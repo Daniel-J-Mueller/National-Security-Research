@@ -1,5 +1,4 @@
 const DATA_URL = "../../data/private/visualizer/plants_reference.json";
-const PROFILE_SOURCE_PATH = "data/private/eia860_2024/plant_profiles_private.csv";
 const HEAT_PANE = "heatPane";
 const POINT_PANE = "pointPane";
 
@@ -84,7 +83,6 @@ const numberFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 
 const integerFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 
 const elements = {
-  sourceSummary: document.getElementById("source-summary"),
   emissionSelect: document.getElementById("emission-select"),
   viewSelect: document.getElementById("view-select"),
   stateSelect: document.getElementById("state-select"),
@@ -142,7 +140,6 @@ async function init() {
     }
 
     state.activeEmissionKey = preferredEmissionKey(state.availableEmissionDefinitions, state.plants);
-    updateSourceSummary(payload.metadata, payload.plants.length, state.plants.length);
     populateEmissionOptions();
     populateFilters();
     refreshView({ fitBounds: true });
@@ -152,8 +149,6 @@ async function init() {
       "Could not load the private visualizer asset. Serve the repo root with a local HTTP server before opening this page.",
       "error",
     );
-    elements.sourceSummary.innerHTML =
-      "Could not read <code>data/private/visualizer/plants_reference.json</code> from the browser.";
   }
 }
 
@@ -272,17 +267,6 @@ function buildSearchText(plant) {
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
-}
-
-function updateSourceSummary(metadata, totalRows, mappedRows) {
-  const sourceFiles = Array.isArray(metadata?.source_files) ? metadata.source_files : [];
-  const sourceSuffix = sourceFiles.length
-    ? ` Built from <code>${escapeHtml(sourceFiles[0].replaceAll("\\", "/"))}</code>.`
-    : ` Built from <code>${escapeHtml(PROFILE_SOURCE_PATH)}</code>.`;
-  elements.sourceSummary.innerHTML =
-    `Auto-loaded <code>data/private/visualizer/plants_reference.json</code> with ` +
-    `${integerFormatter.format(totalRows)} plant rows. ${integerFormatter.format(mappedRows)} rows include ` +
-    `coordinates and are ready to map.${sourceSuffix}`;
 }
 
 function populateEmissionOptions() {
