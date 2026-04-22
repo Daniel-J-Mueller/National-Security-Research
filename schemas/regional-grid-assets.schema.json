@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RegionalGridAsset",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "asset_id": {
+      "type": "string"
+    },
+    "asset_type": {
+      "type": "string",
+      "enum": [
+        "plant",
+        "transmission_corridor",
+        "substation_region_summary"
+      ]
+    },
+    "source_name": {
+      "type": "string"
+    },
+    "source_version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source_date": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "region_type": {
+      "type": "string",
+      "enum": [
+        "county",
+        "state",
+        "balancing_authority",
+        "interconnection",
+        "custom_region"
+      ]
+    },
+    "region_id": {
+      "type": "string"
+    },
+    "region_name": {
+      "type": "string"
+    },
+    "geometry_precision": {
+      "type": "string",
+      "enum": [
+        "point",
+        "generalized_line",
+        "county",
+        "state",
+        "ba_region",
+        "none"
+      ]
+    },
+    "latitude": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "longitude": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "capacity_mw": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "voltage_kv": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "fuel_type": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "status": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "owner_operator": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "substation_count": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "asset_id",
+    "asset_type",
+    "source_name",
+    "region_type",
+    "region_id",
+    "region_name",
+    "geometry_precision"
+  ]
+}
