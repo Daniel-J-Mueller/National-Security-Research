@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plant Emissions Visualizer</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="./app.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="eyebrow">Local private workflow</div>
+        <h1>Plant emissions visualizer</h1>
+        <p class="lede">
+          Plot EIA-860 plant coordinates as points or heatmaps, then join any local emissions CSV keyed by
+          <code>plant_code</code> to inspect per-plant CO2, mercury, and other numeric fields.
+        </p>
+
+        <section class="panel">
+          <h2>Data</h2>
+          <label class="field">
+            <span>Emissions CSV upload</span>
+            <input id="emissions-file" type="file" accept=".csv,text/csv" />
+          </label>
+          <div class="actions">
+            <a class="ghost-button" href="./emissions-template.csv">Template CSV</a>
+            <button id="clear-emissions" type="button" class="ghost-button">Clear upload</button>
+          </div>
+          <p id="upload-summary" class="microcopy">
+            Base plant asset loads from <code>data/private/visualizer/plants_reference.json</code>.
+          </p>
+        </section>
+
+        <section class="panel">
+          <h2>Controls</h2>
+          <label class="field">
+            <span>Metric</span>
+            <select id="metric-select"></select>
+          </label>
+          <label class="field">
+            <span>View</span>
+            <select id="view-select">
+              <option value="both">Heatmap + points</option>
+              <option value="heat">Heatmap only</option>
+              <option value="points">Points only</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>State</span>
+            <select id="state-select">
+              <option value="">All states</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Fuel</span>
+            <select id="fuel-select">
+              <option value="">All fuels</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Search plant, utility, county, or code</span>
+            <input id="search-input" type="search" placeholder="Ex: 52122, TVA, Hardeman" />
+          </label>
+          <label class="field">
+            <span>Minimum metric value</span>
+            <input id="minimum-input" type="number" min="0" step="any" placeholder="0" />
+          </label>
+          <div class="actions">
+            <button id="zoom-filtered" type="button" class="ghost-button">Zoom to filtered</button>
+            <button id="reset-filters" type="button" class="ghost-button">Reset filters</button>
+          </div>
+        </section>
+
+        <section class="panel metrics-panel">
+          <h2>Summary</h2>
+          <div class="stats-grid">
+            <article class="stat-card">
+              <span class="stat-label">Visible plants</span>
+              <strong id="visible-count">0</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Metric total</span>
+              <strong id="metric-total">0</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Max plant</span>
+              <strong id="metric-max">None</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Active metric</span>
+              <strong id="metric-name">Loading</strong>
+            </article>
+          </div>
+          <div class="legend">
+            <span>Lower intensity</span>
+            <div class="legend-ramp" aria-hidden="true"></div>
+            <span>Higher intensity</span>
+          </div>
+          <p id="status-pill" class="status-pill">Loading plant coordinates...</p>
+        </section>
+
+        <section class="panel">
+          <h2>Plants</h2>
+          <div id="results-list" class="results-list"></div>
+        </section>
+
+        <section class="panel detail-panel">
+          <h2>Plant detail</h2>
+          <div id="detail-panel" class="detail-body">
+            Select a plant point or a result row to inspect plant-level values.
+          </div>
+        </section>
+      </aside>
+
+      <main class="map-stage">
+        <div id="map" class="map" aria-label="Plant map"></div>
+      </main>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+    <script src="./app.js" defer></script>
+  </body>
+</html>

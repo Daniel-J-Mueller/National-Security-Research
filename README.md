@@ -181,6 +181,29 @@ Suggested files:
 4. Tag each finding by sector, geography, and dependency type.
 5. Keep location detail coarse unless there is a clearly benign public-interest reason.
 
+## Plant Emissions Visualizer
+
+A local browser visualizer now lives in `docs/plant-emissions-visualizer/`.
+
+Use it to:
+
+- render exact plant points from the private EIA-860 coordinate extract
+- switch between point and heatmap views
+- upload a local emissions CSV keyed by `plant_code`
+- inspect per-plant CO2, mercury, and any other numeric emissions fields
+
+Build the private browser asset with:
+
+```powershell
+C:\Windows\py.exe scripts\build_plant_visualizer_assets.py
+```
+
+Then serve the repo root locally and open:
+
+- `http://localhost:8000/docs/plant-emissions-visualizer/`
+
+See `docs/plant-emissions-visualizer/README.md` for the local workflow and CSV format.
+
 ## Next Build-Out
 
 - Add one markdown file per sector
