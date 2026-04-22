@@ -1,5 +1,7 @@
 const DATA_URL = "../../data/private/visualizer/plants_reference.json";
 const PROFILE_SOURCE_PATH = "data/private/eia860_2024/plant_profiles_private.csv";
+const HEAT_PANE = "heatPane";
+const POINT_PANE = "pointPane";
 
 const EMISSION_DEFINITIONS = [
   { key: "co2_emissions_value", label: "CO2 Emissions (tons)" },
@@ -156,12 +158,23 @@ async function init() {
 }
 
 function buildMap() {
-  state.canvasRenderer = L.canvas({ padding: 0.35 });
   state.map = L.map("map", {
     preferCanvas: true,
     zoomSnap: 0.25,
     minZoom: 2,
   }).setView([39.8, -98.6], 4);
+
+  const heatPane = state.map.createPane(HEAT_PANE);
+  heatPane.style.zIndex = "350";
+  heatPane.style.pointerEvents = "none";
+
+  const pointPane = state.map.createPane(POINT_PANE);
+  pointPane.style.zIndex = "450";
+
+  state.canvasRenderer = L.canvas({
+    padding: 0.35,
+    pane: POINT_PANE,
+  });
 
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
     attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
@@ -453,6 +466,7 @@ function renderHeatLayer(emissionStats) {
   }
 
   state.heatLayer = L.heatLayer(heatPoints, {
+    pane: HEAT_PANE,
     radius: 26,
     blur: 18,
     minOpacity: 0.3,
@@ -477,6 +491,7 @@ function renderPointLayer(emissionStats) {
     const value = getEmissionValue(plant, state.activeEmissionKey);
     const isActive = plant.plant_code === state.activePlantCode;
     const defaultStyle = {
+      pane: POINT_PANE,
       renderer: state.canvasRenderer,
       radius: markerRadius(value, maxValue, isActive),
       weight: isActive ? 1.8 : 0.8,
