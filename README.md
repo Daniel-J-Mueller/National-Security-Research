@@ -193,6 +193,12 @@ Use it to:
 - inspect per-plant CO2, mercury, and any other numeric emissions fields
 - use built-in private profile metrics populated from EPA eGRID and PM2.5 data where available
 
+Example views:
+
+![National emissions view](images/US%20Emissions%20data.png)
+
+![Texas mercury example](images/Texas_HG_Emissions.png)
+
 Build the private browser asset with:
 
 ```powershell
