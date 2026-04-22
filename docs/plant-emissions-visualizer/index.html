@@ -17,97 +17,22 @@
         <div class="eyebrow">Local private workflow</div>
         <h1>Plant emissions visualizer</h1>
         <p class="lede">
-          Plot plant coordinates as points or heatmaps, then use the upload wizard to detect IDs,
-          coordinates, and emissions columns from whatever file you bring in.
+          This view auto-loads <code>plant_profiles_private.csv</code>. Pick an emission, let the
+          heatmap rebalance instantly, and hover or click any plant to inspect the full source row.
         </p>
 
         <section class="panel">
-          <h2>Data</h2>
-          <label class="field">
-            <span>Emissions CSV upload</span>
-            <input id="emissions-file" type="file" accept=".csv,text/csv" />
-          </label>
-          <div class="actions">
-            <a class="ghost-button" href="./emissions-template.csv">Template CSV</a>
-            <button id="clear-emissions" type="button" class="ghost-button">Clear upload</button>
-          </div>
-          <p id="upload-summary" class="microcopy">
-            Base plant asset loads from <code>data/private/visualizer/plants_reference.json</code>.
+          <h2>Dataset</h2>
+          <p id="source-summary" class="microcopy">
+            Loading <code>data/private/eia860_2024/plant_profiles_private.csv</code>...
           </p>
-          <div id="import-wizard" class="wizard-shell" hidden>
-            <div class="wizard-header">
-              <h3>Import wizard</h3>
-              <p id="wizard-overview" class="microcopy">
-                We will detect plant IDs, coordinate columns, and metric candidates from the selected file.
-              </p>
-            </div>
-            <div id="wizard-alert" class="wizard-alert" hidden></div>
-            <div class="wizard-grid">
-              <label class="field">
-                <span>Analysis mode</span>
-                <select id="wizard-mode"></select>
-              </label>
-              <label class="field">
-                <span>Plant code column</span>
-                <select id="wizard-key"></select>
-              </label>
-              <label class="field">
-                <span>Latitude column</span>
-                <select id="wizard-lat"></select>
-              </label>
-              <label class="field">
-                <span>Longitude column</span>
-                <select id="wizard-lon"></select>
-              </label>
-              <label class="field">
-                <span>Plant name column</span>
-                <select id="wizard-name"></select>
-              </label>
-              <label class="field">
-                <span>State column</span>
-                <select id="wizard-state"></select>
-              </label>
-              <label class="field">
-                <span>Fuel column</span>
-                <select id="wizard-fuel"></select>
-              </label>
-              <label class="field">
-                <span>Start with metric</span>
-                <select id="wizard-metric"></select>
-              </label>
-            </div>
-            <div class="wizard-stats">
-              <article class="wizard-stat">
-                <span>Rows</span>
-                <strong id="wizard-row-count">0</strong>
-              </article>
-              <article class="wizard-stat">
-                <span>Metric columns</span>
-                <strong id="wizard-metric-count">0</strong>
-              </article>
-              <article class="wizard-stat">
-                <span>Coordinate rows</span>
-                <strong id="wizard-coordinate-count">0</strong>
-              </article>
-              <article class="wizard-stat">
-                <span>Base matches</span>
-                <strong id="wizard-match-count">0</strong>
-              </article>
-            </div>
-            <p id="wizard-coverage" class="microcopy">
-              Choose how to analyze the selected file, then apply the detected dataset.
-            </p>
-            <div class="actions">
-              <button id="apply-import" type="button">Apply analyzed dataset</button>
-            </div>
-          </div>
         </section>
 
         <section class="panel">
           <h2>Controls</h2>
           <label class="field">
-            <span>Metric</span>
-            <select id="metric-select"></select>
+            <span>Emission</span>
+            <select id="emission-select"></select>
           </label>
           <label class="field">
             <span>View</span>
@@ -134,7 +59,7 @@
             <input id="search-input" type="search" placeholder="Ex: 52122, TVA, Hardeman" />
           </label>
           <label class="field">
-            <span>Minimum metric value</span>
+            <span>Minimum emission value</span>
             <input id="minimum-input" type="number" min="0" step="any" placeholder="0" />
           </label>
           <div class="actions">
@@ -151,15 +76,15 @@
               <strong id="visible-count">0</strong>
             </article>
             <article class="stat-card">
-              <span class="stat-label">Metric total</span>
+              <span class="stat-label">Emission total</span>
               <strong id="metric-total">0</strong>
             </article>
             <article class="stat-card">
-              <span class="stat-label">Max plant</span>
+              <span class="stat-label">Largest plant</span>
               <strong id="metric-max">None</strong>
             </article>
             <article class="stat-card">
-              <span class="stat-label">Active metric</span>
+              <span class="stat-label">Active emission</span>
               <strong id="metric-name">Loading</strong>
             </article>
           </div>
@@ -168,7 +93,7 @@
             <div class="legend-ramp" aria-hidden="true"></div>
             <span>Higher intensity</span>
           </div>
-          <p id="status-pill" class="status-pill">Loading plant coordinates...</p>
+          <p id="status-pill" class="status-pill">Loading plant profile CSV...</p>
         </section>
 
         <section class="panel">
@@ -179,7 +104,7 @@
         <section class="panel detail-panel">
           <h2>Plant detail</h2>
           <div id="detail-panel" class="detail-body">
-            Select a plant point or a result row to inspect plant-level values.
+            Hover or click a plant point or a result row to inspect the full source row.
           </div>
         </section>
       </aside>
