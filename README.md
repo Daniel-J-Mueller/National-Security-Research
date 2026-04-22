@@ -209,7 +209,13 @@ C:\Windows\py.exe scripts\build_private_plant_profiles.py
 C:\Windows\py.exe scripts\build_plant_visualizer_assets.py
 ```
 
-Then serve the repo root locally and open:
+Serve the repo root locally with:
+
+```powershell
+C:\Windows\py.exe scripts\serve_repo_root.py
+```
+
+Then open:
 
 - `http://localhost:8000/docs/plant-emissions-visualizer/`
 

@@ -62,7 +62,7 @@ This writes:
 Serve the repo root over HTTP, then open the app:
 
 ```powershell
-C:\Windows\py.exe -m http.server 8000
+C:\Windows\py.exe scripts\serve_repo_root.py
 ```
 
 Open:
