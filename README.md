@@ -2,6 +2,8 @@
 
 This repository is for high-level research on national infrastructure, systemic dependencies, resilience, and public-impact risk.
 
+We will be analyzing and visualizing CO2 and mercury outputs, as well as ambient environmental radio-isotopic emissions on a per plant basis.
+
 ## Research Boundaries
 
 - Focus on sector-level analysis, policy, resilience, redundancy, supply chains, and public consequence modeling.
