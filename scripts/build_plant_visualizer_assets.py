@@ -13,6 +13,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+PLANT_PROFILE_CSV = ROOT / "data" / "private" / "eia860_2024" / "plant_profiles_private.csv"
 PLANT_DETAILS_CSV = ROOT / "data" / "processed" / "eia860" / "plants_2024_clean.csv"
 PLANT_COORDS_CSV = ROOT / "data" / "private" / "eia860_2024" / "plant_locations_private.csv"
 OUT_DIR = ROOT / "data" / "private" / "visualizer"
@@ -24,6 +25,16 @@ BASE_METRICS = [
     "operable_nameplate_capacity_mw",
     "operable_summer_capacity_mw",
     "operable_winter_capacity_mw",
+    "carbon_capture_generator_count",
+    "co2_emissions_value",
+    "co2e_emissions_value",
+    "ch4_emissions_value",
+    "n2o_emissions_value",
+    "so2_emissions_value",
+    "nox_emissions_value",
+    "particulate_matter_emissions_value",
+    "mercury_emissions_value",
+    "radioisotopic_emissions_value",
 ]
 
 
@@ -56,7 +67,81 @@ def read_csv(path: Path) -> list[dict[str, str]]:
         return [{key: clean_text(value) for key, value in row.items()} for row in reader]
 
 
+def join_profile_rows() -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for row in read_csv(PLANT_PROFILE_CSV):
+        plant_code = row.get("plant_code", "")
+        latitude = parse_float(row.get("latitude"))
+        longitude = parse_float(row.get("longitude"))
+        if not plant_code or latitude is None or longitude is None:
+            continue
+
+        rows.append(
+            {
+                "plant_code": plant_code,
+                "plant_name": row.get("plant_name", ""),
+                "utility_id": row.get("utility_id", ""),
+                "utility_name": row.get("utility_name", ""),
+                "city": row.get("city", ""),
+                "county": row.get("county", ""),
+                "state": row.get("state", ""),
+                "zip_code": row.get("zip_code", ""),
+                "latitude": round(latitude, 6),
+                "longitude": round(longitude, 6),
+                "coordinate_status": row.get("coordinate_status", ""),
+                "nerc_region": row.get("nerc_region", ""),
+                "balancing_authority_code": row.get("balancing_authority_code", ""),
+                "balancing_authority_name": row.get("balancing_authority_name", ""),
+                "sector_name": row.get("sector_name", ""),
+                "regulatory_status": row.get("regulatory_status", ""),
+                "transmission_owner": row.get("transmission_owner", ""),
+                "energy_storage_flag": row.get("energy_storage_flag", ""),
+                "generator_count": parse_int(row.get("generator_count")),
+                "operable_nameplate_capacity_mw": parse_float(row.get("operable_nameplate_capacity_mw")),
+                "operable_summer_capacity_mw": parse_float(row.get("operable_summer_capacity_mw")),
+                "operable_winter_capacity_mw": parse_float(row.get("operable_winter_capacity_mw")),
+                "primary_fuel_code": row.get("primary_fuel_code", ""),
+                "primary_technology": row.get("primary_technology", ""),
+                "status_mix": row.get("status_mix", ""),
+                "carbon_capture_generator_count": parse_int(row.get("carbon_capture_generator_count")),
+                "carbon_capture_present_flag": row.get("carbon_capture_present_flag", ""),
+                "co2_emissions_value": parse_float(row.get("co2_emissions_value")),
+                "co2_emissions_unit": row.get("co2_emissions_unit", ""),
+                "co2e_emissions_value": parse_float(row.get("co2e_emissions_value")),
+                "co2e_emissions_unit": row.get("co2e_emissions_unit", ""),
+                "ch4_emissions_value": parse_float(row.get("ch4_emissions_value")),
+                "ch4_emissions_unit": row.get("ch4_emissions_unit", ""),
+                "n2o_emissions_value": parse_float(row.get("n2o_emissions_value")),
+                "n2o_emissions_unit": row.get("n2o_emissions_unit", ""),
+                "so2_emissions_value": parse_float(row.get("so2_emissions_value")),
+                "so2_emissions_unit": row.get("so2_emissions_unit", ""),
+                "nox_emissions_value": parse_float(row.get("nox_emissions_value")),
+                "nox_emissions_unit": row.get("nox_emissions_unit", ""),
+                "particulate_matter_emissions_value": parse_float(row.get("particulate_matter_emissions_value")),
+                "particulate_matter_emissions_unit": row.get("particulate_matter_emissions_unit", ""),
+                "mercury_emissions_value": parse_float(row.get("mercury_emissions_value")),
+                "mercury_emissions_unit": row.get("mercury_emissions_unit", ""),
+                "radioisotopic_emissions_value": parse_float(row.get("radioisotopic_emissions_value")),
+                "radioisotopic_emissions_unit": row.get("radioisotopic_emissions_unit", ""),
+                "source_dataset": row.get("source_dataset", "EIA-860 2024"),
+            }
+        )
+
+    rows.sort(
+        key=lambda item: (
+            str(item.get("state", "")),
+            str(item.get("county", "")),
+            str(item.get("plant_name", "")),
+            str(item.get("plant_code", "")),
+        )
+    )
+    return rows
+
+
 def join_rows() -> list[dict[str, object]]:
+    if PLANT_PROFILE_CSV.exists():
+        return join_profile_rows()
+
     detail_rows = read_csv(PLANT_DETAILS_CSV)
     detail_by_code = {row["plant_code"]: row for row in detail_rows if row.get("plant_code")}
 
@@ -114,6 +199,10 @@ def join_rows() -> list[dict[str, object]]:
 def build_summary(rows: list[dict[str, object]]) -> dict[str, object]:
     state_counts = Counter(str(row["state"]) for row in rows if row.get("state"))
     fuel_counts = Counter(str(row["primary_fuel_code"]) for row in rows if row.get("primary_fuel_code"))
+    source_files = [str(PLANT_PROFILE_CSV.relative_to(ROOT))] if PLANT_PROFILE_CSV.exists() else [
+        str(PLANT_DETAILS_CSV.relative_to(ROOT)),
+        str(PLANT_COORDS_CSV.relative_to(ROOT)),
+    ]
 
     latitudes = [float(row["latitude"]) for row in rows]
     longitudes = [float(row["longitude"]) for row in rows]
@@ -121,10 +210,7 @@ def build_summary(rows: list[dict[str, object]]) -> dict[str, object]:
 
     return {
         "generated_at_utc": datetime.now(UTC).isoformat(),
-        "source_files": [
-            str(PLANT_DETAILS_CSV.relative_to(ROOT)),
-            str(PLANT_COORDS_CSV.relative_to(ROOT)),
-        ],
+        "source_files": source_files,
         "output_file": str(OUT_JSON.relative_to(ROOT)),
         "plant_count": len(rows),
         "state_count": len(state_counts),
@@ -148,9 +234,9 @@ def write_json(path: Path, payload: object) -> None:
 
 
 def main() -> None:
-    if not PLANT_DETAILS_CSV.exists():
+    if not PLANT_PROFILE_CSV.exists() and not PLANT_DETAILS_CSV.exists():
         raise FileNotFoundError(f"Missing plant details CSV: {PLANT_DETAILS_CSV}")
-    if not PLANT_COORDS_CSV.exists():
+    if not PLANT_PROFILE_CSV.exists() and not PLANT_COORDS_CSV.exists():
         raise FileNotFoundError(f"Missing plant coordinates CSV: {PLANT_COORDS_CSV}")
 
     rows = join_rows()

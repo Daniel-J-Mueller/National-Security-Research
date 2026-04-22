@@ -6,6 +6,16 @@ const BASE_METRIC_DEFINITIONS = [
   { key: "operable_summer_capacity_mw", label: "Summer Capacity (MW)", source: "base" },
   { key: "operable_winter_capacity_mw", label: "Winter Capacity (MW)", source: "base" },
   { key: "generator_count", label: "Generator Count", source: "base" },
+  { key: "carbon_capture_generator_count", label: "Carbon Capture Generator Count", source: "base" },
+  { key: "co2_emissions_value", label: "CO2 Emissions (tons)", source: "base" },
+  { key: "co2e_emissions_value", label: "CO2e Emissions (tons)", source: "base" },
+  { key: "ch4_emissions_value", label: "CH4 Emissions (lb)", source: "base" },
+  { key: "n2o_emissions_value", label: "N2O Emissions (lb)", source: "base" },
+  { key: "so2_emissions_value", label: "SO2 Emissions", source: "base" },
+  { key: "nox_emissions_value", label: "NOx Emissions (tons)", source: "base" },
+  { key: "particulate_matter_emissions_value", label: "Particulate Matter Emissions", source: "base" },
+  { key: "mercury_emissions_value", label: "Mercury Emissions (lb)", source: "base" },
+  { key: "radioisotopic_emissions_value", label: "Radioisotopic Emissions", source: "base" },
 ];
 
 const PREFERRED_UPLOADED_METRICS = [

@@ -191,10 +191,12 @@ Use it to:
 - switch between point and heatmap views
 - upload a local emissions CSV keyed by `plant_code`
 - inspect per-plant CO2, mercury, and any other numeric emissions fields
+- use built-in private profile metrics populated from EPA eGRID and PM2.5 data where available
 
 Build the private browser asset with:
 
 ```powershell
+C:\Windows\py.exe scripts\build_private_plant_profiles.py
 C:\Windows\py.exe scripts\build_plant_visualizer_assets.py
 ```
 

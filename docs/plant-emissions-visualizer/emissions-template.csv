@@ -1,1 +1,1 @@
-plant_code,reporting_year,co2_tons,mercury_lb,so2_tons,nox_tons
+plant_code,reporting_year,co2_tons,co2e_tons,ch4_lb,n2o_lb,so2_tons,nox_tons,particulate_matter_tons,mercury_lb,radioisotopic_release_value,radioisotopic_release_unit
