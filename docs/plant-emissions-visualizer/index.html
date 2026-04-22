@@ -17,14 +17,15 @@
         <div class="eyebrow">Local private workflow</div>
         <h1>Plant emissions visualizer</h1>
         <p class="lede">
-          This view auto-loads <code>plant_profiles_private.csv</code>. Pick an emission, let the
-          heatmap rebalance instantly, and hover or click any plant to inspect the full source row.
+          This view auto-loads a private map asset built from <code>plant_profiles_private.csv</code>.
+          Pick an emission, let the heatmap rebalance instantly, and hover or click any plant to
+          inspect the full source row.
         </p>
 
         <section class="panel">
           <h2>Dataset</h2>
           <p id="source-summary" class="microcopy">
-            Loading <code>data/private/eia860_2024/plant_profiles_private.csv</code>...
+            Loading <code>data/private/visualizer/plants_reference.json</code>...
           </p>
         </section>
 
@@ -93,7 +94,7 @@
             <div class="legend-ramp" aria-hidden="true"></div>
             <span>Higher intensity</span>
           </div>
-          <p id="status-pill" class="status-pill">Loading plant profile CSV...</p>
+          <p id="status-pill" class="status-pill">Loading private visualizer asset...</p>
         </section>
 
         <section class="panel">

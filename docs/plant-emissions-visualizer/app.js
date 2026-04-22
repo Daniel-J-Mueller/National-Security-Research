@@ -1,4 +1,5 @@
-const DATA_URL = "../../data/private/eia860_2024/plant_profiles_private.csv";
+const DATA_URL = "../../data/private/visualizer/plants_reference.json";
+const PROFILE_SOURCE_PATH = "data/private/eia860_2024/plant_profiles_private.csv";
 
 const EMISSION_DEFINITIONS = [
   { key: "co2_emissions_value", label: "CO2 Emissions (tons)" },
@@ -65,7 +66,6 @@ const HEADER_LABEL_OVERRIDES = {
 
 const state = {
   headers: [],
-  headerIndexByKey: new Map(),
   plants: [],
   filteredPlants: [],
   availableEmissionDefinitions: [],
@@ -107,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
 async function init() {
   bindEvents();
   buildMap();
-  setStatus("Loading plant_profiles_private.csv...");
+  setStatus("Loading private visualizer asset...");
 
   try {
     const response = await fetch(DATA_URL, { cache: "no-store" });
@@ -115,47 +115,43 @@ async function init() {
       throw new Error(`HTTP ${response.status}`);
     }
 
-    const text = await response.text();
-    const { rows } = parseDelimitedText(text);
-    if (rows.length < 2) {
-      throw new Error("plant_profiles_private.csv does not contain any plant rows.");
+    const payload = await response.json();
+    if (!payload || !Array.isArray(payload.plants) || !payload.plants.length) {
+      throw new Error("plants_reference.json does not contain any mapped plant rows.");
     }
 
-    const headers = rows[0].map((value) => String(value ?? "").trim());
-    const normalizedHeaders = headers.map(normalizeHeader);
-    const dataRows = rows.slice(1).filter((row) => row.some((value) => String(value ?? "").trim().length));
-
-    state.headers = headers;
-    state.headerIndexByKey = new Map(normalizedHeaders.map((header, index) => [header, index]));
+    state.headers = Array.isArray(payload.headers) && payload.headers.length
+      ? payload.headers.map((value) => String(value ?? "").trim())
+      : inferHeadersFromPlants(payload.plants);
     state.availableEmissionDefinitions = EMISSION_DEFINITIONS.filter((definition) =>
-      state.headerIndexByKey.has(definition.key),
+      payload.plants.some((plant) => Object.prototype.hasOwnProperty.call(plant, definition.key)),
     );
 
     if (!state.availableEmissionDefinitions.length) {
-      throw new Error("No supported emission columns were found in plant_profiles_private.csv.");
+      throw new Error("No supported emission columns were found in plants_reference.json.");
     }
 
-    state.plants = dataRows
-      .map((row, index) => hydratePlant(row, index))
+    state.plants = payload.plants
+      .map((plant, index) => hydratePlant(plant, index))
       .filter((plant) => Number.isFinite(plant.latitude) && Number.isFinite(plant.longitude));
 
     if (!state.plants.length) {
-      throw new Error("No plant rows with valid coordinates were found in plant_profiles_private.csv.");
+      throw new Error("No plant rows with valid coordinates were found in plants_reference.json.");
     }
 
     state.activeEmissionKey = preferredEmissionKey(state.availableEmissionDefinitions, state.plants);
-    updateSourceSummary(dataRows.length, state.plants.length);
+    updateSourceSummary(payload.metadata, payload.plants.length, state.plants.length);
     populateEmissionOptions();
     populateFilters();
     refreshView({ fitBounds: true });
   } catch (error) {
     console.error(error);
     setStatus(
-      "Could not load plant_profiles_private.csv. Serve the repo root with a local HTTP server before opening this page.",
+      "Could not load the private visualizer asset. Serve the repo root with a local HTTP server before opening this page.",
       "error",
     );
     elements.sourceSummary.innerHTML =
-      "Could not read <code>data/private/eia860_2024/plant_profiles_private.csv</code> from the browser.";
+      "Could not read <code>data/private/visualizer/plants_reference.json</code> from the browser.";
   }
 }
 
@@ -216,30 +212,32 @@ function bindEvents() {
   });
 }
 
-function hydratePlant(row, rowIndex) {
-  const plantCode = normalizePlantCode(readFieldByKey(row, "plant_code")) || `row-${rowIndex + 1}`;
+function hydratePlant(sourcePlant, rowIndex) {
+  const plantCode = normalizePlantCode(sourcePlant.plant_code) || `row-${rowIndex + 1}`;
   const emissions = {};
   for (const definition of state.availableEmissionDefinitions) {
-    emissions[definition.key] = parseInputNumber(readFieldByKey(row, definition.key));
+    emissions[definition.key] = toNumber(sourcePlant[definition.key]);
   }
 
   const plant = {
     plant_code: plantCode,
-    plant_name: readFieldByKey(row, "plant_name") || `Plant ${plantCode}`,
-    utility_id: readFieldByKey(row, "utility_id"),
-    utility_name: readFieldByKey(row, "utility_name"),
-    street_address: readFieldByKey(row, "street_address"),
-    city: readFieldByKey(row, "city"),
-    county: readFieldByKey(row, "county"),
-    state: readFieldByKey(row, "state"),
-    zip_code: readFieldByKey(row, "zip_code"),
-    latitude: parseInputNumber(readFieldByKey(row, "latitude")),
-    longitude: parseInputNumber(readFieldByKey(row, "longitude")),
-    balancing_authority_name: readFieldByKey(row, "balancing_authority_name"),
-    primary_fuel_code: readFieldByKey(row, "primary_fuel_code"),
-    primary_technology: readFieldByKey(row, "primary_technology"),
-    source_dataset: readFieldByKey(row, "source_dataset"),
-    rawRow: row,
+    plant_name: stringValue(sourcePlant.plant_name) || `Plant ${plantCode}`,
+    utility_id: stringValue(sourcePlant.utility_id),
+    utility_name: stringValue(sourcePlant.utility_name),
+    street_address: stringValue(sourcePlant.street_address),
+    city: stringValue(sourcePlant.city),
+    county: stringValue(sourcePlant.county),
+    state: stringValue(sourcePlant.state),
+    zip_code: stringValue(sourcePlant.zip_code),
+    latitude: toNumber(sourcePlant.latitude),
+    longitude: toNumber(sourcePlant.longitude),
+    balancing_authority_name: stringValue(sourcePlant.balancing_authority_name),
+    primary_fuel_code: stringValue(sourcePlant.primary_fuel_code),
+    primary_technology: stringValue(sourcePlant.primary_technology),
+    source_dataset: stringValue(sourcePlant.source_dataset),
+    rawRow: Array.isArray(sourcePlant.raw_row)
+      ? sourcePlant.raw_row.map((value) => stringValue(value))
+      : state.headers.map((header) => stringValue(sourcePlant[header])),
     emissions,
   };
 
@@ -263,11 +261,15 @@ function buildSearchText(plant) {
     .toLowerCase();
 }
 
-function updateSourceSummary(totalRows, mappedRows) {
+function updateSourceSummary(metadata, totalRows, mappedRows) {
+  const sourceFiles = Array.isArray(metadata?.source_files) ? metadata.source_files : [];
+  const sourceSuffix = sourceFiles.length
+    ? ` Built from <code>${escapeHtml(sourceFiles[0].replaceAll("\\", "/"))}</code>.`
+    : ` Built from <code>${escapeHtml(PROFILE_SOURCE_PATH)}</code>.`;
   elements.sourceSummary.innerHTML =
-    `Auto-loaded <code>data/private/eia860_2024/plant_profiles_private.csv</code> with ` +
+    `Auto-loaded <code>data/private/visualizer/plants_reference.json</code> with ` +
     `${integerFormatter.format(totalRows)} plant rows. ${integerFormatter.format(mappedRows)} rows include ` +
-    "coordinates and are ready to map.";
+    `coordinates and are ready to map.${sourceSuffix}`;
 }
 
 function populateEmissionOptions() {
@@ -739,19 +741,54 @@ function buildDetailRowHtml(label, value, isHighlighted = false) {
   ].join("");
 }
 
-function readFieldByKey(row, key) {
-  const index = state.headerIndexByKey.get(key);
-  if (!Number.isInteger(index) || index < 0) {
-    return "";
-  }
-  return String(row[index] ?? "").trim();
-}
-
 function readRawValue(row, index) {
   if (!Number.isInteger(index) || index < 0) {
     return "No data";
   }
   return String(row[index] ?? "").trim() || "No data";
+}
+
+function inferHeadersFromPlants(plants) {
+  const orderedHeaders = [];
+  const seen = new Set();
+
+  for (const preferred of [
+    "plant_code",
+    "plant_name",
+    "utility_id",
+    "utility_name",
+    "street_address",
+    "city",
+    "county",
+    "state",
+    "zip_code",
+    "latitude",
+    "longitude",
+  ]) {
+    if (plants.some((plant) => Object.prototype.hasOwnProperty.call(plant, preferred))) {
+      orderedHeaders.push(preferred);
+      seen.add(preferred);
+    }
+  }
+
+  for (const plant of plants) {
+    for (const key of Object.keys(plant)) {
+      if (key === "raw_row" || seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      orderedHeaders.push(key);
+    }
+  }
+
+  return orderedHeaders;
+}
+
+function stringValue(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  return String(value).trim();
 }
 
 function formatAddress(plant) {

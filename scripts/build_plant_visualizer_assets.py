@@ -61,15 +61,18 @@ def parse_int(value: str | None) -> int | None:
     return int(number)
 
 
-def read_csv(path: Path) -> list[dict[str, str]]:
+def read_csv(path: Path) -> tuple[list[str], list[dict[str, str]]]:
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
-        return [{key: clean_text(value) for key, value in row.items()} for row in reader]
+        headers = [clean_text(value) for value in (reader.fieldnames or [])]
+        rows = [{key: clean_text(value) for key, value in row.items()} for row in reader]
+        return headers, rows
 
 
-def join_profile_rows() -> list[dict[str, object]]:
+def join_profile_rows() -> tuple[list[str], list[dict[str, object]]]:
     rows: list[dict[str, object]] = []
-    for row in read_csv(PLANT_PROFILE_CSV):
+    headers, profile_rows = read_csv(PLANT_PROFILE_CSV)
+    for row in profile_rows:
         plant_code = row.get("plant_code", "")
         latitude = parse_float(row.get("latitude"))
         longitude = parse_float(row.get("longitude"))
@@ -124,6 +127,7 @@ def join_profile_rows() -> list[dict[str, object]]:
                 "radioisotopic_emissions_value": parse_float(row.get("radioisotopic_emissions_value")),
                 "radioisotopic_emissions_unit": row.get("radioisotopic_emissions_unit", ""),
                 "source_dataset": row.get("source_dataset", "EIA-860 2024"),
+                "raw_row": [row.get(header, "") for header in headers],
             }
         )
 
@@ -135,18 +139,19 @@ def join_profile_rows() -> list[dict[str, object]]:
             str(item.get("plant_code", "")),
         )
     )
-    return rows
+    return headers, rows
 
 
-def join_rows() -> list[dict[str, object]]:
+def join_rows() -> tuple[list[str], list[dict[str, object]]]:
     if PLANT_PROFILE_CSV.exists():
         return join_profile_rows()
 
-    detail_rows = read_csv(PLANT_DETAILS_CSV)
+    _detail_headers, detail_rows = read_csv(PLANT_DETAILS_CSV)
     detail_by_code = {row["plant_code"]: row for row in detail_rows if row.get("plant_code")}
 
     joined_rows: list[dict[str, object]] = []
-    for row in read_csv(PLANT_COORDS_CSV):
+    _coord_headers, coord_rows = read_csv(PLANT_COORDS_CSV)
+    for row in coord_rows:
         plant_code = row.get("plant_code", "")
         latitude = parse_float(row.get("latitude"))
         longitude = parse_float(row.get("longitude"))
@@ -193,7 +198,8 @@ def join_rows() -> list[dict[str, object]]:
             str(item.get("plant_code", "")),
         )
     )
-    return joined_rows
+    fallback_headers = [key for key in joined_rows[0].keys() if key != "raw_row"] if joined_rows else []
+    return fallback_headers, joined_rows
 
 
 def build_summary(rows: list[dict[str, object]]) -> dict[str, object]:
@@ -239,7 +245,7 @@ def main() -> None:
     if not PLANT_PROFILE_CSV.exists() and not PLANT_COORDS_CSV.exists():
         raise FileNotFoundError(f"Missing plant coordinates CSV: {PLANT_COORDS_CSV}")
 
-    rows = join_rows()
+    headers, rows = join_rows()
     if not rows:
         raise ValueError("No joined plant rows were built")
 
@@ -248,6 +254,7 @@ def main() -> None:
         OUT_JSON,
         {
             "metadata": summary,
+            "headers": headers,
             "plants": rows,
         },
     )

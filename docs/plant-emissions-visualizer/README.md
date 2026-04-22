@@ -1,6 +1,6 @@
 # Plant Emissions Visualizer
 
-This static app now auto-loads the private plant profile CSV and keeps the workflow focused on one thing:
+This static app now auto-loads a private browser-friendly asset built from the plant profile CSV and keeps the workflow focused on one thing:
 
 - choose an emission
 - watch the heatmap and results update immediately
@@ -8,7 +8,9 @@ This static app now auto-loads the private plant profile CSV and keeps the workf
 
 ## What It Does
 
-- Loads the private source file:
+- Loads the private visualizer asset:
+  - `data/private/visualizer/plants_reference.json`
+- That asset is built from:
   - `data/private/eia860_2024/plant_profiles_private.csv`
 - Renders:
   - point markers for plant-level inspection
@@ -39,10 +41,21 @@ From the repo root:
 C:\Windows\py.exe scripts\build_private_plant_profiles.py
 ```
 
-This writes the source file the visualizer now loads directly:
+This writes the source CSV:
 
 - `data/private/eia860_2024/plant_profiles_private.csv`
 - `data/private/eia860_2024/plant_profiles_private_metadata.json`
+
+Then build the browser-ready private visualizer asset:
+
+```powershell
+C:\Windows\py.exe scripts\build_plant_visualizer_assets.py
+```
+
+This writes:
+
+- `data/private/visualizer/plants_reference.json`
+- `data/private/visualizer/plants_reference_summary.json`
 
 ## Run The Visualizer
 
@@ -56,11 +69,12 @@ Open:
 
 - `http://localhost:8000/docs/plant-emissions-visualizer/`
 
-The page should not be opened with `file:///...` because the browser needs HTTP access to fetch the local CSV.
+The page should not be opened with `file:///...` because the browser needs HTTP access to fetch the local JSON asset.
 
 ## Interaction Model
 
-- `plant_profiles_private.csv` is loaded automatically when the page opens.
+- `plants_reference.json` is loaded automatically when the page opens.
+- That JSON asset is generated from `plant_profiles_private.csv`.
 - The emission selector drives both the point sizing/coloring and the heatmap weighting.
 - State, fuel, search, and minimum-value filters narrow the mapped plant set.
 - Hovering a plant or result row fills the detail panel with the complete source row.
@@ -69,4 +83,4 @@ The page should not be opened with `file:///...` because the browser needs HTTP 
 ## Privacy Boundary
 
 Exact coordinates stay in `data/private/` and are not copied into `data/public/`.
-Keep `plant_profiles_private.csv` and any related derived artifacts outside public outputs.
+Keep `plant_profiles_private.csv`, `plants_reference.json`, and any related derived artifacts outside public outputs.
