@@ -19,8 +19,9 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RAW_DIR = ROOT / "data" / "raw" / "eia860" / "2024"
-OUT_DIR = ROOT / "data" / "processed" / "eia860"
+RAW_DIR = ROOT / "data" / "raw" / "electrical" / "eia860" / "2024"
+OUT_DIR = ROOT / "data" / "processed" / "electrical" / "eia860"
+PUBLIC_DIR = ROOT / "data" / "public" / "electrical"
 
 PLANT_XLSX = RAW_DIR / "2___Plant_Y2024.xlsx"
 GENERATOR_XLSX = RAW_DIR / "3_1_Generator_Y2024.xlsx"
@@ -291,9 +292,9 @@ def write_metadata(rows: list[dict[str, str]], state_rows: list[dict[str, str]],
             str(GENERATOR_XLSX.relative_to(ROOT)),
         ],
         "outputs": [
-            "data/processed/eia860/plants_2024_clean.csv",
-            "data/public/plants_state_summary.csv",
-            "data/public/plants_county_summary.csv",
+            "data/processed/electrical/eia860/plants_2024_clean.csv",
+            "data/public/electrical/plants_state_summary.csv",
+            "data/public/electrical/plants_county_summary.csv",
         ],
         "safety_note": "Clean outputs exclude exact coordinates and street addresses.",
         "record_counts": {
@@ -324,8 +325,8 @@ def main() -> None:
     county_summary = aggregate(plants, ["state", "county"])
 
     write_csv(OUT_DIR / "plants_2024_clean.csv", plants)
-    write_csv(ROOT / "data" / "public" / "plants_state_summary.csv", state_summary)
-    write_csv(ROOT / "data" / "public" / "plants_county_summary.csv", county_summary)
+    write_csv(PUBLIC_DIR / "plants_state_summary.csv", state_summary)
+    write_csv(PUBLIC_DIR / "plants_county_summary.csv", county_summary)
     write_metadata(plants, state_summary, county_summary)
 
     print(f"Wrote {len(plants)} plant rows")

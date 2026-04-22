@@ -1,0 +1,61 @@
+{
+  "generated_at_utc": "2026-04-22T21:40:43.062604+00:00",
+  "public_bulk_files": {
+    "electrical": {
+      "path": "data\\public-bulk\\electrical\\electrical.csv",
+      "source_summary": {
+        "generated_at_utc": "2026-04-22T21:40:43.137137+00:00",
+        "source_files": [
+          "data\\public\\electrical\\plants_county_summary.csv",
+          "data\\public\\electrical\\plants_state_summary.csv",
+          "data\\raw\\agriculture\\census\\2024_Gaz_counties_national\\2024_Gaz_counties_national.txt"
+        ],
+        "county_row_count": 2415,
+        "state_row_count": 51,
+        "output_file": "data\\public-bulk\\electrical\\electrical.csv",
+        "notes": [
+          "County rows use Census Gazetteer county centroids.",
+          "State rows use the simple mean of matched county centroids inside each state."
+        ]
+      }
+    },
+    "people": {
+      "path": "data\\public-bulk\\people\\people.csv",
+      "source_file": "data\\public\\people\\municipal_population_town_halls_2024.csv"
+    },
+    "agriculture": {
+      "path": "data\\public-bulk\\agriculture\\agriculture.csv",
+      "source_file": "data\\public\\agriculture\\county_food_outputs_2022.csv"
+    },
+    "raws": {
+      "path": "data\\public-bulk\\raws\\raws.csv",
+      "source_file": "data\\public\\raws\\raw_material_sites_2023.csv"
+    },
+    "radiation": {
+      "path": "data\\public-bulk\\radiation\\radiation.csv",
+      "source_file": "data\\public\\radiation\\radnet_background_radiation_monitors.csv"
+    }
+  },
+  "private_bulk_files": {
+    "people": {
+      "path": "data\\private-bulk\\people\\people.csv",
+      "source_file": "data\\private\\people\\municipal_population_town_halls_2024_private.csv"
+    },
+    "agriculture": {
+      "path": "data\\private-bulk\\agriculture\\agriculture.csv",
+      "source_file": "data\\private\\agriculture\\county_food_outputs_2022_private.csv"
+    },
+    "raws": {
+      "path": "data\\private-bulk\\raws\\raws.csv",
+      "source_file": "data\\private\\raws\\raw_material_sites_2023_private.csv"
+    },
+    "radiation": {
+      "path": "data\\private-bulk\\radiation\\radiation.csv",
+      "source_file": "data\\private\\radiation\\radnet_background_radiation_monitors_private.csv"
+    },
+    "electrical": {
+      "path": "data\\private-bulk\\electrical\\electrical.csv",
+      "source_file": "data\\private\\electrical\\eia860_2024\\plant_profiles_private.csv"
+    }
+  }
+}

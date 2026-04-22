@@ -1,0 +1,116 @@
+{
+  "generated_at_utc": "2026-04-22T17:34:02.924642+00:00",
+  "source_files": [
+    "data\\raw\\agriculture\\usda\\NASSAgCensusDownload2022_175maps_Links.xlsx",
+    "data\\raw\\agriculture\\census\\2024_Gaz_counties_national\\2024_Gaz_counties_national.txt"
+  ],
+  "output_file": "data\\public\\agriculture\\county_food_outputs_2022.csv",
+  "county_count": 3070,
+  "selected_metric_count": 14,
+  "missing_county_coordinates": 9,
+  "notes": [
+    "Coordinates come from Census Gazetteer county centroids.",
+    "Public output keeps the numeric values and a per-county withheld metric count.",
+    "Some selected USDA measures are shares or inventories rather than absolute tonnage because those are the county-level web-map fields published in the official workbook."
+  ],
+  "selected_metrics": [
+    {
+      "key": "vegetables_market_value_share_pct",
+      "map_id": "y22_M013",
+      "sheet": "Economics",
+      "label": "Vegetables, Melons, Potatoes, and Sweet Potatoes Market Value Share",
+      "unit": "percent"
+    },
+    {
+      "key": "fruits_tree_nuts_berries_market_value_share_pct",
+      "map_id": "y22_M014",
+      "sheet": "Economics",
+      "label": "Fruits, Tree Nuts, and Berries Market Value Share",
+      "unit": "percent"
+    },
+    {
+      "key": "poultry_eggs_market_value_share_pct",
+      "map_id": "y22_M018",
+      "sheet": "Economics",
+      "label": "Poultry and Eggs Market Value Share",
+      "unit": "percent"
+    },
+    {
+      "key": "milk_from_cows_market_value_share_pct",
+      "map_id": "y22_M019",
+      "sheet": "Economics",
+      "label": "Milk from Cows Market Value Share",
+      "unit": "percent"
+    },
+    {
+      "key": "cattle_calves_market_value_share_pct",
+      "map_id": "y22_M020",
+      "sheet": "Economics",
+      "label": "Cattle and Calves Market Value Share",
+      "unit": "percent"
+    },
+    {
+      "key": "hogs_pigs_market_value_share_pct",
+      "map_id": "y22_M021",
+      "sheet": "Economics",
+      "label": "Hogs and Pigs Market Value Share",
+      "unit": "percent"
+    },
+    {
+      "key": "cattle_calves_per_100_acres",
+      "map_id": "y22_M098",
+      "sheet": "Livestock and Animals",
+      "label": "Cattle and Calves per 100 Acres of All Land in Farms",
+      "unit": "cattle_and_calves"
+    },
+    {
+      "key": "milk_cows_inventory",
+      "map_id": "y22_M099",
+      "sheet": "Livestock and Animals",
+      "label": "Cows and Heifers That Had Calved Inventory",
+      "unit": "cows_and_heifers"
+    },
+    {
+      "key": "cattle_calves_sold_count",
+      "map_id": "y22_M101",
+      "sheet": "Livestock and Animals",
+      "label": "Cattle and Calves Sold",
+      "unit": "cattle_and_calves"
+    },
+    {
+      "key": "corn_grain_harvested_share_pct",
+      "map_id": "y22_M107",
+      "sheet": "Crops and Plants",
+      "label": "Corn Grain Harvested Share of Harvested Cropland",
+      "unit": "percent"
+    },
+    {
+      "key": "all_wheat_harvested_share_pct",
+      "map_id": "y22_M112",
+      "sheet": "Crops and Plants",
+      "label": "All Wheat Harvested Share of Harvested Cropland",
+      "unit": "percent"
+    },
+    {
+      "key": "soybeans_harvested_share_pct",
+      "map_id": "y22_M126",
+      "sheet": "Crops and Plants",
+      "label": "Soybeans Harvested Share of Harvested Cropland",
+      "unit": "percent"
+    },
+    {
+      "key": "potatoes_harvested_share_pct",
+      "map_id": "y22_M129",
+      "sheet": "Crops and Plants",
+      "label": "Potatoes Harvested Share of Harvested Cropland",
+      "unit": "percent"
+    },
+    {
+      "key": "vegetables_harvested_share_pct",
+      "map_id": "y22_M141",
+      "sheet": "Crops and Plants",
+      "label": "Vegetables Harvested Share of Harvested Cropland",
+      "unit": "percent"
+    }
+  ]
+}

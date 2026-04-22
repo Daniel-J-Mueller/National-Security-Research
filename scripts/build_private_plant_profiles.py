@@ -16,10 +16,10 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RAW_DIR = ROOT / "data" / "raw" / "eia860" / "2024"
-EPA_DIR = ROOT / "data" / "raw" / "epa"
-PRIVATE_DIR = ROOT / "data" / "private" / "eia860_2024"
-PROCESSED_DIR = ROOT / "data" / "processed" / "eia860"
+RAW_DIR = ROOT / "data" / "raw" / "electrical" / "eia860" / "2024"
+EPA_DIR = ROOT / "data" / "raw" / "electrical" / "epa"
+PRIVATE_DIR = ROOT / "data" / "private" / "electrical" / "eia860_2024"
+PROCESSED_DIR = ROOT / "data" / "processed" / "electrical" / "eia860"
 
 PLANT_XLSX = RAW_DIR / "2___Plant_Y2024.xlsx"
 GENERATOR_XLSX = RAW_DIR / "3_1_Generator_Y2024.xlsx"
@@ -1180,23 +1180,23 @@ def update_source_inventory() -> None:
         for row in existing_rows
         if row.get("output_file")
         not in {
-            "data/private/eia860_2024/plant_profiles_private.csv",
-            "data/private/eia860_2024/plant_profiles_private_metadata.json",
+            "data/private/electrical/eia860_2024/plant_profiles_private.csv",
+            "data/private/electrical/eia860_2024/plant_profiles_private_metadata.json",
         }
     ]
 
     kept_rows.extend(
         [
             {
-                "source_file": "data/raw/eia860/2024/2___Plant_Y2024.xlsx|data/raw/epa/egrid2023_data_rev2.xlsx|data/raw/epa/egrid_pm25_2018_2021.xlsx",
+                "source_file": "data/raw/electrical/eia860/2024/2___Plant_Y2024.xlsx|data/raw/electrical/epa/egrid2023_data_rev2.xlsx|data/raw/electrical/epa/egrid_pm25_2018_2021.xlsx",
                 "sheet_name": f"{PLANT_SHEET}|{EGRID_PLANT_SHEET}|{EGRID_PM25_PLANT_SHEET}",
-                "output_file": "data/private/eia860_2024/plant_profiles_private.csv",
+                "output_file": "data/private/electrical/eia860_2024/plant_profiles_private.csv",
                 "purpose": "Private plant-level profile with exact coordinates, environmental controls, and EPA-populated emissions columns.",
             },
             {
-                "source_file": "data/raw/eia860/2024/3_1_Generator_Y2024.xlsx|data/raw/eia860/2024/6_1_EnviroAssoc_Y2024.xlsx|data/raw/eia860/2024/6_2_EnviroEquip_Y2024.xlsx|data/processed/eia860/plants_2024_clean.csv|data/raw/epa/egrid2023_data_rev2.xlsx|data/raw/epa/egrid_pm25_2018_2021.xlsx",
+                "source_file": "data/raw/electrical/eia860/2024/3_1_Generator_Y2024.xlsx|data/raw/electrical/eia860/2024/6_1_EnviroAssoc_Y2024.xlsx|data/raw/electrical/eia860/2024/6_2_EnviroEquip_Y2024.xlsx|data/processed/electrical/eia860/plants_2024_clean.csv|data/raw/electrical/epa/egrid2023_data_rev2.xlsx|data/raw/electrical/epa/egrid_pm25_2018_2021.xlsx",
                 "sheet_name": "Operable|Boiler Generator|Boiler Cooling|Boiler Particulate Matter|Boiler SO2|Boiler NOx|Boiler Mercury|Boiler Stack Flue|Emissions Control Equipment|Emission Standards & Strategies|Cooling|FGP|FGD|Stack Flue|PLNT23|2021 PM Plant-level Data",
-                "output_file": "data/private/eia860_2024/plant_profiles_private_metadata.json",
+                "output_file": "data/private/electrical/eia860_2024/plant_profiles_private_metadata.json",
                 "purpose": "Metadata summary for the private plant profile build, including emissions-column coverage notes.",
             },
         ]

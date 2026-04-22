@@ -1,0 +1,4 @@
+source_name,source_url,purpose,coordinate_strategy,status
+USDA NASS Quick Stats,https://www.nass.usda.gov/Quick_Stats/,County-level crop and livestock outputs for major food commodities,Join county rows to Census county centroids,identified
+Census Gazetteer county files,https://www.census.gov/geographies/reference-files/time-series/geo/gazetteer-files.html,County centroid coordinates for agriculture outputs,Use county internal points as first-pass coordinates,identified
+USDA ERS,https://www.ers.usda.gov/,Supporting food-system references and processing context,Supplement commodity prioritization after first county build,identified

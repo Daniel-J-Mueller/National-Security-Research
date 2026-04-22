@@ -1,0 +1,109 @@
+Revision History for U.S. Geological Data Release
+
+https://doi.org/10.5066/P9K1HBNT
+https://www.sciencebase.gov/catalog/item/6464de5bd34ec179a83d9e6c
+
+Hammarstrom, J.M., Woodruff, L.G., and Dicken, C.L., 2023, Critical mineral deposits of the United States: U.S. Geological Survey data release, https://doi.org/10.5066/P9K1HBNT.
+
+
+By Connie L. Dicken
+
+Critical mineral deposits of the United States
+__________________________________________________
+
+Original dataset published July 18, 2023:
+__________________________________________________
+
+______________________________
+
+Revision 2.0 - April, 2024:
+____________________________
+
+Addition of production and resource data to multiple deposits.
+
+Added deposits:
+Alcoa Arkansas operations
+Bisoni fluorspar deposit (MB project)
+Blazer fluorspar
+Bradshaw pits
+Bull Hill
+Cordero
+Cressman Gulch
+Dry Lake Antimony mine
+Emma
+Fluorspar King & Blue Bell
+Horseshoe
+Iowa Canyon mine
+Katahdin pyrrhotite deposit
+Lakes barite mine
+Lone Pine
+Maltby No. 2 mine
+Mammoth prospect
+Maturi Southwest
+Nevada fluorspar (Lander Co.)
+Niblack
+Overton mine
+Reed mine
+Salmon River Bench
+Shannon Queen prospect
+Spar mine
+Tamarack, Lower SMSU
+Union Canyon mine
+Valery mine
+
+
+Deleted deposits:
+deleted 1 Indian Springs duplicate
+
+Bauxite (Reynolds)
+Castle Dome mine
+Desert antimony (Wade) mine
+Goodnews Bay placer
+Heavy Spar
+Keystone
+Lemhi Pass
+Mill City
+Mineral Hill
+Mineral Hill lode
+Panther Run (No 1 Workings)
+Panther Run (No 2 Workings)
+Red Mountain
+
+
+Revised deposits:
+Renamed 25 deposits.
+Coosa Cassiterite mine = Coosa Cassiterite mine (No. 1 mine)
+Empire State = Empire State mines
+Eufaula	= Baker 1 (Eufaula bauxite district)
+Iron Creek = Iron Creek (No Name Zone)
+Magnet Cove rutile mine	= Magnet Cove
+Mammoth = Mammoth (CA)
+Mammoth = Mammoth (CO)
+Maturi/Birch Lake = Maturi
+McIntyre mine = MacIntyre mine	
+Mineral Park mine = Mineral Park deposit
+Misheguk Mountain = Misheguk Mountain deposit
+Mountain Pass = Mountain Pass deposit
+Myers Ranch mine = Meyers Ranch	
+Pacific mine =	Pacific mine (ID)
+Pacific mine =	Pacific mine (NV)
+Red Mountain deposits =	Red Mountain deposits (Kenai Chrome)
+Rough and Ready = Rough and Ready (OR)
+Rough and Ready = Rough and Ready (SD)
+Sanford Hill/South Extension = Sanford Hill-South Extension
+Sierrita mine =	Sierrita deposit
+Silica = Silica deposit
+Silver Peak mine brine operation = Silver Peak brine operation (Clayton Valley)
+Tamarack, SMSU = Tamarack, Upper SMSU
+Thicketty Creeks = Thicketty Creek
+Young, Immel, Coy, New Market East Tennessee) =	Young, Immel, Coy, New Market (East Tennessee mines)
+
+
+684 total deposits.
+
+
+
+-----------------------------------------------------------------
+
+
+

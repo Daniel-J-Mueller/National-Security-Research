@@ -1,0 +1,4 @@
+source_name,source_url,purpose,coordinate_strategy,status
+USGS USMIN,https://www.usgs.gov/centers/geology-minerals-energy-science-center/science/usmin-mineral-deposit-database,Coordinate-backed mineral sites and deposits,Use published site coordinates directly,identified
+USGS Mineral Commodity Summaries,https://www.usgs.gov/centers/national-minerals-information-center/mineral-commodity-summaries,Commodity context for ore and raw-material output priorities,Use for commodity ranking and metadata rather than site geometry,identified
+EPA Facility Registry Service,https://www.epa.gov/frs,Steel and heavy-industry facility coordinates by regulated site,Use site coordinates after NAICS-based filtering,identified

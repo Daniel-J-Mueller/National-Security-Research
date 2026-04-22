@@ -1,86 +1,70 @@
-# Plant Emissions Visualizer
+# Strategic Resource Visualizer
 
-This static app now auto-loads a private browser-friendly asset built from the plant profile CSV and keeps the workflow focused on one thing:
+This static app now loads a category manifest and can switch across:
 
-- choose an emission
-- watch the heatmap and results update immediately
-- hover or click any plant to inspect the full source row
+- private electrical plant records
+- municipality population points
+- county-level agriculture outputs
+- ore and steel-adjacent raw-material sites
+- ambient radiation monitor summaries
 
-## What It Does
+## What It Loads
 
-- Loads the private visualizer asset:
-  - `data/private/visualizer/plants_reference.json`
-- That asset is built from:
-  - `data/private/eia860_2024/plant_profiles_private.csv`
-- Renders:
-  - point markers for plant-level inspection
-  - heatmaps weighted by the selected emission
-  - filterable result rows and a plant detail panel that shows the full CSV row on hover
-- Exposes built-in base metrics from the private profile, including:
-  - capacity and generator count
-  - carbon-capture generator count
-  - EPA eGRID2023 annual CO2, CO2e, CH4, N2O, SO2, NOx, and mercury values where available
-  - EPA PM2.5 2021 plant-level values where available
-  - EIA-derived SO2 and particulate design-rate fallbacks where EPA values are unavailable
+The browser app reads:
 
-## Example Views
+- `data/private/visualizer/visualizer_manifest.json`
 
-### National emissions view
+That manifest points to category dataset assets under:
 
-![National emissions view](../../images/US%20Emissions%20data.png)
+- `data/private/visualizer/datasets/electrical.json`
+- `data/private/visualizer/datasets/people.json`
+- `data/private/visualizer/datasets/agriculture.json`
+- `data/private/visualizer/datasets/raws.json`
+- `data/private/visualizer/datasets/radiation.json`
 
-### Texas mercury example
+The legacy electrical-only asset is still generated for compatibility:
 
-![Texas mercury example](../../images/Texas_HG_Emissions.png)
+- `data/private/electrical/visualizer/plants_reference.json`
 
-## Build The Private Asset
+## Build Order
 
 From the repo root:
 
 ```powershell
 C:\Windows\py.exe scripts\build_private_plant_profiles.py
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\download_radnet_background_data.py
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\build_radiation_reference.py
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\build_people_municipal_reference.py
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\build_agriculture_county_reference.py
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\build_raws_reference.py
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\build_bulk_exports.py
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\build_plant_visualizer_assets.py
 ```
-
-This writes the source CSV:
-
-- `data/private/eia860_2024/plant_profiles_private.csv`
-- `data/private/eia860_2024/plant_profiles_private_metadata.json`
-
-Then build the browser-ready private visualizer asset:
-
-```powershell
-C:\Windows\py.exe scripts\build_plant_visualizer_assets.py
-```
-
-This writes:
-
-- `data/private/visualizer/plants_reference.json`
-- `data/private/visualizer/plants_reference_summary.json`
 
 ## Run The Visualizer
 
-Serve the repo root over HTTP, then open the app:
+Serve the repo root over HTTP, then open:
 
 ```powershell
 C:\Windows\py.exe scripts\serve_repo_root.py
 ```
 
-Open:
-
 - `http://localhost:8000/docs/plant-emissions-visualizer/`
 
-The page should not be opened with `file:///...` because the browser needs HTTP access to fetch the local JSON asset.
+The page should not be opened with `file:///...` because the browser needs HTTP access to fetch the local JSON assets.
 
 ## Interaction Model
 
-- `plants_reference.json` is loaded automatically when the page opens.
-- That JSON asset is generated from `plant_profiles_private.csv`.
-- The emission selector drives both the point sizing/coloring and the heatmap weighting.
-- State, fuel, search, and minimum-value filters narrow the mapped plant set.
-- Hovering a plant or result row fills the detail panel with the complete source row.
-- Clicking a plant or result row locks that plant into the detail panel and centers the map on it.
+- Switch categories with the category selector.
+- Change the active metric per category.
+- Filter by state, category-specific group, search text, and minimum metric value.
+- Toggle between heatmap and point views.
+- Hover or click any point or result row to inspect the full source row.
 
 ## Privacy Boundary
 
-Exact coordinates stay in `data/private/` and are not copied into `data/public/`.
-Keep `plant_profiles_private.csv`, `plants_reference.json`, and any related derived artifacts outside public outputs.
+Public and private category outputs now diverge intentionally:
+
+- public files keep non-sensitive coordinate-backed summaries
+- private files retain withheld or richer detail where needed
+- the local visualizer reads private category assets and should stay outside public publishing workflows

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build browser-ready private plant map assets from EIA-860 coordinate data.
+Build browser-ready visualizer assets for electrical, people, agriculture, and raws.
 """
 
 from __future__ import annotations
@@ -13,12 +13,22 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PLANT_PROFILE_CSV = ROOT / "data" / "private" / "eia860_2024" / "plant_profiles_private.csv"
-PLANT_DETAILS_CSV = ROOT / "data" / "processed" / "eia860" / "plants_2024_clean.csv"
-PLANT_COORDS_CSV = ROOT / "data" / "private" / "eia860_2024" / "plant_locations_private.csv"
-OUT_DIR = ROOT / "data" / "private" / "visualizer"
-OUT_JSON = OUT_DIR / "plants_reference.json"
-OUT_SUMMARY_JSON = OUT_DIR / "plants_reference_summary.json"
+
+PLANT_PROFILE_CSV = ROOT / "data" / "private" / "electrical" / "eia860_2024" / "plant_profiles_private.csv"
+PLANT_DETAILS_CSV = ROOT / "data" / "processed" / "electrical" / "eia860" / "plants_2024_clean.csv"
+PLANT_COORDS_CSV = ROOT / "data" / "private" / "electrical" / "eia860_2024" / "plant_locations_private.csv"
+LEGACY_OUT_DIR = ROOT / "data" / "private" / "electrical" / "visualizer"
+LEGACY_OUT_JSON = LEGACY_OUT_DIR / "plants_reference.json"
+LEGACY_OUT_SUMMARY_JSON = LEGACY_OUT_DIR / "plants_reference_summary.json"
+
+PEOPLE_PRIVATE_CSV = ROOT / "data" / "private" / "people" / "municipal_population_town_halls_2024_private.csv"
+AGRICULTURE_PRIVATE_CSV = ROOT / "data" / "private" / "agriculture" / "county_food_outputs_2022_private.csv"
+RAWS_PRIVATE_CSV = ROOT / "data" / "private" / "raws" / "raw_material_sites_2023_private.csv"
+RADIATION_PRIVATE_CSV = ROOT / "data" / "private" / "radiation" / "radnet_background_radiation_monitors_private.csv"
+
+VISUALIZER_OUT_DIR = ROOT / "data" / "private" / "visualizer"
+VISUALIZER_DATASET_DIR = VISUALIZER_OUT_DIR / "datasets"
+VISUALIZER_MANIFEST_JSON = VISUALIZER_OUT_DIR / "visualizer_manifest.json"
 
 BASE_METRICS = [
     "generator_count",
@@ -37,11 +47,71 @@ BASE_METRICS = [
     "radioisotopic_emissions_value",
 ]
 
+ELECTRICAL_METRICS = [
+    {"key": "generator_count", "label": "Generator Count", "unit": "count"},
+    {"key": "operable_nameplate_capacity_mw", "label": "Operable Nameplate Capacity", "unit": "MW"},
+    {"key": "operable_summer_capacity_mw", "label": "Operable Summer Capacity", "unit": "MW"},
+    {"key": "operable_winter_capacity_mw", "label": "Operable Winter Capacity", "unit": "MW"},
+    {"key": "carbon_capture_generator_count", "label": "Carbon Capture Generator Count", "unit": "count"},
+    {"key": "co2_emissions_value", "label": "CO2 Emissions", "unit": "tons"},
+    {"key": "co2e_emissions_value", "label": "CO2e Emissions", "unit": "tons"},
+    {"key": "ch4_emissions_value", "label": "CH4 Emissions", "unit": "lb"},
+    {"key": "n2o_emissions_value", "label": "N2O Emissions", "unit": "lb"},
+    {"key": "so2_emissions_value", "label": "SO2 Emissions", "unit": "tons"},
+    {"key": "nox_emissions_value", "label": "NOx Emissions", "unit": "tons"},
+    {"key": "particulate_matter_emissions_value", "label": "Particulate Matter Emissions", "unit": "tons"},
+    {"key": "mercury_emissions_value", "label": "Mercury Emissions", "unit": "lb"},
+    {"key": "radioisotopic_emissions_value", "label": "Radioisotopic Emissions", "unit": "unknown"},
+]
+
+PEOPLE_METRICS = [
+    {"key": "population_2024", "label": "Population 2024", "unit": "people"},
+    {"key": "population_per_town_hall", "label": "Population per Town Hall", "unit": "people"},
+    {"key": "matched_town_hall_rows_with_coordinates", "label": "Matched Town Hall Rows", "unit": "count"},
+    {"key": "land_area_sqmi", "label": "Land Area", "unit": "sq_miles"},
+]
+
+AGRICULTURE_METRICS = [
+    {"key": "vegetables_market_value_share_pct", "label": "Vegetables Market Value Share", "unit": "percent"},
+    {"key": "fruits_tree_nuts_berries_market_value_share_pct", "label": "Fruits, Tree Nuts, and Berries Market Value Share", "unit": "percent"},
+    {"key": "poultry_eggs_market_value_share_pct", "label": "Poultry and Eggs Market Value Share", "unit": "percent"},
+    {"key": "milk_from_cows_market_value_share_pct", "label": "Milk from Cows Market Value Share", "unit": "percent"},
+    {"key": "cattle_calves_market_value_share_pct", "label": "Cattle and Calves Market Value Share", "unit": "percent"},
+    {"key": "hogs_pigs_market_value_share_pct", "label": "Hogs and Pigs Market Value Share", "unit": "percent"},
+    {"key": "cattle_calves_per_100_acres", "label": "Cattle and Calves per 100 Acres", "unit": "count"},
+    {"key": "milk_cows_inventory", "label": "Milk Cows Inventory", "unit": "count"},
+    {"key": "cattle_calves_sold_count", "label": "Cattle and Calves Sold", "unit": "count"},
+    {"key": "corn_grain_harvested_share_pct", "label": "Corn Harvested Share", "unit": "percent"},
+    {"key": "all_wheat_harvested_share_pct", "label": "All Wheat Harvested Share", "unit": "percent"},
+    {"key": "soybeans_harvested_share_pct", "label": "Soybeans Harvested Share", "unit": "percent"},
+    {"key": "potatoes_harvested_share_pct", "label": "Potatoes Harvested Share", "unit": "percent"},
+    {"key": "vegetables_harvested_share_pct", "label": "Vegetables Harvested Share", "unit": "percent"},
+]
+
+RAWS_METRICS = [
+    {"key": "presence_count", "label": "Presence Count", "unit": "count"},
+    {"key": "rank_score", "label": "USGS Rank Score", "unit": "score"},
+    {"key": "production_present_flag", "label": "Production Present Flag", "unit": "flag"},
+    {"key": "resources_present_flag", "label": "Resources Present Flag", "unit": "flag"},
+    {"key": "total_reported_direct_emissions_mtco2e", "label": "Total Reported Direct Emissions", "unit": "mtco2e"},
+    {"key": "iron_and_steel_production_emissions_mtco2e", "label": "Iron and Steel Production Emissions", "unit": "mtco2e"},
+]
+
+RADIATION_METRICS = [
+    {"key": "dose_equivalent_rate_avg_nsvh", "label": "Average Dose Equivalent Rate", "unit": "nSv/h"},
+    {"key": "dose_equivalent_rate_p95_nsvh", "label": "P95 Dose Equivalent Rate", "unit": "nSv/h"},
+    {"key": "dose_equivalent_rate_max_nsvh", "label": "Max Dose Equivalent Rate", "unit": "nSv/h"},
+    {"key": "gamma_count_rate_total_avg_cpm", "label": "Average Total Gamma Count Rate", "unit": "CPM"},
+    {"key": "approved_dose_reading_count", "label": "Approved Dose Readings", "unit": "count"},
+    {"key": "approved_sample_count", "label": "Approved Samples", "unit": "count"},
+    {"key": "years_with_data_count", "label": "Years With Data", "unit": "count"},
+]
+
 
 def clean_text(value: str | None) -> str:
     if value is None:
         return ""
-    return " ".join(value.replace("\xa0", " ").split())
+    return " ".join(str(value).replace("\xa0", " ").split())
 
 
 def parse_float(value: str | None) -> float | None:
@@ -202,7 +272,7 @@ def join_rows() -> tuple[list[str], list[dict[str, object]]]:
     return fallback_headers, joined_rows
 
 
-def build_summary(rows: list[dict[str, object]]) -> dict[str, object]:
+def build_legacy_summary(rows: list[dict[str, object]]) -> dict[str, object]:
     state_counts = Counter(str(row["state"]) for row in rows if row.get("state"))
     fuel_counts = Counter(str(row["primary_fuel_code"]) for row in rows if row.get("primary_fuel_code"))
     source_files = [str(PLANT_PROFILE_CSV.relative_to(ROOT))] if PLANT_PROFILE_CSV.exists() else [
@@ -217,7 +287,7 @@ def build_summary(rows: list[dict[str, object]]) -> dict[str, object]:
     return {
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "source_files": source_files,
-        "output_file": str(OUT_JSON.relative_to(ROOT)),
+        "output_file": str(LEGACY_OUT_JSON.relative_to(ROOT)),
         "plant_count": len(rows),
         "state_count": len(state_counts),
         "fuel_code_count": len(fuel_counts),
@@ -239,29 +309,397 @@ def write_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
+def search_text(parts: list[str]) -> str:
+    return " ".join(clean_text(part) for part in parts if clean_text(part)).lower()
+
+
+def build_bounds(records: list[dict[str, object]]) -> dict[str, float]:
+    latitudes = [float(record["latitude"]) for record in records]
+    longitudes = [float(record["longitude"]) for record in records]
+    return {
+        "min_latitude": min(latitudes),
+        "max_latitude": max(latitudes),
+        "min_longitude": min(longitudes),
+        "max_longitude": max(longitudes),
+    }
+
+
+def dataset_output_path(key: str) -> Path:
+    return VISUALIZER_DATASET_DIR / f"{key}.json"
+
+
+def app_relative_dataset_path(key: str) -> str:
+    return f"../../data/private/visualizer/datasets/{key}.json"
+
+
+def build_dataset_payload(
+    *,
+    key: str,
+    label: str,
+    source_csv: Path,
+    metrics: list[dict[str, str]],
+    default_metric_key: str,
+    group_field: str,
+    group_label: str,
+    results_label: str,
+    search_placeholder: str,
+    description: str,
+    build_id,
+    build_title,
+    build_subtitle,
+    build_search_parts,
+) -> tuple[dict[str, object], dict[str, object]]:
+    headers, rows = read_csv(source_csv)
+    records: list[dict[str, object]] = []
+    states = set()
+    groups = set()
+
+    for index, row in enumerate(rows, start=1):
+        latitude = parse_float(row.get("latitude"))
+        longitude = parse_float(row.get("longitude"))
+        if latitude is None or longitude is None:
+            continue
+
+        metrics_payload = {}
+        for metric in metrics:
+            value = parse_float(row.get(metric["key"]))
+            if value is not None:
+                metrics_payload[metric["key"]] = value
+
+        group_value = clean_text(row.get(group_field)) or "Unspecified"
+        state_value = clean_text(row.get("state"))
+        county_value = clean_text(row.get("county")) or clean_text(row.get("county_name"))
+        title = clean_text(build_title(row, index))
+
+        record = {
+            "id": clean_text(build_id(row, index)),
+            "title": title or f"{label} {index}",
+            "subtitle": clean_text(build_subtitle(row)),
+            "state": state_value,
+            "county": county_value,
+            "latitude": round(latitude, 6),
+            "longitude": round(longitude, 6),
+            "group_value": group_value,
+            "group_display": group_value,
+            "search_text": search_text(build_search_parts(row)),
+            "metrics": metrics_payload,
+            "row": row,
+        }
+        records.append(record)
+        if state_value:
+            states.add(state_value)
+        if group_value:
+            groups.add(group_value)
+
+    if not records:
+        raise ValueError(f"No mappable records were built for {key}")
+
+    payload = {
+        "metadata": {
+            "category_key": key,
+            "category_label": label,
+            "description": description,
+            "default_metric_key": default_metric_key,
+            "group_field": group_field,
+            "group_label": group_label,
+            "results_label": results_label,
+            "search_placeholder": search_placeholder,
+            "source_files": [str(source_csv.relative_to(ROOT))],
+            "output_file": str(dataset_output_path(key).relative_to(ROOT)),
+            "record_count": len(records),
+            "states": sorted(states),
+            "group_values": sorted(groups),
+            "metrics": metrics,
+            "bounds": build_bounds(records),
+        },
+        "headers": headers,
+        "records": records,
+    }
+    manifest_entry = {
+        "key": key,
+        "label": label,
+        "path": app_relative_dataset_path(key),
+        "record_count": len(records),
+        "default_metric_key": default_metric_key,
+        "group_label": group_label,
+        "description": description,
+    }
+    return payload, manifest_entry
+
+
+def build_electrical_dataset() -> tuple[dict[str, object], dict[str, object]]:
+    headers, rows = read_csv(PLANT_PROFILE_CSV)
+    records: list[dict[str, object]] = []
+    states = set()
+    groups = set()
+
+    for index, row in enumerate(rows, start=1):
+        latitude = parse_float(row.get("latitude"))
+        longitude = parse_float(row.get("longitude"))
+        if latitude is None or longitude is None:
+            continue
+
+        metrics_payload = {}
+        for metric in ELECTRICAL_METRICS:
+            value = parse_float(row.get(metric["key"]))
+            if value is not None:
+                metrics_payload[metric["key"]] = value
+
+        fuel_code = clean_text(row.get("primary_fuel_code")) or "Unspecified"
+        state_value = clean_text(row.get("state"))
+        county_value = clean_text(row.get("county"))
+        record = {
+            "id": clean_text(row.get("plant_code")) or f"plant-{index}",
+            "title": clean_text(row.get("plant_name")) or f"Plant {index}",
+            "subtitle": " | ".join(
+                part
+                for part in [
+                    f"{county_value}, {state_value}" if county_value and state_value else county_value or state_value,
+                    fuel_code,
+                    clean_text(row.get("primary_technology")),
+                ]
+                if part
+            ),
+            "state": state_value,
+            "county": county_value,
+            "latitude": round(latitude, 6),
+            "longitude": round(longitude, 6),
+            "group_value": fuel_code,
+            "group_display": fuel_code,
+            "search_text": search_text(
+                [
+                    row.get("plant_code"),
+                    row.get("plant_name"),
+                    row.get("utility_name"),
+                    row.get("street_address"),
+                    row.get("city"),
+                    row.get("county"),
+                    row.get("state"),
+                    row.get("primary_fuel_code"),
+                    row.get("primary_technology"),
+                ]
+            ),
+            "metrics": metrics_payload,
+            "row": row,
+        }
+        records.append(record)
+        if state_value:
+            states.add(state_value)
+        groups.add(fuel_code)
+
+    payload = {
+        "metadata": {
+            "category_key": "electrical",
+            "category_label": "Electrical",
+            "description": "Private plant-level electrical generation and emissions records.",
+            "default_metric_key": "co2_emissions_value",
+            "group_field": "primary_fuel_code",
+            "group_label": "Fuel",
+            "results_label": "Plants",
+            "search_placeholder": "Search plant, utility, county, or code",
+            "source_files": [str(PLANT_PROFILE_CSV.relative_to(ROOT))],
+            "output_file": str(dataset_output_path("electrical").relative_to(ROOT)),
+            "record_count": len(records),
+            "states": sorted(states),
+            "group_values": sorted(groups),
+            "metrics": ELECTRICAL_METRICS,
+            "bounds": build_bounds(records),
+        },
+        "headers": headers,
+        "records": records,
+    }
+    manifest_entry = {
+        "key": "electrical",
+        "label": "Electrical",
+        "path": app_relative_dataset_path("electrical"),
+        "record_count": len(records),
+        "default_metric_key": "co2_emissions_value",
+        "group_label": "Fuel",
+        "description": payload["metadata"]["description"],
+    }
+    return payload, manifest_entry
+
+
+def build_people_dataset() -> tuple[dict[str, object], dict[str, object]]:
+    return build_dataset_payload(
+        key="people",
+        label="People",
+        source_csv=PEOPLE_PRIVATE_CSV,
+        metrics=PEOPLE_METRICS,
+        default_metric_key="population_2024",
+        group_field="dominant_people_profile",
+        group_label="Coordinate Basis",
+        results_label="Municipalities",
+        search_placeholder="Search municipality, state, or town hall",
+        description="Municipal population points anchored to matched town halls where available.",
+        build_id=lambda row, index: row.get("geoid") or f"people-{index}",
+        build_title=lambda row, index: row.get("place_name") or row.get("census_name") or f"Municipality {index}",
+        build_subtitle=lambda row: " | ".join(
+            part
+            for part in [
+                clean_text(row.get("state_name")) or clean_text(row.get("state")),
+                f"Population {clean_text(row.get('population_2024'))}" if clean_text(row.get("population_2024")) else "",
+            ]
+            if part
+        ),
+        build_search_parts=lambda row: [
+            row.get("place_name"),
+            row.get("census_name"),
+            row.get("state"),
+            row.get("state_name"),
+            row.get("town_hall_name"),
+            row.get("town_hall_locality"),
+        ],
+    )
+
+
+def build_agriculture_dataset() -> tuple[dict[str, object], dict[str, object]]:
+    return build_dataset_payload(
+        key="agriculture",
+        label="Agriculture",
+        source_csv=AGRICULTURE_PRIVATE_CSV,
+        metrics=AGRICULTURE_METRICS,
+        default_metric_key="corn_grain_harvested_share_pct",
+        group_field="dominant_output_profile",
+        group_label="Dominant Output",
+        results_label="Counties",
+        search_placeholder="Search county, state, or output profile",
+        description="County-level food-output proxies from the USDA 2022 Ag Census web maps.",
+        build_id=lambda row, index: row.get("geoid") or f"agriculture-{index}",
+        build_title=lambda row, index: row.get("county_name") or f"Agriculture County {index}",
+        build_subtitle=lambda row: " | ".join(
+            part
+            for part in [
+                clean_text(row.get("state")),
+                clean_text(row.get("dominant_output_profile")),
+            ]
+            if part
+        ),
+        build_search_parts=lambda row: [
+            row.get("county_name"),
+            row.get("state"),
+            row.get("dominant_output_profile"),
+        ],
+    )
+
+
+def build_raws_dataset() -> tuple[dict[str, object], dict[str, object]]:
+    return build_dataset_payload(
+        key="raws",
+        label="Raws",
+        source_csv=RAWS_PRIVATE_CSV,
+        metrics=RAWS_METRICS,
+        default_metric_key="presence_count",
+        group_field="dominant_raws_profile",
+        group_label="Asset Type",
+        results_label="Sites",
+        search_placeholder="Search site, state, material, or facility",
+        description="Coordinate-backed ore sites and steel facilities from official USGS and EPA sources.",
+        build_id=lambda row, index: row.get("asset_id") or f"raws-{index}",
+        build_title=lambda row, index: row.get("site_name") or f"Raw Site {index}",
+        build_subtitle=lambda row: " | ".join(
+            part
+            for part in [
+                clean_text(row.get("state")),
+                clean_text(row.get("asset_type")).replace("_", " ").title(),
+                clean_text(row.get("primary_material")),
+            ]
+            if part
+        ),
+        build_search_parts=lambda row: [
+            row.get("site_name"),
+            row.get("state"),
+            row.get("county"),
+            row.get("primary_material"),
+            row.get("critical_materials"),
+            row.get("ghgrp_primary_naics_code"),
+        ],
+    )
+
+
+def build_radiation_dataset() -> tuple[dict[str, object], dict[str, object]]:
+    return build_dataset_payload(
+        key="radiation",
+        label="Radiation",
+        source_csv=RADIATION_PRIVATE_CSV,
+        metrics=RADIATION_METRICS,
+        default_metric_key="dose_equivalent_rate_avg_nsvh",
+        group_field="background_radiation_band",
+        group_label="Background Band",
+        results_label="Monitors",
+        search_placeholder="Search monitor, city, state, or radiation band",
+        description="EPA RadNet station summaries for ambient gamma background and dose-equivalent measurements.",
+        build_id=lambda row, index: row.get("station_id") or f"radiation-{index}",
+        build_title=lambda row, index: row.get("station_name") or row.get("place_name") or f"Radiation Monitor {index}",
+        build_subtitle=lambda row: " | ".join(
+            part
+            for part in [
+                clean_text(row.get("state_name")) or clean_text(row.get("state")),
+                clean_text(row.get("background_radiation_band")),
+                (
+                    f"{clean_text(row.get('monitoring_year_start'))}-{clean_text(row.get('monitoring_year_end'))}"
+                    if clean_text(row.get("monitoring_year_start")) and clean_text(row.get("monitoring_year_end"))
+                    else ""
+                ),
+            ]
+            if part
+        ),
+        build_search_parts=lambda row: [
+            row.get("station_name"),
+            row.get("place_name"),
+            row.get("state"),
+            row.get("state_name"),
+            row.get("background_radiation_band"),
+            row.get("dominant_radiation_profile"),
+        ],
+    )
+
+
 def main() -> None:
     if not PLANT_PROFILE_CSV.exists() and not PLANT_DETAILS_CSV.exists():
         raise FileNotFoundError(f"Missing plant details CSV: {PLANT_DETAILS_CSV}")
     if not PLANT_PROFILE_CSV.exists() and not PLANT_COORDS_CSV.exists():
         raise FileNotFoundError(f"Missing plant coordinates CSV: {PLANT_COORDS_CSV}")
+    for required in [PEOPLE_PRIVATE_CSV, AGRICULTURE_PRIVATE_CSV, RAWS_PRIVATE_CSV, RADIATION_PRIVATE_CSV]:
+        if not required.exists():
+            raise FileNotFoundError(f"Missing visualizer source CSV: {required}")
 
-    headers, rows = join_rows()
-    if not rows:
+    legacy_headers, legacy_rows = join_rows()
+    if not legacy_rows:
         raise ValueError("No joined plant rows were built")
 
-    summary = build_summary(rows)
+    legacy_summary = build_legacy_summary(legacy_rows)
     write_json(
-        OUT_JSON,
+        LEGACY_OUT_JSON,
         {
-            "metadata": summary,
-            "headers": headers,
-            "plants": rows,
+            "metadata": legacy_summary,
+            "headers": legacy_headers,
+            "plants": legacy_rows,
         },
     )
-    write_json(OUT_SUMMARY_JSON, summary)
+    write_json(LEGACY_OUT_SUMMARY_JSON, legacy_summary)
 
-    print(f"Wrote {len(rows)} joined plant rows to {OUT_JSON}")
-    print(f"Wrote summary metadata to {OUT_SUMMARY_JSON}")
+    dataset_builders = [
+        build_electrical_dataset,
+        build_people_dataset,
+        build_agriculture_dataset,
+        build_raws_dataset,
+        build_radiation_dataset,
+    ]
+
+    manifest = {
+        "generated_at_utc": datetime.now(UTC).isoformat(),
+        "datasets": [],
+    }
+    for builder in dataset_builders:
+        payload, manifest_entry = builder()
+        write_json(dataset_output_path(manifest_entry["key"]), payload)
+        manifest["datasets"].append(manifest_entry)
+
+    write_json(VISUALIZER_MANIFEST_JSON, manifest)
+
+    print(f"Wrote legacy electrical asset to {LEGACY_OUT_JSON}")
+    print(f"Wrote category visualizer manifest to {VISUALIZER_MANIFEST_JSON}")
 
 
 if __name__ == "__main__":

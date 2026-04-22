@@ -1,0 +1,18 @@
+{
+  "generated_at_utc": "2026-04-22T17:33:17.760121+00:00",
+  "source_files": [
+    "data\\raw\\people\\census\\sub-est2024.csv",
+    "data\\raw\\people\\census\\2024_Gaz_place_national\\2024_Gaz_place_national.txt",
+    "data\\private\\_tmp_us_town_halls\\combined_data\\combined_town_halls.csv"
+  ],
+  "output_file": "data\\public\\people\\municipal_population_town_halls_2024.csv",
+  "municipality_count": 19461,
+  "town_hall_coordinate_matches": 6209,
+  "census_centroid_fallbacks": 13252,
+  "population_total_2024": 214210580,
+  "notes": [
+    "Coordinates prefer a matched town hall when a municipal locality and state align cleanly.",
+    "Rows without a usable town hall coordinate fall back to the Census Gazetteer place centroid.",
+    "Public output keeps municipal coordinates but withholds the matched town-hall name and street-address fields."
+  ]
+}

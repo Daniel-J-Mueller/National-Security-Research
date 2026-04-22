@@ -2,21 +2,31 @@
 
 This folder is for clean, non-sensitive public outputs that support resilience analysis.
 
-Recommended first outputs:
+Category layout:
 
-- `plants_county_summary.csv`
-- `plants_state_summary.csv`
-- `transmission_corridors_generalized.geojson`
-- `substations_regional_summary.csv`
+- `electrical/`
+- `agriculture/`
+- `raws/`
+- `people/`
+- `radiation/`
 
 Do not place exact substation coordinates here.
 Do not place exact plant coordinates or street addresses here either.
 
 Current generated outputs:
 
-- `plants_state_summary.csv`
-- `plants_county_summary.csv`
+- `electrical/plants_state_summary.csv`
+- `electrical/plants_county_summary.csv`
+- `people/municipal_population_town_halls_2024.csv`
+- `agriculture/county_food_outputs_2022.csv`
+- `raws/raw_material_sites_2023.csv`
+- `radiation/radnet_background_radiation_monitors.csv`
 
-These are produced from the official EIA-860 2024 source by:
+These are produced from official sources by:
 
 - `scripts/ingest_eia860_plants.py`
+- `scripts/build_people_municipal_reference.py`
+- `scripts/build_agriculture_county_reference.py`
+- `scripts/build_raws_reference.py`
+- `scripts/build_radiation_reference.py`
+- `scripts/build_bulk_exports.py`

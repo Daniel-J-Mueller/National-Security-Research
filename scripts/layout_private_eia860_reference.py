@@ -16,9 +16,9 @@ from zipfile import ZipFile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-LAYOUT_XLSX = ROOT / "data" / "raw" / "eia860" / "2024" / "LayoutY2024.xlsx"
-PLANT_XLSX = ROOT / "data" / "raw" / "eia860" / "2024" / "2___Plant_Y2024.xlsx"
-OUT_DIR = ROOT / "data" / "private" / "eia860_2024"
+LAYOUT_XLSX = ROOT / "data" / "raw" / "electrical" / "eia860" / "2024" / "LayoutY2024.xlsx"
+PLANT_XLSX = ROOT / "data" / "raw" / "electrical" / "eia860" / "2024" / "2___Plant_Y2024.xlsx"
+OUT_DIR = ROOT / "data" / "private" / "electrical" / "eia860_2024"
 
 NS = {"a": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 FIELD_DIRECTORY_SHEET = "Field Directory"
@@ -281,27 +281,27 @@ def build_reference_outputs(rows: list[dict[str, str]], location_rows: list[dict
 
     dataset_rows = [
         {
-            "source_file": "data/raw/eia860/2024/LayoutY2024.xlsx",
+            "source_file": "data/raw/electrical/eia860/2024/LayoutY2024.xlsx",
             "sheet_name": FIELD_DIRECTORY_SHEET,
-            "output_file": "data/private/eia860_2024/field_directory.csv",
+            "output_file": "data/private/electrical/eia860_2024/field_directory.csv",
             "purpose": "CSV reference copy of the official layout field directory.",
         },
         {
-            "source_file": "data/raw/eia860/2024/LayoutY2024.xlsx",
+            "source_file": "data/raw/electrical/eia860/2024/LayoutY2024.xlsx",
             "sheet_name": FIELD_DIRECTORY_SHEET,
-            "output_file": "data/private/eia860_2024/sensitive_fields_manifest.csv",
+            "output_file": "data/private/electrical/eia860_2024/sensitive_fields_manifest.csv",
                     "purpose": "Sensitive field inventory for withheld exact location/address data.",
         },
         {
-            "source_file": "data/raw/eia860/2024/2___Plant_Y2024.xlsx",
+            "source_file": "data/raw/electrical/eia860/2024/2___Plant_Y2024.xlsx",
             "sheet_name": PLANT_SHEET,
-            "output_file": "data/private/eia860_2024/plant_locations_private.csv",
+            "output_file": "data/private/electrical/eia860_2024/plant_locations_private.csv",
             "purpose": "Private plant-level location table with exact coordinates and address fields from the official plant workbook.",
         },
         {
-            "source_file": "data/raw/eia860/2024/2___Plant_Y2024.xlsx",
+            "source_file": "data/raw/electrical/eia860/2024/2___Plant_Y2024.xlsx",
             "sheet_name": PLANT_SHEET,
-            "output_file": "data/private/eia860_2024/plant_coordinates_state_summary_private.csv",
+            "output_file": "data/private/electrical/eia860_2024/plant_coordinates_state_summary_private.csv",
             "purpose": "Private state summary of coordinate coverage for plant location records.",
         },
     ]

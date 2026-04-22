@@ -181,17 +181,16 @@ Suggested files:
 4. Tag each finding by sector, geography, and dependency type.
 5. Keep location detail coarse unless there is a clearly benign public-interest reason.
 
-## Plant Emissions Visualizer
+## Strategic Resource Visualizer
 
 A local browser visualizer now lives in `docs/plant-emissions-visualizer/`.
 
 Use it to:
 
-- render exact plant points from the private EIA-860 coordinate extract
-- switch between point and heatmap views
-- upload a local emissions CSV keyed by `plant_code`
-- inspect per-plant CO2, mercury, and any other numeric emissions fields
-- use built-in private profile metrics populated from EPA eGRID and PM2.5 data where available
+- switch between private electrical plants, municipality population points, county agriculture, raw-material sites, and ambient radiation monitors
+- render both point and heatmap views from the same interface
+- pivot each category across its available numeric metrics
+- inspect the full source row for any mapped record
 
 Example views:
 
@@ -206,8 +205,34 @@ Build the private browser asset with:
 
 ```powershell
 C:\Windows\py.exe scripts\build_private_plant_profiles.py
-C:\Windows\py.exe scripts\build_plant_visualizer_assets.py
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\download_radnet_background_data.py
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\build_radiation_reference.py
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\build_people_municipal_reference.py
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\build_agriculture_county_reference.py
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\build_raws_reference.py
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\build_bulk_exports.py
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\build_plant_visualizer_assets.py
 ```
+
+The electrical data pipeline now writes category-scoped outputs under:
+
+- `data/raw/electrical/`
+- `data/processed/electrical/`
+- `data/public/electrical/`
+- `data/private/electrical/`
+
+Additional category outputs now live under:
+
+- `data/public/people/`
+- `data/private/people/`
+- `data/public/agriculture/`
+- `data/private/agriculture/`
+- `data/public/raws/`
+- `data/private/raws/`
+- `data/public/radiation/`
+- `data/private/radiation/`
+- `data/public-bulk/`
+- `data/private-bulk/`
 
 Serve the repo root locally with:
 

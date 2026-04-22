@@ -1,0 +1,667 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<metadata>
+  <idinfo>
+    <citation>
+      <citeinfo>
+        <origin>Jane M. Hammarstrom</origin>
+        <origin>Laurel G. Woodruff</origin>
+        <origin>Connie L. Dicken</origin>
+        <pubdate>20230718</pubdate>
+        <title>Critical mineral deposits of the United States (ver. 2.0, April 2024)</title>
+        <edition>v2</edition>
+        <geoform>vector digital data</geoform>
+        <onlink>https://doi.org/10.5066/P9K1HBNT</onlink>
+      </citeinfo>
+    </citation>
+    <descript>
+      <abstract>This product includes GIS and data tables for 684 deposits in the United States and Puerto Rico that have past or present production or resources for critical minerals. Deposits are classified by mineral system and deposit types using the Earth Mineral Resources Initiative (EMRI) framework of Hofstra and Kreiner (2020) and the focus areas defined by Dicken and others (2022).</abstract>
+      <purpose>The intent is for the GIS and table to show where the focus areas in Dicken and others (2022) have documented critical minerals from the USGS mineral occurrence databases (MRDS, USMIN, and ARDF).</purpose>
+    </descript>
+    <timeperd>
+      <timeinfo>
+        <sngdate>
+          <caldate>2024</caldate>
+        </sngdate>
+      </timeinfo>
+      <current>ground condition</current>
+    </timeperd>
+    <status>
+      <progress>Complete</progress>
+      <update>None planned</update>
+    </status>
+    <spdom>
+      <bounding>
+        <westbc>-167.9565</westbc>
+        <eastbc>-66.4647</eastbc>
+        <northbc>68.6159</northbc>
+        <southbc>18.0715</southbc>
+      </bounding>
+    </spdom>
+    <keywords>
+      <theme>
+        <themekt>ISO 19115 Topic Category</themekt>
+        <themekey>geoscientificInformation</themekey>
+      </theme>
+      <theme>
+        <themekt>USGS Thesaurus</themekt>
+        <themekey>critical minerals</themekey>
+        <themekey>mineral deposits</themekey>
+        <themekey>mineral resources</themekey>
+      </theme>
+      <theme>
+        <themekt>USGS Metadata Identifier</themekt>
+        <themekey>USGS:6464de5bd34ec179a83d9e6c</themekey>
+      </theme>
+      <place>
+        <placekt>Common geographic areas</placekt>
+        <placekey>United States</placekey>
+        <placekey>Puerto Rico</placekey>
+      </place>
+    </keywords>
+    <accconst>None. Please see 'Distribution Info' for details.</accconst>
+    <useconst>None. Users are advised to read the dataset's metadata thoroughly to understand appropriate use and data limitations.</useconst>
+    <ptcontac>
+      <cntinfo>
+        <cntperp>
+          <cntper>Jane M. Hammarstrom</cntper>
+          <cntorg>U.S. Geological Survey, Northeast Region</cntorg>
+        </cntperp>
+        <cntpos>Research Geologist</cntpos>
+        <cntaddr>
+          <addrtype>mailing address</addrtype>
+          <address>Mail Stop 954, 12201 Sunrise Valley Dr</address>
+          <city>Reston</city>
+          <state>VA</state>
+          <postal>20192</postal>
+          <country>US</country>
+        </cntaddr>
+        <cntvoice>703-648-6165</cntvoice>
+        <cntfax>703-648-6252</cntfax>
+        <cntemail>jhammars@usgs.gov</cntemail>
+      </cntinfo>
+    </ptcontac>
+    <datacred>Mineral deposit production and/or resource data compiled for the USGS USMIN project, led by Jeffrey Mauk and Carma San Juan (USGS), were made available to the authors for this data release. Contributors to the USMIN project include Nickolas A. Karl, Jonathan A. Funk, Margaret B. Hammond, Liam D. Kundsen, Clayton R. Forbush, Bradley S. Van Gosen, Patrick C. Scott, Emma L. Boardman-Larson, Susan M. Hall, German Schmeda, and Amanda L. Ringer.</datacred>
+    <native>Windows 10 Enterprise, Esri ArcGIS Pro 3.0.2, Microsoft Excel</native>
+  </idinfo>
+  <dataqual>
+    <attracc>
+      <attraccr>Values were checked with sources and confirmed to be accurate. Spell checks were completed. Additionally, values were checked for extra spaces that cause errors.</attraccr>
+    </attracc>
+    <logic>Values fall within expected ranges for latitude and longitude. Visual comparison of States and points was performed. Duplicate data were searched for and removed. All extra leading and trailing spaces were detected and removed in Excel.</logic>
+    <complete>Dataset only includes public data from mineral databases. They were limited to include points only in the focus areas and contain production and/or resource information.</complete>
+    <posacc>
+      <horizpa>
+        <horizpar>Points were checked to make sure they plotted in the United States and Puerto Rico.</horizpar>
+      </horizpa>
+      <vertacc>
+        <vertaccr>No vertical data included.</vertaccr>
+      </vertacc>
+    </posacc>
+    <lineage>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>Albert H. Hofstra</origin>
+            <origin>Douglas C. Kreiner</origin>
+            <pubdate>2020</pubdate>
+            <title>Systems-deposits-commodities-critical minerals table for the Earth Mapping Resources Initiative</title>
+            <geoform>publication</geoform>
+            <pubinfo>
+              <pubplace>n/a</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://doi.org/10.3133/ofr20201042</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital and/or Hardcopy</typesrc>
+        <srctime>
+          <timeinfo>
+            <sngdate>
+              <caldate>2020</caldate>
+            </sngdate>
+          </timeinfo>
+          <srccurr>publication date</srccurr>
+        </srctime>
+        <srccitea>Hofstra</srccitea>
+        <srccontr>This report was used to classify mineral systems and deposit types.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>Connie L. Dicken</origin>
+            <origin>Laurel G. Woodruff</origin>
+            <origin>Jane M. Hammarstrom</origin>
+            <origin>Kelsey E. Crocker</origin>
+            <pubdate>2024</pubdate>
+            <title>GIS, supplemental data table, and references for focus areas of potential domestic resources of critical minerals and related commodities in the United States and Puerto Rico (version 2.0, April 2024)</title>
+            <edition>v 2.0</edition>
+            <geoform>dataset</geoform>
+            <pubinfo>
+              <pubplace>https://www.sciencebase.gov</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://doi.org/10.5066/p9diz9n8</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital and/or Hardcopy</typesrc>
+        <srctime>
+          <timeinfo>
+            <sngdate>
+              <caldate>2024</caldate>
+            </sngdate>
+          </timeinfo>
+          <srccurr>publication date</srccurr>
+        </srctime>
+        <srccitea>Focus Areas v2.0</srccitea>
+        <srccontr>Each deposit in this database is associated with a focus area from this source.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>U.S. Geological Survey</origin>
+            <pubdate>2005</pubdate>
+            <title>Mineral Resources Data System (MRDS)</title>
+            <geoform>tabular digital data</geoform>
+            <onlink>https://mrdata.usgs.gov/mrds/</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital and/or Hardcopy</typesrc>
+        <srctime>
+          <timeinfo>
+            <sngdate>
+              <caldate>2005</caldate>
+            </sngdate>
+          </timeinfo>
+          <srccurr>publication date</srccurr>
+        </srctime>
+        <srccitea>MRDS</srccitea>
+        <srccontr>MRDS records were queried for sites that produced critical minerals in the past or have resources for critical minerals reported.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>U.S. Geological Survey</origin>
+            <pubdate>2022</pubdate>
+            <title>USMIN Mineral Deposit Database</title>
+            <geoform>tabular digital data</geoform>
+            <onlink>https://mrdata.usgs.gov/deposit/</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital and/or Hardcopy</typesrc>
+        <srctime>
+          <timeinfo>
+            <sngdate>
+              <caldate>2022</caldate>
+            </sngdate>
+          </timeinfo>
+          <srccurr>publication date</srccurr>
+        </srctime>
+        <srccitea>USMIN</srccitea>
+        <srccontr>USMIN records were queried for sites that produced critical minerals in the past or have resources for critical minerals reported.</srccontr>
+      </srcinfo>
+      <srcinfo>
+        <srccite>
+          <citeinfo>
+            <origin>U.S. Geological Survey</origin>
+            <origin>Frederic H. Wilson</origin>
+            <pubdate>2021</pubdate>
+            <title>Alaska Resource Data File (ARDF)</title>
+            <geoform>dataset</geoform>
+            <pubinfo>
+              <pubplace>https://www.sciencebase.gov</pubplace>
+              <publish>U.S. Geological Survey</publish>
+            </pubinfo>
+            <onlink>https://doi.org/10.5066/p96mmrfd</onlink>
+          </citeinfo>
+        </srccite>
+        <typesrc>Digital and/or Hardcopy</typesrc>
+        <srctime>
+          <timeinfo>
+            <sngdate>
+              <caldate>2021</caldate>
+            </sngdate>
+          </timeinfo>
+          <srccurr>publication date</srccurr>
+        </srctime>
+        <srccitea>ARDF</srccitea>
+        <srccontr>ARDF records were queried for sites that produced critical minerals in the past or have resources for critical minerals reported.</srccontr>
+      </srcinfo>
+      <procstep>
+        <procdesc>USGS mineral occurrence databases MRDS, ARDF, and USMIN were queried for sites that produced critical minerals in the past or have resources for critical minerals reported by searching for sites that mention a critical mineral commodity. USGS Mineral Commodity Summary reports were examined for mention of active mines for critical mineral commodities. Critical minerals are those included on the 2022 U.S. critical minerals list. Data were also extracted from the data tables and references in the focus area compilation of Dicken and others (2022). In addition, mining company reports for properties in the U.S. were compiled along with information reported on company websites and in press releases. Site names, locations, and production and resource data were extracted from the source materials. The sites were plotted in the GIS of focus areas. Focus area names, mineral systems, and deposit types were related to each site. Duplicates were deleted along with any site that did not have either past production data reported or resource information reported. The most recent and reliable data were selected, such as data from technical reports that meet international reporting standards for resources and reserves. Sites that mention past, but unquantified production were deleted. Production and resource data are reported as noted in source documents (short tons, metric tons, pounds, and so forth).
+
+2022 critical minerals list - https://www.usgs.gov/news/national-news-release/us-geological-survey-releases-2022-list-critical-minerals.
+
+Full references for sources used can also be found in the associated stand-alone table under the tab called References.</procdesc>
+        <srcused>Hofstra</srcused>
+        <srcused>Focus Areas v2.0</srcused>
+        <srcused>MRDS</srcused>
+        <srcused>USMIN</srcused>
+        <srcused>ARDF</srcused>
+        <procdate>20230401</procdate>
+        <proccont>
+          <cntinfo>
+            <cntperp>
+              <cntper>Jane M. Hammarstrom</cntper>
+              <cntorg>U.S. Geological Survey, Northeast Region</cntorg>
+            </cntperp>
+            <cntpos>Research Geologist</cntpos>
+            <cntaddr>
+              <addrtype>mailing address</addrtype>
+              <address>Mail Stop 954, 12201 Sunrise Valley Dr</address>
+              <city>Reston</city>
+              <state>VA</state>
+              <postal>20192</postal>
+              <country>US</country>
+            </cntaddr>
+            <cntvoice>703-648-6165</cntvoice>
+            <cntfax>703-648-6252</cntfax>
+            <cntemail>jhammars@usgs.gov</cntemail>
+          </cntinfo>
+        </proccont>
+      </procstep>
+      <procstep>
+        <procdesc>The deposit table was updated to include 25 deposits that were renamed. For example, there were 2 deposits with the name "Pacific mine" and they were modified to add the State after the name - "Pacific mine (ID)" and "Pacific mine (NV)". 
+Below is a list of changes:
+Coosa Cassiterite mine = Coosa Cassiterite mine (No. 1 mine); 
+Empire State = Empire State mines; 
+Eufaula = Baker 1 (Eufaula bauxite district); 
+Iron Creek = Iron Creek (No Name Zone); 
+Magnet Cove rutile mine = Magnet Cove; 
+Mammoth = Mammoth (CA); 
+Mammoth = Mammoth (CO); 
+Maturi/Birch Lake = Maturi; 
+McIntyre mine = MacIntyre mine; 
+Mineral Park mine = Mineral Park deposit; 
+Misheguk Mountain = Misheguk Mountain deposit; 
+Mountain Pass = Mountain Pass deposit; 
+Myers Ranch mine = Meyers Ranch; 
+Pacific mine = Pacific mine (ID); 
+Pacific mine = Pacific mine (NV);
+Red Mountain deposits = Red Mountain deposits (Kenai Chrome);
+Rough and Ready = Rough and Ready (OR);
+Rough and Ready = Rough and Ready (SD);
+Sanford Hill/South Extension = Sanford Hill-South Extension;
+Sierrita mine = Sierrita deposit;
+Silica = Silica deposit;
+Silver Peak mine brine operation = Silver Peak brine operation (Clayton Valley);
+Tamarack, SMSU = Tamarack, Upper SMSU;
+Thicketty Creeks = Thicketty Creek;
+Young, Immel, Coy, New Market East Tennessee) = Young, Immel, Coy, New Market (East Tennessee mines).
+
+The following were added: 
+Alcoa Arkansas operations;
+Bisoni fluorspar deposit (MB project);
+Blazer fluorspar;
+Bradshaw pits;
+Bull Hill;
+Cordero;
+Cressman Gulch;
+Dry Lake Antimony mine;
+Emma;
+Fluorspar King &amp; Blue Bell;
+Horseshoe;
+Iowa Canyon mine;
+Katahdin pyrrhotite deposit;
+Lakes barite mine;
+Lone Pine;
+Maltby No. 2 mine;
+Mammoth prospect;
+Maturi Southwest;
+Nevada fluorspar (Lander Co.);
+Niblack;
+Overton mine;
+Reed mine;
+Salmon River Bench;
+Shannon Queen prospect;
+Spar mine;
+Tamarack, Lower SMSU;
+Union Canyon mine;
+Valery mine.
+
+The following were deleted:
+Indian Springs duplicate;
+Bauxite (Reynolds);
+Castle Dome mine;
+Desert antimony (Wade) mine;
+Goodnews Bay placer;
+Heavy Spar;
+Keystone;
+Lemhi Pass;
+Mill City;
+Mineral Hill;
+Mineral Hill lode;
+Panther Run (No 1 Workings);
+Panther Run (No 2 Workings);
+Red Mountain.
+
+Version 2.0 has 684 deposits.
+
+Additional information was added to resources and production fields as needed.</procdesc>
+        <procdate>20231004</procdate>
+        <proccont>
+          <cntinfo>
+            <cntperp>
+              <cntper>Jane M. Hammarstrom</cntper>
+              <cntorg>U.S. Geological Survey, Northeast Region</cntorg>
+            </cntperp>
+            <cntpos>Research Geologist</cntpos>
+            <cntaddr>
+              <addrtype>mailing address</addrtype>
+              <address>Mail Stop 954, 12201 Sunrise Valley Dr</address>
+              <city>Reston</city>
+              <state>VA</state>
+              <postal>20192</postal>
+              <country>US</country>
+            </cntaddr>
+            <cntvoice>703-648-6165</cntvoice>
+            <cntfax>703-648-6252</cntfax>
+            <cntemail>jhammars@usgs.gov</cntemail>
+          </cntinfo>
+        </proccont>
+      </procstep>
+    </lineage>
+  </dataqual>
+  <spdoinfo>
+    <direct>Vector</direct>
+    <ptvctinf>
+      <sdtsterm>
+        <sdtstype>Entity point</sdtstype>
+        <ptvctcnt>684</ptvctcnt>
+      </sdtsterm>
+    </ptvctinf>
+  </spdoinfo>
+  <spref>
+    <horizsys>
+      <geograph>
+        <latres>0.0197337064</latres>
+        <longres>0.0269992866</longres>
+        <geogunit>Decimal seconds</geogunit>
+      </geograph>
+      <geodetic>
+        <horizdn>WGS_1984</horizdn>
+        <ellips>WGS 84</ellips>
+        <semiaxis>6378137.0</semiaxis>
+        <denflat>298.257223563</denflat>
+      </geodetic>
+    </horizsys>
+  </spref>
+  <eainfo>
+    <detailed>
+      <enttyp>
+        <enttypl>critical_mineral_deposits_v2.shp Attribute Table</enttypl>
+        <enttypd>Table containing attribute information associated with the data set.</enttypd>
+        <enttypds>Producer defined</enttypds>
+      </enttyp>
+      <attr>
+        <attrlabl>FID</attrlabl>
+        <attrdef>Internal feature number.</attrdef>
+        <attrdefs>ESRI</attrdefs>
+        <attrdomv>
+          <udom>Sequential unique whole numbers that are automatically generated.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Shape</attrlabl>
+        <attrdef>Feature geometry.</attrdef>
+        <attrdefs>ESRI</attrdefs>
+        <attrdomv><udom>Shape type.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Deposit</attrlabl>
+        <attrdef>Name of deposit.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv><udom>Deposit name.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Lat_WGS84</attrlabl>
+        <attrdef>Latitude, in decimal degrees; geographic coordinate system WGS84.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv><rdom>
+            <rdommin>18.0715</rdommin>
+            <rdommax>68.6159</rdommax>
+            <attrunit>decimal degrees</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Long_WGS84</attrlabl>
+        <attrdef>Longitude, in decimal degrees; geographic coordinate system WGS84.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv><rdom>
+            <rdommin>-167.95646</rdommin>
+            <rdommax>-66.46475</rdommax>
+            <attrunit>decimal degrees</attrunit>
+          </rdom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>State</attrlabl>
+        <attrdef>Abbreviation of the State.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv><udom>2-character State abbreviation. Includes Puerto Rico which is = "PR".</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>MinSystem</attrlabl>
+        <attrdef>Mineral system from Hofstra and Kreiner (2020).</attrdef>
+        <attrdefs>Hofstra and Kreiner (2020)</attrdefs>
+        <attrdomv><udom>Table 1 Hofstra and Kreiner (2020) lists available mineral systems. Orogenic * - Mineral system uncertain for these antimony deposits.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>DepType</attrlabl>
+        <attrdef>Deposit type from Hofstra and Kreiner (2020).</attrdef>
+        <attrdefs>Hofstra and Kreiner (2020)</attrdefs>
+        <attrdomv><udom>Table 1 Hofstra and Kreiner (2020) lists available deposit types.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>CritMin</attrlabl>
+        <attrdef>Critical mineral which has been produced or which has defined resources; critical minerals are those mineral commodities included on the USGS critical minerals list of 2022 (U.S. Geological Survey, 2022).</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv><udom>List of critical minerals from the published report where it has produced or defined resources. Open text field.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>FocusArea</attrlabl>
+        <attrdef>Name of the focus area from Dicken and others (2022) that the deposit is located in.</attrdef>
+        <attrdefs>Dicken and others (2022)</attrdefs>
+        <attrdomv><udom>Focus area name from the report.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+  <attrlabl>DepCat</attrlabl><attrdef>Critical mineral production and(or) resources category for the deposit.</attrdef><attrdefs>Producer defined</attrdefs><attrdomv>
+    <edom>
+      <edomv>CM-past producer+resources</edomv>
+      <edomvd>Critical mineral production reported before 2015 and reported resources or reserves. Resources/reserves may be estimated or industry-compliant.</edomvd>
+      <edomvds>Producer defined</edomvds>
+    </edom>
+  </attrdomv>
+  <attrdomv>
+    <edom>
+      <edomv>CM-past producer</edomv>
+      <edomvd>Historical critical mineral production reported; no reported resources or reserves. Includes site that may have resources left but have been reclaimed or under reclamation as Superfund sites.</edomvd>
+      <edomvds>Producer defined</edomvds>
+    </edom>
+  </attrdomv>
+  <attrdomv>
+    <edom>
+      <edomv>Past producer+CM resources</edomv>
+      <edomvd>Historical production that did not include critical minerals, but critical mineral resources are reported (may be as byproduct critical minerals). Resources/reserves may be estimated or industry-compliant.</edomvd>
+      <edomvds>Producer defined</edomvds>
+    </edom>
+  </attrdomv>
+  <attrdomv>
+    <edom>
+      <edomv>CM-recent producer+resources</edomv>
+      <edomvd>Critical mineral production reported since 2015 and reported resources or reserves. Resources/reserves may be estimated or industry-compliant.</edomvd>
+      <edomvds>Producer defined</edomvds>
+    </edom>
+  </attrdomv>
+  <attrdomv>
+    <edom>
+      <edomv>Recent producer+CM resources</edomv>
+      <edomvd>Recent production (no critical minerals reported), but critical mineral resources noted (may be byproduct critical minerals). Resources/reserves may be estimated or industry-compliant.</edomvd>
+      <edomvds>Producer defined</edomvds>
+    </edom>
+  </attrdomv>
+  <attrdomv>
+    <edom>
+      <edomv>CM resources</edomv>
+      <edomvd>No production reported; critical mineral resources or reserves reported. Resources/reserves may be estimated or industry-compliant.</edomvd>
+      <edomvds>Producer defined</edomvds>
+    </edom>
+  </attrdomv>
+</attr>
+      <attr>
+  <attrlabl>Rank</attrlabl><attrdef>Rank for critical mineral production and(or) resources category.</attrdef><attrdefs>Producer defined</attrdefs><attrdomv>
+    <edom>
+      <edomv>1</edomv>
+      <edomvd>CM-past producer</edomvd>
+      <edomvds>Producer defined</edomvds>
+    </edom>
+  </attrdomv>
+  <attrdomv>
+    <edom>
+      <edomv>2</edomv>
+      <edomvd>Past producer+CM resources</edomvd>
+      <edomvds>Producer defined</edomvds>
+    </edom>
+  </attrdomv>
+  <attrdomv>
+    <edom>
+      <edomv>3</edomv>
+      <edomvd>CM resources</edomvd>
+      <edomvds>Producer defined</edomvds>
+    </edom>
+  </attrdomv>
+  <attrdomv>
+    <edom>
+      <edomv>4</edomv>
+      <edomvd>Recent producer+CM resources</edomvd>
+      <edomvds>Producer defined</edomvds>
+    </edom>
+  </attrdomv>
+  <attrdomv>
+    <edom>
+      <edomv>5</edomv>
+      <edomvd>CM-past producer+resources</edomvd>
+      <edomvds>Producer defined</edomvds>
+    </edom>
+  </attrdomv>
+  <attrdomv>
+    <edom>
+      <edomv>6</edomv>
+      <edomvd>CM-recent producer+resources</edomvd>
+      <edomvds>Producer defined</edomvds>
+    </edom>
+  </attrdomv>
+</attr>
+      <attr>
+        <attrlabl>Prduction1</attrlabl>
+        <attrdef>Production data, as reported in the source documents.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv><udom>If the characters in the cell exceed 254 characters, the overflow characters will be continued into "Prduction2". Abbreviations can be found in the stand-alone table under the tab called Explanation.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Prduction2</attrlabl>
+        <attrdef>Production data, as reported in the source documents. (continued)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv><udom>Continued data from "Prduction1" as needed.
+Abbreviations can be found in the stand-alone table under the tab called Explanation.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Resources1</attrlabl>
+        <attrdef>Resource and reserve data, as reported in the source documents.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv><udom>If the characters in the cell exceed 254 characters, the overflow characters will be continued into "Resources2". Abbreviations can be found in the stand-alone table under the tab called Explanation.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Resources2</attrlabl>
+        <attrdef>Resource and reserve data, as reported in the source documents. (continued 1)</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv><udom>If the characters in the cell exceed 254 characters, the overflow characters will be continued into "Resources3". Abbreviations can be found in the stand-alone table under the tab called Explanation.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Resources3</attrlabl>
+        <attrdef>Resource and reserve data, as reported in the source documents. (continued 2).</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv><udom>Continued data from "Resources2" as needed. Abbreviations can be found in the stand-alone table under the tab called Explanation.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Source_s</attrlabl>
+        <attrdef>List of references for production and resource data.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv><udom>This field lists the short reference for the source used to capture production and/or resource information. Full references can be found in the stand-alone table under the tab called References.</udom>
+        </attrdomv>
+      </attr>
+      <attr>
+        <attrlabl>Links</attrlabl>
+        <attrdef>Links to publicly available USGS data sources in ARDF, MRDS, or USMIN.</attrdef>
+        <attrdefs>Producer defined</attrdefs>
+        <attrdomv><udom>Link provided for MRDS, USMIN, or ARDF records.</udom>
+        </attrdomv>
+      </attr>
+    </detailed>
+  </eainfo>
+  <distinfo>
+    <distrib>
+      <cntinfo>
+        <cntorgp>
+          <cntorg>U.S. Geological Survey</cntorg>
+          <cntper>GS ScienceBase</cntper>
+        </cntorgp>
+        <cntaddr>
+          <addrtype>mailing address</addrtype>
+          <address>Denver Federal Center, Building 810, Mail Stop 302</address>
+          <city>Denver</city>
+          <state>CO</state>
+          <postal>80225</postal>
+          <country>United States</country>
+        </cntaddr>
+        <cntvoice>1-888-275-8747</cntvoice>
+        <cntemail>sciencebase@usgs.gov</cntemail>
+      </cntinfo>
+    </distrib>
+    <distliab>Unless otherwise stated, all data, metadata and related materials are considered to satisfy the quality standards relative to the purpose for which the data were collected. Although these data and associated metadata have been reviewed for accuracy and completeness and approved for release by the U.S. Geological Survey (USGS), no warranty expressed or implied is made regarding the display or utility of the data for other purposes, nor on all computer systems, nor shall the act of distribution constitute any such warranty.</distliab>
+    <stdorder>
+      <digform><digtinfo>
+          <formname>Digital Data</formname>
+        </digtinfo>
+        <digtopt><onlinopt><computer><networka><networkr>https://doi.org/10.5066/P9K1HBNT</networkr></networka></computer></onlinopt></digtopt></digform>
+      <fees>None</fees>
+    </stdorder>
+  </distinfo>
+  <metainfo>
+    <metd>20240806</metd>
+    <metc>
+      <cntinfo>
+        <cntperp>
+          <cntper>Connie L. Dicken</cntper>
+          <cntorg>U.S. Geological Survey, Northeast Region</cntorg>
+        </cntperp>
+        <cntpos>Geologist</cntpos>
+        <cntaddr>
+          <addrtype>mailing address</addrtype>
+          <address>Mail Stop 954, 12201 Sunrise Valley Dr</address>
+          <city>Reston</city>
+          <state>VA</state>
+          <postal>20192</postal>
+          <country>US</country>
+        </cntaddr>
+        <cntvoice>703-648-6482</cntvoice>
+        <cntfax>703-648-6252</cntfax>
+        <cntemail>cdicken@usgs.gov</cntemail>
+      </cntinfo>
+    </metc>
+    <metstdn>FGDC Content Standard for Digital Geospatial Metadata</metstdn>
+    <metstdv>FGDC-STD-001-1998</metstdv>
+  </metainfo>
+</metadata>

@@ -1,0 +1,4 @@
+source_name,source_url,purpose,coordinate_strategy,status
+Census place population estimates,https://www2.census.gov/programs-surveys/popest/datasets/2020-2024/cities/totals/sub-est2024.csv,Annual municipal population counts,Join to Gazetteer and town halls by place and state,downloaded
+Census Gazetteer place file,https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2024_Gazetteer/2024_Gaz_place_national.zip,Place centroid coordinates and geometry metadata,Use centroid as fallback when town hall coordinates are unavailable,downloaded
+US_Town_Halls,https://github.com/Daniel-J-Mueller/US_Town_Halls,Municipal coordinate anchor for local population outputs,Use representative town hall coordinates per matched place,cloned_temp

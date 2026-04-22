@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Plant Emissions Visualizer</title>
+    <title>Strategic Resource Visualizer</title>
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -15,18 +15,25 @@
     <div class="shell">
       <aside class="sidebar">
         <div class="eyebrow">Local private workflow</div>
-        <h1>Plant emissions visualizer</h1>
+        <h1>Strategic resource visualizer</h1>
         <p class="lede">
-          This view auto-loads a private map asset built from <code>plant_profiles_private.csv</code>.
-          Pick an emission, let the heatmap rebalance instantly, and hover or click any plant to
-          inspect the full source row.
+          Switch between private electrical plants, municipality population points, county-level
+          agriculture, and raw-material sites. Each category loads its own metric stack so the
+          same map can pivot across emissions, people, food output, and steel or ore footprints.
+        </p>
+        <p id="dataset-description" class="microcopy">
+          Loading category metadata...
         </p>
 
         <section class="panel">
           <h2>Controls</h2>
           <label class="field">
-            <span>Emission</span>
-            <select id="emission-select"></select>
+            <span>Category</span>
+            <select id="category-select"></select>
+          </label>
+          <label class="field">
+            <span>Metric</span>
+            <select id="metric-select"></select>
           </label>
           <label class="field">
             <span>View</span>
@@ -43,17 +50,17 @@
             </select>
           </label>
           <label class="field">
-            <span>Fuel</span>
-            <select id="fuel-select">
-              <option value="">All fuels</option>
+            <span id="group-filter-label">Type</span>
+            <select id="group-select">
+              <option value="">All groups</option>
             </select>
           </label>
           <label class="field">
-            <span>Search plant, utility, county, or code</span>
-            <input id="search-input" type="search" placeholder="Ex: 52122, TVA, Hardeman" />
+            <span id="search-label">Search records</span>
+            <input id="search-input" type="search" placeholder="Search the active category" />
           </label>
           <label class="field">
-            <span>Minimum emission value</span>
+            <span>Minimum metric value</span>
             <input id="minimum-input" type="number" min="0" step="any" placeholder="0" />
           </label>
           <div class="actions">
@@ -66,19 +73,19 @@
           <h2>Summary</h2>
           <div class="stats-grid">
             <article class="stat-card">
-              <span class="stat-label">Visible plants</span>
+              <span class="stat-label">Visible records</span>
               <strong id="visible-count">0</strong>
             </article>
             <article class="stat-card">
-              <span class="stat-label">Emission total</span>
+              <span class="stat-label">Metric total</span>
               <strong id="metric-total">0</strong>
             </article>
             <article class="stat-card">
-              <span class="stat-label">Largest plant</span>
+              <span class="stat-label">Largest record</span>
               <strong id="metric-max">None</strong>
             </article>
             <article class="stat-card">
-              <span class="stat-label">Active emission</span>
+              <span class="stat-label">Active metric</span>
               <strong id="metric-name">Loading</strong>
             </article>
           </div>
@@ -87,24 +94,24 @@
             <div class="legend-ramp" aria-hidden="true"></div>
             <span>Higher intensity</span>
           </div>
-          <p id="status-pill" class="status-pill">Loading private visualizer asset...</p>
+          <p id="status-pill" class="status-pill">Loading visualizer manifest...</p>
         </section>
 
         <section class="panel">
-          <h2>Plants</h2>
+          <h2 id="results-heading">Results</h2>
           <div id="results-list" class="results-list"></div>
         </section>
 
         <section class="panel detail-panel">
-          <h2>Plant detail</h2>
+          <h2 id="detail-heading">Record detail</h2>
           <div id="detail-panel" class="detail-body">
-            Hover or click a plant point or a result row to inspect the full source row.
+            Hover or click a point or result row to inspect the active source record.
           </div>
         </section>
       </aside>
 
       <main class="map-stage">
-        <div id="map" class="map" aria-label="Plant map"></div>
+        <div id="map" class="map" aria-label="Strategic systems map"></div>
       </main>
     </div>
 
