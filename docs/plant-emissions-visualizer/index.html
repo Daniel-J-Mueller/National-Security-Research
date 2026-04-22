@@ -17,61 +17,129 @@
         <div class="eyebrow">Local private workflow</div>
         <h1>Strategic resource visualizer</h1>
         <p class="lede">
-          Switch between private electrical plants, municipality population points, county-level
-          agriculture, and raw-material sites. Each category loads its own metric stack so the
-          same map can pivot across emissions, people, food output, and steel or ore footprints.
+          Stack overlapping characteristics from emissions, ores, radiation, people, and food
+          output without having to switch the whole map every time.
         </p>
         <p id="dataset-description" class="microcopy">
           Loading category metadata...
         </p>
 
         <section class="panel">
-          <h2>Controls</h2>
-          <label class="field">
-            <span>Category</span>
-            <select id="category-select"></select>
-          </label>
-          <label class="field">
-            <span>Metric</span>
-            <select id="metric-select"></select>
-          </label>
-          <label class="field">
-            <span>View</span>
-            <select id="view-select">
-              <option value="both">Heatmap + points</option>
-              <option value="heat">Heatmap only</option>
-              <option value="points">Points only</option>
-            </select>
-          </label>
-          <label class="field">
-            <span>State</span>
-            <select id="state-select">
-              <option value="">All states</option>
-            </select>
-          </label>
-          <label class="field">
-            <span id="group-filter-label">Type</span>
-            <select id="group-select">
-              <option value="">All groups</option>
-            </select>
-          </label>
-          <label class="field">
-            <span id="search-label">Search records</span>
-            <input id="search-input" type="search" placeholder="Search the active category" />
-          </label>
-          <label class="field">
-            <span>Minimum metric value</span>
-            <input id="minimum-input" type="number" min="0" step="any" placeholder="0" />
-          </label>
-          <div class="actions">
-            <button id="zoom-filtered" type="button" class="ghost-button">Zoom to filtered</button>
-            <button id="reset-filters" type="button" class="ghost-button">Reset filters</button>
+          <div class="panel-header">
+            <h2>Characteristics</h2>
+            <div class="pane-toggle" role="tablist" aria-label="Control detail">
+              <button
+                id="simple-pane-button"
+                class="pane-toggle-button is-active"
+                type="button"
+                data-pane="simple"
+                aria-pressed="true"
+              >
+                Simple
+              </button>
+              <button
+                id="advanced-pane-button"
+                class="pane-toggle-button"
+                type="button"
+                data-pane="advanced"
+                aria-pressed="false"
+              >
+                Advanced
+              </button>
+            </div>
           </div>
+
+          <div id="simple-pane" class="control-pane is-active">
+            <label class="field">
+              <span>Data family</span>
+              <select id="simple-dataset-select"></select>
+            </label>
+            <label class="field">
+              <span>Characteristic</span>
+              <select id="simple-metric-select"></select>
+            </label>
+            <div class="actions">
+              <button id="add-layer" type="button">Add characteristic</button>
+              <button id="zoom-visible" type="button" class="ghost-button">Zoom visible</button>
+              <button id="clear-layers" type="button" class="ghost-button">Clear layers</button>
+            </div>
+            <p class="microcopy compact">
+              Build a stack of overlapping layers like ores + radiation + emissions, then use the
+              active layer list below to focus or remove items.
+            </p>
+          </div>
+
+          <div id="advanced-pane" class="control-pane" hidden>
+            <label class="field">
+              <span>Focused layer</span>
+              <select id="focus-layer-select">
+                <option value="">No active layers</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Data family</span>
+              <select id="advanced-dataset-select"></select>
+            </label>
+            <label class="field">
+              <span>Characteristic</span>
+              <select id="advanced-metric-select"></select>
+            </label>
+            <label class="field">
+              <span>Layer view</span>
+              <select id="view-select">
+                <option value="both">Heatmap + points</option>
+                <option value="heat">Heatmap only</option>
+                <option value="points">Points only</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>State</span>
+              <select id="state-select">
+                <option value="">All states</option>
+              </select>
+            </label>
+            <label class="field">
+              <span id="group-filter-label">Type</span>
+              <select id="group-select">
+                <option value="">All groups</option>
+              </select>
+            </label>
+            <label class="field">
+              <span id="search-label">Search records</span>
+              <input id="search-input" type="search" placeholder="Search the focused layer" />
+            </label>
+            <label class="field">
+              <span>Minimum metric value</span>
+              <input id="minimum-input" type="number" min="0" step="any" placeholder="0" />
+            </label>
+            <label class="toggle-field" for="show-nulls-toggle">
+              <input id="show-nulls-toggle" type="checkbox" />
+              <div>
+                <strong>Show null metric values</strong>
+                <small>Off by default to keep the map focused. Turn this on when debugging.</small>
+              </div>
+            </label>
+            <div class="actions">
+              <button id="reset-filters" type="button" class="ghost-button">
+                Reset focused filters
+              </button>
+            </div>
+          </div>
+
+          <div class="subpanel-header">
+            <h3>Active layers</h3>
+            <span id="layer-count" class="microcopy">0 active</span>
+          </div>
+          <div id="active-layer-list" class="active-layer-list"></div>
         </section>
 
         <section class="panel metrics-panel">
           <h2>Summary</h2>
           <div class="stats-grid">
+            <article class="stat-card">
+              <span class="stat-label">Active layers</span>
+              <strong id="active-layer-count">0</strong>
+            </article>
             <article class="stat-card">
               <span class="stat-label">Visible records</span>
               <strong id="visible-count">0</strong>
@@ -84,16 +152,12 @@
               <span class="stat-label">Largest record</span>
               <strong id="metric-max">None</strong>
             </article>
-            <article class="stat-card">
-              <span class="stat-label">Active metric</span>
+            <article class="stat-card stat-card--wide">
+              <span class="stat-label">Focused characteristic</span>
               <strong id="metric-name">Loading</strong>
             </article>
           </div>
-          <div class="legend">
-            <span>Lower intensity</span>
-            <div class="legend-ramp" aria-hidden="true"></div>
-            <span>Higher intensity</span>
-          </div>
+          <div id="layer-legend" class="layer-legend"></div>
           <p id="status-pill" class="status-pill">Loading visualizer manifest...</p>
         </section>
 
@@ -102,7 +166,7 @@
           <div id="results-list" class="results-list"></div>
         </section>
 
-        <section class="panel detail-panel">
+        <section class="panel detail-panel-shell">
           <h2 id="detail-heading">Record detail</h2>
           <div id="detail-panel" class="detail-body">
             Hover or click a point or result row to inspect the active source record.

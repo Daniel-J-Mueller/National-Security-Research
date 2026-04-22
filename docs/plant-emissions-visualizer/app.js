@@ -2,17 +2,16 @@ const MANIFEST_URL = "../../data/private/visualizer/visualizer_manifest.json";
 const HEAT_PANE = "heatPane";
 const POINT_PANE = "pointPane";
 
-const SPECIAL_GROUP_COLORS = {
-  NG: "#5f8d4e",
-  SUN: "#d4a43c",
-  NUC: "#5a5cbd",
-  WND: "#3a7ca5",
-  WAT: "#2f6b8f",
-  DFO: "#7c5c47",
-  BIT: "#3b3531",
-  SUB: "#56423d",
-  WDL: "#7f5539",
-};
+const LAYER_COLORS = [
+  "#b03a2e",
+  "#2f6b8f",
+  "#5f8d4e",
+  "#7d5ba6",
+  "#d47f2f",
+  "#a14f67",
+  "#3f7c73",
+  "#886247",
+];
 
 const HEADER_LABEL_OVERRIDES = {
   geoid: "GEOID",
@@ -31,16 +30,15 @@ const HEADER_LABEL_OVERRIDES = {
 const state = {
   manifest: [],
   datasetCache: new Map(),
-  dataset: null,
-  records: [],
-  filteredRecords: [],
-  activeCategoryKey: "",
-  activeMetricKey: "",
-  activeRecordId: "",
-  hoverRecordId: "",
+  activeLayers: [],
+  layerSequence: 0,
+  focusedLayerId: "",
+  activeRecordKey: "",
+  hoverRecordKey: "",
+  showNulls: false,
+  controlPane: "simple",
+  simpleDatasetKey: "",
   map: null,
-  pointLayer: null,
-  heatLayer: null,
   canvasRenderer: null,
 };
 
@@ -48,8 +46,18 @@ const numberFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 
 const integerFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 
 const elements = {
-  categorySelect: document.getElementById("category-select"),
-  metricSelect: document.getElementById("metric-select"),
+  simplePaneButton: document.getElementById("simple-pane-button"),
+  advancedPaneButton: document.getElementById("advanced-pane-button"),
+  simplePane: document.getElementById("simple-pane"),
+  advancedPane: document.getElementById("advanced-pane"),
+  simpleDatasetSelect: document.getElementById("simple-dataset-select"),
+  simpleMetricSelect: document.getElementById("simple-metric-select"),
+  addLayer: document.getElementById("add-layer"),
+  zoomVisible: document.getElementById("zoom-visible"),
+  clearLayers: document.getElementById("clear-layers"),
+  focusLayerSelect: document.getElementById("focus-layer-select"),
+  advancedDatasetSelect: document.getElementById("advanced-dataset-select"),
+  advancedMetricSelect: document.getElementById("advanced-metric-select"),
   viewSelect: document.getElementById("view-select"),
   stateSelect: document.getElementById("state-select"),
   groupSelect: document.getElementById("group-select"),
@@ -57,12 +65,16 @@ const elements = {
   searchLabel: document.getElementById("search-label"),
   searchInput: document.getElementById("search-input"),
   minimumInput: document.getElementById("minimum-input"),
-  zoomFiltered: document.getElementById("zoom-filtered"),
+  showNullsToggle: document.getElementById("show-nulls-toggle"),
   resetFilters: document.getElementById("reset-filters"),
+  activeLayerList: document.getElementById("active-layer-list"),
+  layerCount: document.getElementById("layer-count"),
+  activeLayerCount: document.getElementById("active-layer-count"),
   visibleCount: document.getElementById("visible-count"),
   metricTotal: document.getElementById("metric-total"),
   metricMax: document.getElementById("metric-max"),
   metricName: document.getElementById("metric-name"),
+  layerLegend: document.getElementById("layer-legend"),
   resultsHeading: document.getElementById("results-heading"),
   resultsList: document.getElementById("results-list"),
   detailHeading: document.getElementById("detail-heading"),
@@ -102,10 +114,21 @@ async function init() {
       throw new Error("No valid dataset entries were found in visualizer_manifest.json.");
     }
 
-    populateCategoryOptions();
-    state.activeCategoryKey = state.manifest[0].key;
-    elements.categorySelect.value = state.activeCategoryKey;
-    await activateCategory(state.activeCategoryKey, { fitBounds: true });
+    populateDatasetOptions(elements.simpleDatasetSelect);
+    populateDatasetOptions(elements.advancedDatasetSelect);
+
+    state.simpleDatasetKey = state.manifest[0].key;
+    elements.simpleDatasetSelect.value = state.simpleDatasetKey;
+    await syncSimpleMetricOptions(state.simpleDatasetKey);
+
+    setControlPane("simple");
+    await addLayer(
+      {
+        datasetKey: state.simpleDatasetKey,
+        metricKey: elements.simpleMetricSelect.value,
+      },
+      { allowDuplicate: true, fitBounds: true },
+    );
   } catch (error) {
     console.error(error);
     setStatus(
@@ -116,47 +139,157 @@ async function init() {
 }
 
 function bindEvents() {
-  elements.categorySelect.addEventListener("change", async () => {
-    state.activeCategoryKey = elements.categorySelect.value;
-    await activateCategory(state.activeCategoryKey, { fitBounds: true });
+  for (const button of [elements.simplePaneButton, elements.advancedPaneButton]) {
+    button.addEventListener("click", () => {
+      setControlPane(button.dataset.pane);
+    });
+  }
+
+  elements.simpleDatasetSelect.addEventListener("change", async () => {
+    state.simpleDatasetKey = elements.simpleDatasetSelect.value;
+    await syncSimpleMetricOptions(state.simpleDatasetKey);
   });
 
-  elements.metricSelect.addEventListener("change", () => {
-    state.activeMetricKey = elements.metricSelect.value;
-    refreshView();
+  elements.addLayer.addEventListener("click", async () => {
+    await addLayer({
+      datasetKey: elements.simpleDatasetSelect.value,
+      metricKey: elements.simpleMetricSelect.value,
+    });
+  });
+
+  elements.zoomVisible.addEventListener("click", () => {
+    zoomToRecords(collectVisibleRecords());
+  });
+
+  elements.clearLayers.addEventListener("click", async () => {
+    await clearAllLayers();
+  });
+
+  elements.focusLayerSelect.addEventListener("change", async () => {
+    await focusLayer(elements.focusLayerSelect.value);
+  });
+
+  elements.advancedDatasetSelect.addEventListener("change", async () => {
+    await updateFocusedLayerDataset(elements.advancedDatasetSelect.value);
+  });
+
+  elements.advancedMetricSelect.addEventListener("change", () => {
+    const layer = focusedLayer();
+    if (!layer) {
+      return;
+    }
+
+    layer.metricKey = resolveMetricKey(datasetForLayer(layer), elements.advancedMetricSelect.value);
+    clearLayerRecordSelection(layer.id);
+    refreshView({ fitBounds: true });
   });
 
   elements.viewSelect.addEventListener("change", () => {
+    const layer = focusedLayer();
+    if (!layer) {
+      return;
+    }
+
+    layer.viewMode = elements.viewSelect.value;
     refreshView();
   });
 
   elements.stateSelect.addEventListener("change", () => {
-    refreshView();
+    const layer = focusedLayer();
+    if (!layer) {
+      return;
+    }
+
+    layer.stateFilter = elements.stateSelect.value;
+    clearLayerRecordSelection(layer.id);
+    refreshView({ fitBounds: true });
   });
 
   elements.groupSelect.addEventListener("change", () => {
-    refreshView();
+    const layer = focusedLayer();
+    if (!layer) {
+      return;
+    }
+
+    layer.groupFilter = elements.groupSelect.value;
+    clearLayerRecordSelection(layer.id);
+    refreshView({ fitBounds: true });
   });
 
   elements.searchInput.addEventListener("input", () => {
+    const layer = focusedLayer();
+    if (!layer) {
+      return;
+    }
+
+    layer.searchTerm = elements.searchInput.value;
+    clearLayerRecordSelection(layer.id);
     refreshView();
   });
 
   elements.minimumInput.addEventListener("input", () => {
+    const layer = focusedLayer();
+    if (!layer) {
+      return;
+    }
+
+    layer.minimumValue = elements.minimumInput.value;
+    clearLayerRecordSelection(layer.id);
     refreshView();
   });
 
-  elements.zoomFiltered.addEventListener("click", () => {
-    zoomToFiltered();
+  elements.showNullsToggle.addEventListener("change", () => {
+    state.showNulls = elements.showNullsToggle.checked;
+    clearAllRecordSelection();
+    refreshView({ fitBounds: true });
   });
 
   elements.resetFilters.addEventListener("click", () => {
+    const layer = focusedLayer();
+    if (!layer) {
+      return;
+    }
+
+    layer.stateFilter = "";
+    layer.groupFilter = "";
+    layer.searchTerm = "";
+    layer.minimumValue = "";
     elements.stateSelect.value = "";
     elements.groupSelect.value = "";
     elements.searchInput.value = "";
     elements.minimumInput.value = "";
-    elements.viewSelect.value = "both";
+    clearLayerRecordSelection(layer.id);
     refreshView({ fitBounds: true });
+  });
+
+  elements.activeLayerList.addEventListener("click", (event) => {
+    const actionButton = event.target.closest("[data-layer-action]");
+    if (!actionButton) {
+      return;
+    }
+
+    const layerId = actionButton.dataset.layerId;
+    if (!layerId) {
+      return;
+    }
+
+    const action = actionButton.dataset.layerAction;
+    if (action === "focus") {
+      void focusLayer(layerId);
+      return;
+    }
+
+    if (action === "zoom") {
+      const layer = layerById(layerId);
+      if (layer) {
+        zoomToRecords(layer.filteredRecords);
+      }
+      return;
+    }
+
+    if (action === "remove") {
+      void removeLayer(layerId);
+    }
   });
 }
 
@@ -184,53 +317,131 @@ function buildMap() {
     subdomains: "abcd",
     maxZoom: 19,
   }).addTo(state.map);
-
-  state.pointLayer = L.layerGroup().addTo(state.map);
 }
 
-async function activateCategory(categoryKey, options = {}) {
-  if (!categoryKey) {
+async function addLayer(request, options = {}) {
+  const datasetKey = stringValue(request.datasetKey);
+  if (!datasetKey) {
+    return null;
+  }
+
+  setStatus(`Loading ${manifestLabel(datasetKey)}...`);
+
+  const dataset = await loadDataset(datasetKey);
+  const metricKey = resolveMetricKey(dataset, request.metricKey);
+  const existingLayer = state.activeLayers.find(
+    (layer) => layer.datasetKey === dataset.key && layer.metricKey === metricKey,
+  );
+
+  if (existingLayer && !options.allowDuplicate) {
+    await focusLayer(existingLayer.id);
+    setStatus(`${layerDisplayLabel(existingLayer)} is already active.`);
+    return existingLayer;
+  }
+
+  const colorIndex = state.layerSequence % LAYER_COLORS.length;
+  state.layerSequence += 1;
+
+  const layer = {
+    id: `layer-${state.layerSequence}`,
+    datasetKey: dataset.key,
+    metricKey,
+    viewMode: state.activeLayers.length === 0 ? "both" : "points",
+    stateFilter: "",
+    groupFilter: "",
+    searchTerm: "",
+    minimumValue: "",
+    filteredRecords: [],
+    metricStats: emptyMetricStats(),
+    color: LAYER_COLORS[colorIndex],
+    pointLayer: L.layerGroup().addTo(state.map),
+    heatLayer: null,
+  };
+
+  state.activeLayers.push(layer);
+  state.focusedLayerId = layer.id;
+  clearAllRecordSelection();
+  await syncAdvancedControls();
+  refreshView({ fitBounds: options.fitBounds !== false });
+  return layer;
+}
+
+async function removeLayer(layerId) {
+  const index = state.activeLayers.findIndex((layer) => layer.id === layerId);
+  if (index === -1) {
     return;
   }
 
-  const manifestEntry = state.manifest.find((dataset) => dataset.key === categoryKey);
-  if (!manifestEntry) {
-    setStatus(`Unknown category: ${categoryKey}`, "error");
+  const [layer] = state.activeLayers.splice(index, 1);
+  disposeLayer(layer);
+  clearLayerRecordSelection(layer.id);
+
+  if (state.focusedLayerId === layer.id) {
+    state.focusedLayerId = state.activeLayers[0]?.id ?? "";
+  }
+
+  await syncAdvancedControls();
+  refreshView({ fitBounds: true });
+}
+
+async function clearAllLayers() {
+  for (const layer of state.activeLayers) {
+    disposeLayer(layer);
+  }
+
+  state.activeLayers = [];
+  state.focusedLayerId = "";
+  clearAllRecordSelection();
+  await syncAdvancedControls();
+  refreshView();
+}
+
+async function focusLayer(layerId) {
+  const layer = layerById(layerId);
+  if (!layer) {
     return;
   }
 
-  setStatus(`Loading ${manifestEntry.label}...`);
-
-  try {
-    const dataset = await loadDataset(categoryKey);
-    state.dataset = dataset;
-    state.records = dataset.records;
-    state.filteredRecords = dataset.records;
-    state.activeCategoryKey = categoryKey;
-    state.activeMetricKey = preferredMetricKey(dataset);
-    state.activeRecordId = "";
-    state.hoverRecordId = "";
-    elements.searchInput.value = "";
-    elements.minimumInput.value = "";
-
-    updateDatasetChrome();
-    populateMetricOptions();
-    populateFilters(true);
-    refreshView({ fitBounds: options.fitBounds });
-  } catch (error) {
-    console.error(error);
-    setStatus(`Could not load the ${manifestEntry.label} dataset.`, "error");
+  state.focusedLayerId = layer.id;
+  if (!recordKeyBelongsToLayer(state.activeRecordKey, layer.id)) {
+    state.activeRecordKey = "";
   }
+  if (!recordKeyBelongsToLayer(state.hoverRecordKey, layer.id)) {
+    state.hoverRecordKey = "";
+  }
+
+  await syncAdvancedControls();
+  refreshView();
 }
 
-async function loadDataset(categoryKey) {
-  if (state.datasetCache.has(categoryKey)) {
-    return state.datasetCache.get(categoryKey);
+async function updateFocusedLayerDataset(datasetKey) {
+  const layer = focusedLayer();
+  if (!layer || !datasetKey) {
+    return;
   }
 
-  const manifestEntry = state.manifest.find((dataset) => dataset.key === categoryKey);
+  setStatus(`Loading ${manifestLabel(datasetKey)}...`);
+
+  const dataset = await loadDataset(datasetKey);
+  layer.datasetKey = dataset.key;
+  layer.metricKey = preferredMetricKey(dataset);
+  layer.stateFilter = "";
+  layer.groupFilter = "";
+  layer.searchTerm = "";
+  layer.minimumValue = "";
+  clearLayerRecordSelection(layer.id);
+  await syncAdvancedControls();
+  refreshView({ fitBounds: true });
+}
+
+async function loadDataset(datasetKey) {
+  if (state.datasetCache.has(datasetKey)) {
+    return state.datasetCache.get(datasetKey);
+  }
+
+  const manifestEntry = manifestEntryByKey(datasetKey);
   if (!manifestEntry) {
-    throw new Error(`Missing dataset entry for ${categoryKey}`);
+    throw new Error(`Missing dataset entry for ${datasetKey}`);
   }
 
   const payload = await fetchJson(manifestEntry.path);
@@ -239,7 +450,7 @@ async function loadDataset(categoryKey) {
   }
 
   const dataset = hydrateDataset(payload, manifestEntry);
-  state.datasetCache.set(categoryKey, dataset);
+  state.datasetCache.set(datasetKey, dataset);
   return dataset;
 }
 
@@ -308,124 +519,58 @@ function hydrateDataset(payload, manifestEntry) {
       group_label: stringValue(metadata.group_label) || manifestEntry.groupLabel || "Group",
       search_placeholder: stringValue(metadata.search_placeholder) || "Search the active category",
       description: stringValue(metadata.description) || manifestEntry.description || "",
-      default_metric_key: stringValue(metadata.default_metric_key) || manifestEntry.defaultMetricKey || availableMetrics[0].key,
+      default_metric_key:
+        stringValue(metadata.default_metric_key) ||
+        manifestEntry.defaultMetricKey ||
+        availableMetrics[0].key,
     },
   };
 }
 
-function populateCategoryOptions() {
-  elements.categorySelect.replaceChildren();
-  for (const dataset of state.manifest) {
-    const option = document.createElement("option");
-    option.value = dataset.key;
-    option.textContent = dataset.label;
-    elements.categorySelect.append(option);
-  }
-}
-
-function populateMetricOptions() {
-  const dataset = state.dataset;
-  if (!dataset) {
-    return;
-  }
-
-  elements.metricSelect.replaceChildren();
-  for (const metric of dataset.metadata.metrics) {
-    const option = document.createElement("option");
-    option.value = metric.key;
-    option.textContent = metric.label;
-    elements.metricSelect.append(option);
-  }
-  elements.metricSelect.value = state.activeMetricKey;
-}
-
-function populateFilters(resetSelections = false) {
-  const dataset = state.dataset;
-  if (!dataset) {
-    return;
-  }
-
-  const previousState = resetSelections ? "" : elements.stateSelect.value;
-  const previousGroup = resetSelections ? "" : elements.groupSelect.value;
-  const states = [...new Set(dataset.records.map((record) => record.state).filter(Boolean))].sort();
-  const groups = [...new Set(dataset.records.map((record) => record.groupValue).filter(Boolean))].sort();
-
-  replaceSelectOptions(elements.stateSelect, states, "All states");
-  replaceSelectOptions(elements.groupSelect, groups, `All ${dataset.metadata.group_label.toLowerCase()} groups`);
-
-  if (states.includes(previousState)) {
-    elements.stateSelect.value = previousState;
-  }
-  if (groups.includes(previousGroup)) {
-    elements.groupSelect.value = previousGroup;
-  }
-
-  elements.groupLabel.textContent = dataset.metadata.group_label;
-  elements.searchLabel.textContent = `Search ${dataset.metadata.results_label.toLowerCase()}`;
-  elements.searchInput.placeholder = dataset.metadata.search_placeholder;
-}
-
-function replaceSelectOptions(select, values, emptyLabel) {
-  select.replaceChildren();
-
-  const emptyOption = document.createElement("option");
-  emptyOption.value = "";
-  emptyOption.textContent = emptyLabel;
-  select.append(emptyOption);
-
-  for (const value of values) {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = value;
-    select.append(option);
-  }
-}
-
-function updateDatasetChrome() {
-  if (!state.dataset) {
-    return;
-  }
-
-  const countLabel = `${integerFormatter.format(state.dataset.records.length)} ${state.dataset.metadata.results_label.toLowerCase()}`;
-  elements.datasetDescription.textContent = `${state.dataset.metadata.description} ${countLabel}.`;
-  elements.resultsHeading.textContent = state.dataset.metadata.results_label;
-  elements.detailHeading.textContent = `${singularizeLabel(state.dataset.metadata.results_label)} detail`;
-  document.title = `${state.dataset.label} Visualizer`;
-}
-
 function refreshView(options = {}) {
-  if (!state.dataset) {
-    return;
+  ensureFocusedLayerExists();
+
+  for (const layer of state.activeLayers) {
+    layer.filteredRecords = applyFilters(layer);
+    layer.metricStats = buildMetricStats(layer.filteredRecords, layer.metricKey);
   }
 
-  state.filteredRecords = applyFilters();
+  pruneSelectedRecords();
 
-  if (!state.filteredRecords.some((record) => record.id === state.activeRecordId)) {
-    state.activeRecordId = "";
-  }
-  if (!state.filteredRecords.some((record) => record.id === state.hoverRecordId)) {
-    state.hoverRecordId = "";
+  const orderedLayers = renderOrder();
+  for (const layer of orderedLayers) {
+    renderHeatLayer(layer);
+    renderPointLayer(layer);
   }
 
-  const metricStats = buildMetricStats(state.filteredRecords);
-  renderSummary(metricStats);
-  renderHeatLayer(metricStats);
-  renderPointLayer(metricStats);
-  renderResults(metricStats);
+  renderActiveLayerList();
+  renderSummary();
+  renderResults();
   renderDetail();
+  renderStatus();
 
   if (options.fitBounds) {
-    zoomToFiltered();
+    zoomToRecords(collectVisibleRecords());
   }
 }
 
-function applyFilters() {
-  const selectedState = elements.stateSelect.value;
-  const selectedGroup = elements.groupSelect.value;
-  const searchTerm = elements.searchInput.value.trim().toLowerCase();
-  const minimumValue = parseInputNumber(elements.minimumInput.value);
+function applyFilters(layer) {
+  const dataset = datasetForLayer(layer);
+  if (!dataset) {
+    return [];
+  }
 
-  return state.records.filter((record) => {
+  const selectedState = stringValue(layer.stateFilter);
+  const selectedGroup = stringValue(layer.groupFilter);
+  const searchTerm = stringValue(layer.searchTerm).toLowerCase();
+  const minimumValue = parseInputNumber(layer.minimumValue);
+
+  return dataset.records.filter((record) => {
+    const metricValue = getMetricValue(record, layer.metricKey);
+
+    if (!state.showNulls && !Number.isFinite(metricValue)) {
+      return false;
+    }
     if (selectedState && record.state !== selectedState) {
       return false;
     }
@@ -436,7 +581,6 @@ function applyFilters() {
       return false;
     }
     if (minimumValue !== null) {
-      const metricValue = getMetricValue(record, state.activeMetricKey);
       if (!Number.isFinite(metricValue) || metricValue < minimumValue) {
         return false;
       }
@@ -445,7 +589,7 @@ function applyFilters() {
   });
 }
 
-function buildMetricStats(records) {
+function buildMetricStats(records, metricKey) {
   const values = [];
   let total = 0;
   let maxRecord = null;
@@ -453,7 +597,7 @@ function buildMetricStats(records) {
   let positiveCount = 0;
 
   for (const record of records) {
-    const value = getMetricValue(record, state.activeMetricKey);
+    const value = getMetricValue(record, metricKey);
     if (!Number.isFinite(value)) {
       continue;
     }
@@ -479,33 +623,24 @@ function buildMetricStats(records) {
   };
 }
 
-function renderSummary(metricStats) {
-  elements.visibleCount.textContent = integerFormatter.format(state.filteredRecords.length);
-  elements.metricTotal.textContent = metricStats.countWithMetric ? formatMetric(metricStats.total) : "No data";
-  elements.metricMax.textContent = metricStats.maxRecord
-    ? `${metricStats.maxRecord.title} (${formatMetric(metricStats.maxValue)})`
-    : "No data";
-  elements.metricName.textContent = metricLabel(state.activeMetricKey);
-}
-
-function renderHeatLayer(metricStats) {
-  if (state.heatLayer) {
-    state.map.removeLayer(state.heatLayer);
-    state.heatLayer = null;
+function renderHeatLayer(layer) {
+  if (layer.heatLayer) {
+    state.map.removeLayer(layer.heatLayer);
+    layer.heatLayer = null;
   }
 
-  if (elements.viewSelect.value === "points" || typeof L.heatLayer !== "function") {
+  if (layer.viewMode === "points" || typeof L.heatLayer !== "function") {
     return;
   }
 
-  const maxValue = metricStats.maxValue ?? 0;
+  const maxValue = layer.metricStats.maxValue ?? 0;
   if (maxValue <= 0) {
     return;
   }
 
-  const heatPoints = state.filteredRecords
+  const heatPoints = layer.filteredRecords
     .map((record) => {
-      const value = getMetricValue(record, state.activeMetricKey);
+      const value = getMetricValue(record, layer.metricKey);
       if (!Number.isFinite(value) || value <= 0) {
         return null;
       }
@@ -518,54 +653,59 @@ function renderHeatLayer(metricStats) {
     return;
   }
 
-  state.heatLayer = L.heatLayer(heatPoints, {
+  layer.heatLayer = L.heatLayer(heatPoints, {
     pane: HEAT_PANE,
-    radius: 26,
+    radius: 24,
     blur: 18,
-    minOpacity: 0.3,
+    minOpacity: 0.24,
     maxZoom: 7,
-    gradient: {
-      0.2: "#fee08b",
-      0.5: "#f46d43",
-      0.85: "#9e0142",
-    },
+    gradient: buildHeatGradient(layer.color),
   }).addTo(state.map);
 }
 
-function renderPointLayer(metricStats) {
-  state.pointLayer.clearLayers();
+function renderPointLayer(layer) {
+  layer.pointLayer.clearLayers();
 
-  if (elements.viewSelect.value === "heat") {
+  if (layer.viewMode === "heat") {
     return;
   }
 
-  const maxValue = metricStats.maxValue ?? 0;
-  for (const record of state.filteredRecords) {
-    const value = getMetricValue(record, state.activeMetricKey);
-    const isActive = record.id === state.activeRecordId;
+  const maxValue = layer.metricStats.maxValue ?? 0;
+  const isFocused = layer.id === state.focusedLayerId;
+
+  for (const record of layer.filteredRecords) {
+    const value = getMetricValue(record, layer.metricKey);
+    const recordKey = toRecordKey(layer.id, record.id);
+    const isHighlighted = recordKey === state.activeRecordKey || recordKey === state.hoverRecordKey;
+    const hasMetric = Number.isFinite(value);
+
     const defaultStyle = {
       pane: POINT_PANE,
       renderer: state.canvasRenderer,
-      radius: markerRadius(value, maxValue, isActive),
-      weight: isActive ? 1.8 : 0.8,
-      color: isActive ? "rgba(31, 26, 22, 0.75)" : "rgba(31, 26, 22, 0.38)",
-      fillColor: markerColor(record, value, maxValue),
-      fillOpacity: Number.isFinite(value) ? (isActive ? 0.92 : 0.82) : 0.46,
+      radius: markerRadius(value, maxValue, isHighlighted),
+      weight: isHighlighted ? 2 : isFocused ? 1.2 : 0.8,
+      color: isHighlighted
+        ? "rgba(31, 26, 22, 0.84)"
+        : isFocused
+          ? "rgba(31, 26, 22, 0.56)"
+          : "rgba(31, 26, 22, 0.3)",
+      fillColor: markerColor(layer, value, maxValue),
+      fillOpacity: hasMetric ? (isFocused ? 0.84 : 0.68) : 0.24,
     };
 
     const marker = L.circleMarker([record.latitude, record.longitude], defaultStyle);
     const hoverStyle = {
-      weight: Math.max(defaultStyle.weight, 1.5),
-      color: "rgba(31, 26, 22, 0.8)",
+      weight: Math.max(defaultStyle.weight, 1.8),
+      color: "rgba(31, 26, 22, 0.88)",
       radius: defaultStyle.radius + 1.2,
     };
 
     marker.on("mouseover", () => {
-      state.hoverRecordId = record.id;
+      state.hoverRecordKey = recordKey;
       marker.setStyle(hoverStyle);
       marker.unbindTooltip();
       marker
-        .bindTooltip(buildHoverSummaryHtml(record), {
+        .bindTooltip(buildHoverSummaryHtml(layer, record), {
           direction: "top",
           offset: [0, -10],
           opacity: 1,
@@ -576,8 +716,8 @@ function renderPointLayer(metricStats) {
     });
 
     marker.on("mouseout", () => {
-      if (state.hoverRecordId === record.id) {
-        state.hoverRecordId = "";
+      if (state.hoverRecordKey === recordKey) {
+        state.hoverRecordKey = "";
       }
       marker.setStyle(defaultStyle);
       marker.closeTooltip();
@@ -586,112 +726,268 @@ function renderPointLayer(metricStats) {
     });
 
     marker.on("click", () => {
-      focusRecord(record, { flyTo: false });
+      focusRecord(layer, record, { flyTo: false });
     });
 
-    state.pointLayer.addLayer(marker);
+    layer.pointLayer.addLayer(marker);
   }
 }
 
-function renderResults(metricStats) {
-  const orderedRecords = [...state.filteredRecords].sort((left, right) => {
-    const leftValue = getMetricValue(left, state.activeMetricKey) ?? Number.NEGATIVE_INFINITY;
-    const rightValue = getMetricValue(right, state.activeMetricKey) ?? Number.NEGATIVE_INFINITY;
+function renderSummary() {
+  const layer = focusedLayer();
+  elements.activeLayerCount.textContent = integerFormatter.format(state.activeLayers.length);
+  renderLayerLegend();
+
+  if (!layer) {
+    elements.visibleCount.textContent = "0";
+    elements.metricTotal.textContent = "No data";
+    elements.metricMax.textContent = "No data";
+    elements.metricName.textContent = "Add a characteristic";
+    elements.datasetDescription.textContent =
+      "Add one or more characteristics to compare emissions, ores, radiation, population, and agriculture on the same map.";
+    elements.resultsHeading.textContent = "Results";
+    elements.detailHeading.textContent = "Record detail";
+    document.title = "Strategic Resource Visualizer";
+    return;
+  }
+
+  const dataset = datasetForLayer(layer);
+  const stats = layer.metricStats;
+  const metricLabelText = metricLabel(layer.metricKey, layer);
+
+  elements.visibleCount.textContent = integerFormatter.format(layer.filteredRecords.length);
+  elements.metricTotal.textContent = stats.countWithMetric ? formatMetric(stats.total) : "No data";
+  elements.metricMax.textContent = stats.maxRecord
+    ? `${stats.maxRecord.title} (${formatMetric(stats.maxValue)})`
+    : "No data";
+  elements.metricName.textContent = layerDisplayLabel(layer);
+  elements.datasetDescription.textContent = `${dataset.metadata.description} Focused layer: ${layerDisplayLabel(layer)}.`;
+  elements.resultsHeading.textContent = `${dataset.metadata.results_label} by ${metricLabelText}`;
+  elements.detailHeading.textContent = `${singularizeLabel(dataset.metadata.results_label)} detail`;
+  document.title =
+    state.activeLayers.length > 1
+      ? `${layerDisplayLabel(layer)} + ${state.activeLayers.length - 1} more | Strategic Resource Visualizer`
+      : `${layerDisplayLabel(layer)} | Strategic Resource Visualizer`;
+}
+
+function renderLayerLegend() {
+  const fragment = document.createDocumentFragment();
+
+  if (!state.activeLayers.length) {
+    const empty = document.createElement("div");
+    empty.className = "microcopy";
+    empty.textContent = "No active layers yet.";
+    fragment.append(empty);
+    elements.layerLegend.replaceChildren(fragment);
+    return;
+  }
+
+  for (const layer of state.activeLayers) {
+    const item = document.createElement("div");
+    item.className = "layer-legend-item";
+
+    const dot = document.createElement("span");
+    dot.className = "layer-dot";
+    dot.style.backgroundColor = layer.color;
+
+    const text = document.createElement("span");
+    text.textContent =
+      layer.id === state.focusedLayerId
+        ? `${layerDisplayLabel(layer)} (focused)`
+        : layerDisplayLabel(layer);
+
+    item.append(dot, text);
+    fragment.append(item);
+  }
+
+  elements.layerLegend.replaceChildren(fragment);
+}
+
+function renderActiveLayerList() {
+  elements.layerCount.textContent = `${integerFormatter.format(state.activeLayers.length)} active`;
+
+  const fragment = document.createDocumentFragment();
+
+  if (!state.activeLayers.length) {
+    const empty = document.createElement("div");
+    empty.className = "microcopy";
+    empty.textContent = "Add a characteristic to begin stacking layers.";
+    fragment.append(empty);
+    elements.activeLayerList.replaceChildren(fragment);
+    return;
+  }
+
+  for (const layer of state.activeLayers) {
+    const dataset = datasetForLayer(layer);
+    const card = document.createElement("div");
+    card.className = "layer-card";
+    if (layer.id === state.focusedLayerId) {
+      card.classList.add("is-focused");
+    }
+
+    const top = document.createElement("div");
+    top.className = "layer-card-top";
+
+    const mainButton = document.createElement("button");
+    mainButton.type = "button";
+    mainButton.className = "layer-main-button";
+    mainButton.dataset.layerAction = "focus";
+    mainButton.dataset.layerId = layer.id;
+
+    const titleRow = document.createElement("div");
+    titleRow.className = "layer-title-row";
+
+    const dot = document.createElement("span");
+    dot.className = "layer-dot";
+    dot.style.backgroundColor = layer.color;
+
+    const titleText = document.createElement("div");
+    titleText.className = "layer-title";
+    titleText.textContent = layerDisplayLabel(layer);
+
+    titleRow.append(dot, titleText);
+    mainButton.append(titleRow);
+
+    const meta = document.createElement("div");
+    meta.className = "layer-meta";
+    meta.textContent = `${integerFormatter.format(layer.filteredRecords.length)} ${dataset.metadata.results_label.toLowerCase()} visible | ${viewLabel(layer.viewMode)}`;
+    mainButton.append(meta);
+
+    const note = document.createElement("div");
+    note.className = "layer-card-note";
+    note.textContent = buildLayerFilterSummary(layer);
+    mainButton.append(note);
+
+    const actions = document.createElement("div");
+    actions.className = "layer-actions";
+
+    const focusButton = document.createElement("button");
+    focusButton.type = "button";
+    focusButton.dataset.layerAction = "focus";
+    focusButton.dataset.layerId = layer.id;
+    focusButton.textContent = layer.id === state.focusedLayerId ? "Focused" : "Focus";
+
+    const zoomButton = document.createElement("button");
+    zoomButton.type = "button";
+    zoomButton.dataset.layerAction = "zoom";
+    zoomButton.dataset.layerId = layer.id;
+    zoomButton.textContent = "Zoom";
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.dataset.layerAction = "remove";
+    removeButton.dataset.layerId = layer.id;
+    removeButton.textContent = "Remove";
+
+    actions.append(focusButton, zoomButton, removeButton);
+    top.append(mainButton, actions);
+    card.append(top);
+    fragment.append(card);
+  }
+
+  elements.activeLayerList.replaceChildren(fragment);
+}
+
+function renderResults() {
+  const layer = focusedLayer();
+  const fragment = document.createDocumentFragment();
+
+  if (!layer) {
+    const empty = document.createElement("div");
+    empty.className = "microcopy";
+    empty.textContent = "Results will appear here once a characteristic layer is active.";
+    fragment.append(empty);
+    elements.resultsList.replaceChildren(fragment);
+    return;
+  }
+
+  const dataset = datasetForLayer(layer);
+  const orderedRecords = [...layer.filteredRecords].sort((left, right) => {
+    const leftValue = getMetricValue(left, layer.metricKey) ?? Number.NEGATIVE_INFINITY;
+    const rightValue = getMetricValue(right, layer.metricKey) ?? Number.NEGATIVE_INFINITY;
     if (rightValue !== leftValue) {
       return rightValue - leftValue;
     }
     return (left.title || "").localeCompare(right.title || "");
   });
 
-  const fragment = document.createDocumentFragment();
-
   if (!orderedRecords.length) {
     const empty = document.createElement("div");
     empty.className = "microcopy";
-    empty.textContent = `No ${state.dataset.metadata.results_label.toLowerCase()} match the current filters.`;
+    empty.textContent = `No ${dataset.metadata.results_label.toLowerCase()} match the current filters for ${layerDisplayLabel(layer)}.`;
     fragment.append(empty);
-  } else {
-    const header = document.createElement("div");
-    header.className = "microcopy";
-    header.textContent = `Showing ${Math.min(25, orderedRecords.length)} of ${integerFormatter.format(orderedRecords.length)} ${state.dataset.metadata.results_label.toLowerCase()}.`;
-    fragment.append(header);
+    elements.resultsList.replaceChildren(fragment);
+    return;
+  }
 
-    for (const record of orderedRecords.slice(0, 25)) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "result-button";
-      if (record.id === state.activeRecordId) {
-        button.classList.add("active");
-      }
+  const header = document.createElement("div");
+  header.className = "microcopy";
+  header.textContent = `Focused layer: ${layerDisplayLabel(layer)}. Showing ${Math.min(25, orderedRecords.length)} of ${integerFormatter.format(orderedRecords.length)} ${dataset.metadata.results_label.toLowerCase()}.`;
+  fragment.append(header);
 
-      const title = document.createElement("div");
-      title.className = "result-title";
-      title.textContent = record.title;
+  for (const record of orderedRecords.slice(0, 25)) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "result-button";
 
-      const subtitle = document.createElement("div");
-      subtitle.className = "result-subline";
-      subtitle.textContent = record.subtitle || `${record.state || "State unknown"} | ${record.groupValue || "Group unknown"}`;
-
-      const valueLine = document.createElement("div");
-      valueLine.className = "result-subline";
-      valueLine.textContent = `${metricLabel(state.activeMetricKey)}: ${displayMetricValue(record, state.activeMetricKey)}`;
-
-      button.append(title, subtitle, valueLine);
-      button.addEventListener("mouseenter", () => {
-        state.hoverRecordId = record.id;
-        renderDetail();
-      });
-      button.addEventListener("mouseleave", () => {
-        if (state.hoverRecordId === record.id) {
-          state.hoverRecordId = "";
-          renderDetail();
-        }
-      });
-      button.addEventListener("click", () => {
-        focusRecord(record, { flyTo: true });
-      });
-
-      fragment.append(button);
+    const recordKey = toRecordKey(layer.id, record.id);
+    if (recordKey === state.activeRecordKey) {
+      button.classList.add("active");
     }
+
+    const title = document.createElement("div");
+    title.className = "result-title";
+    title.textContent = record.title;
+
+    const subtitle = document.createElement("div");
+    subtitle.className = "result-subline";
+    subtitle.textContent = record.subtitle || `${record.state || "State unknown"} | ${record.groupValue || "Group unknown"}`;
+
+    const valueLine = document.createElement("div");
+    valueLine.className = "result-subline";
+    valueLine.textContent = `${metricLabel(layer.metricKey, layer)}: ${displayMetricValue(record, layer.metricKey)}`;
+
+    button.append(title, subtitle, valueLine);
+    button.addEventListener("mouseenter", () => {
+      state.hoverRecordKey = recordKey;
+      renderDetail();
+    });
+    button.addEventListener("mouseleave", () => {
+      if (state.hoverRecordKey === recordKey) {
+        state.hoverRecordKey = "";
+        renderDetail();
+      }
+    });
+    button.addEventListener("click", () => {
+      focusRecord(layer, record, { flyTo: true });
+    });
+
+    fragment.append(button);
   }
 
   elements.resultsList.replaceChildren(fragment);
-
-  if (!state.filteredRecords.length) {
-    setStatus(`No ${state.dataset.metadata.results_label.toLowerCase()} match the current filters.`);
-    return;
-  }
-
-  if (!metricStats.countWithMetric) {
-    setStatus(`${metricLabel(state.activeMetricKey)} has no numeric values in the current view.`);
-    return;
-  }
-
-  if (elements.viewSelect.value !== "points" && metricStats.positiveCount === 0) {
-    setStatus(`${metricLabel(state.activeMetricKey)} has numeric values, but none are above zero, so the heatmap is empty.`);
-    return;
-  }
-
-  setStatus(
-    `Viewing ${integerFormatter.format(state.filteredRecords.length)} ${state.dataset.metadata.results_label.toLowerCase()} using ${metricLabel(state.activeMetricKey)}.`,
-  );
 }
 
 function renderDetail() {
-  const record = detailRecord();
-  if (!record) {
+  const target = detailTarget();
+  if (!target) {
     elements.detailPanel.textContent =
       "Hover or click a point or result row to inspect the active source record.";
     return;
   }
 
+  const { layer, record, recordKey } = target;
+  const dataset = datasetForLayer(layer);
   const previewLabel =
-    state.hoverRecordId === record.id ? "Hover preview from the active dataset" : "Selected record";
-  const groupLabel = state.dataset.metadata.group_label || "Group";
+    state.hoverRecordKey === recordKey
+      ? `Hover preview from ${layerDisplayLabel(layer)}`
+      : `Selected record from ${layerDisplayLabel(layer)}`;
+  const groupLabel = dataset.metadata.group_label || "Group";
 
   const summaryRows = [
-    ["Active metric", metricLabel(state.activeMetricKey)],
-    ["Metric value", displayMetricValue(record, state.activeMetricKey)],
+    ["Layer", layerDisplayLabel(layer)],
+    ["Active metric", metricLabel(layer.metricKey, layer)],
+    ["Metric value", displayMetricValue(record, layer.metricKey)],
     ["Record ID", record.id],
     [groupLabel, record.groupValue || "No data"],
     ["State", record.state || "No data"],
@@ -702,12 +998,12 @@ function renderDetail() {
     .map(([label, value]) => buildDetailRowHtml(label, value))
     .join("");
 
-  const fullRow = state.dataset.headers
+  const fullRow = dataset.headers
     .map((header) =>
       buildDetailRowHtml(
         humanizeHeader(header),
         readRowValue(record.row, header),
-        normalizeHeader(header) === normalizeHeader(state.activeMetricKey),
+        normalizeHeader(header) === normalizeHeader(layer.metricKey),
       ),
     )
     .join("");
@@ -718,30 +1014,51 @@ function renderDetail() {
     `<div class="microcopy">${escapeHtml(previewLabel)}</div>`,
     record.subtitle ? `<div class="microcopy">${escapeHtml(record.subtitle)}</div>` : "",
     `</div>`,
-    `<div class="detail-section-label">Active view</div>`,
+    `<div class="detail-section-label">Focused view</div>`,
     `<div class="detail-grid">${summaryRows}</div>`,
     `<div class="detail-section-label">Full source row</div>`,
     `<div class="detail-grid detail-grid--dense">${fullRow}</div>`,
   ].join("");
 }
 
-function detailRecord() {
-  if (state.hoverRecordId) {
-    return state.filteredRecords.find((record) => record.id === state.hoverRecordId) ?? null;
+function renderStatus() {
+  const layer = focusedLayer();
+  if (!layer) {
+    setStatus("Add a characteristic to start comparing layers.");
+    return;
   }
-  if (state.activeRecordId) {
-    return state.filteredRecords.find((record) => record.id === state.activeRecordId) ?? null;
+
+  const dataset = datasetForLayer(layer);
+  const metricName = metricLabel(layer.metricKey, layer);
+
+  if (!layer.filteredRecords.length) {
+    setStatus(`No ${dataset.metadata.results_label.toLowerCase()} match the current filters for ${layerDisplayLabel(layer)}.`);
+    return;
   }
-  return null;
+
+  if (layer.viewMode !== "points" && layer.metricStats.positiveCount === 0) {
+    setStatus(`${metricName} has no values above zero in ${layerDisplayLabel(layer)}, so its heatmap is empty.`);
+    return;
+  }
+
+  if (state.showNulls && layer.metricStats.countWithMetric < layer.filteredRecords.length) {
+    setStatus(
+      `Viewing ${integerFormatter.format(layer.filteredRecords.length)} ${dataset.metadata.results_label.toLowerCase()} in ${layerDisplayLabel(layer)}. Null metric values are included for debugging.`,
+    );
+    return;
+  }
+
+  setStatus(
+    `Viewing ${integerFormatter.format(layer.filteredRecords.length)} ${dataset.metadata.results_label.toLowerCase()} in ${layerDisplayLabel(layer)}.`,
+  );
 }
 
-function focusRecord(record, options = {}) {
-  state.activeRecordId = record.id;
-  state.hoverRecordId = "";
-  const metricStats = buildMetricStats(state.filteredRecords);
-  renderPointLayer(metricStats);
-  renderResults(metricStats);
-  renderDetail();
+function focusRecord(layer, record, options = {}) {
+  state.focusedLayerId = layer.id;
+  state.activeRecordKey = toRecordKey(layer.id, record.id);
+  state.hoverRecordKey = "";
+  void syncAdvancedControls();
+  refreshView();
 
   if (options.flyTo) {
     state.map.flyTo([record.latitude, record.longitude], Math.max(state.map.getZoom(), 7), {
@@ -750,19 +1067,310 @@ function focusRecord(record, options = {}) {
   }
 }
 
-function zoomToFiltered() {
-  if (!state.filteredRecords.length) {
+function zoomToRecords(records) {
+  if (!records.length) {
     return;
   }
 
-  if (state.filteredRecords.length === 1) {
-    const [record] = state.filteredRecords;
+  if (records.length === 1) {
+    const [record] = records;
     state.map.flyTo([record.latitude, record.longitude], 8, { duration: 0.65 });
     return;
   }
 
-  const bounds = L.latLngBounds(state.filteredRecords.map((record) => [record.latitude, record.longitude]));
+  const bounds = L.latLngBounds(records.map((record) => [record.latitude, record.longitude]));
   state.map.fitBounds(bounds, { padding: [28, 28] });
+}
+
+async function syncSimpleMetricOptions(datasetKey, preferredMetricKey = "") {
+  if (!datasetKey) {
+    replaceSelectOptions(elements.simpleMetricSelect, [], "No characteristics available");
+    return;
+  }
+
+  const dataset = await loadDataset(datasetKey);
+  populateMetricOptions(elements.simpleMetricSelect, dataset, resolveMetricKey(dataset, preferredMetricKey));
+}
+
+async function syncAdvancedControls() {
+  populateDatasetOptions(elements.advancedDatasetSelect);
+  populateFocusLayerOptions();
+  elements.showNullsToggle.checked = state.showNulls;
+
+  const layer = focusedLayer();
+  const advancedControls = [
+    elements.advancedDatasetSelect,
+    elements.advancedMetricSelect,
+    elements.viewSelect,
+    elements.stateSelect,
+    elements.groupSelect,
+    elements.searchInput,
+    elements.minimumInput,
+    elements.resetFilters,
+  ];
+
+  if (!layer) {
+    for (const control of advancedControls) {
+      control.disabled = true;
+    }
+    replaceSelectOptions(elements.advancedMetricSelect, [], "No active layer");
+    replaceSelectOptions(elements.stateSelect, [], "All states");
+    replaceSelectOptions(elements.groupSelect, [], "All groups");
+    elements.groupLabel.textContent = "Group";
+    elements.searchLabel.textContent = "Search records";
+    elements.searchInput.value = "";
+    elements.searchInput.placeholder = "Search the focused layer";
+    elements.minimumInput.value = "";
+    elements.viewSelect.value = "points";
+    return;
+  }
+
+  const dataset = datasetForLayer(layer) ?? (await loadDataset(layer.datasetKey));
+  for (const control of advancedControls) {
+    control.disabled = false;
+  }
+
+  elements.focusLayerSelect.value = layer.id;
+  elements.advancedDatasetSelect.value = dataset.key;
+  populateMetricOptions(elements.advancedMetricSelect, dataset, layer.metricKey);
+  elements.viewSelect.value = layer.viewMode;
+
+  const states = [...new Set(dataset.records.map((record) => record.state).filter(Boolean))].sort();
+  const groups = [...new Set(dataset.records.map((record) => record.groupValue).filter(Boolean))].sort();
+
+  replaceSelectOptions(elements.stateSelect, states, "All states");
+  replaceSelectOptions(
+    elements.groupSelect,
+    groups,
+    `All ${dataset.metadata.group_label.toLowerCase()} groups`,
+  );
+
+  if (states.includes(layer.stateFilter)) {
+    elements.stateSelect.value = layer.stateFilter;
+  }
+  if (groups.includes(layer.groupFilter)) {
+    elements.groupSelect.value = layer.groupFilter;
+  }
+
+  elements.groupLabel.textContent = dataset.metadata.group_label;
+  elements.searchLabel.textContent = `Search ${dataset.metadata.results_label.toLowerCase()}`;
+  elements.searchInput.placeholder = dataset.metadata.search_placeholder;
+  elements.searchInput.value = layer.searchTerm;
+  elements.minimumInput.value = layer.minimumValue;
+}
+
+function populateDatasetOptions(select) {
+  const previousValue = select.value;
+  select.replaceChildren();
+
+  for (const dataset of state.manifest) {
+    const option = document.createElement("option");
+    option.value = dataset.key;
+    option.textContent = dataset.label;
+    select.append(option);
+  }
+
+  if (state.manifest.some((dataset) => dataset.key === previousValue)) {
+    select.value = previousValue;
+  }
+}
+
+function populateMetricOptions(select, dataset, selectedMetricKey = "") {
+  select.replaceChildren();
+
+  for (const metric of dataset.metadata.metrics) {
+    const option = document.createElement("option");
+    option.value = metric.key;
+    option.textContent = metric.label;
+    select.append(option);
+  }
+
+  const resolvedMetric = resolveMetricKey(dataset, selectedMetricKey);
+  select.value = resolvedMetric;
+}
+
+function populateFocusLayerOptions() {
+  elements.focusLayerSelect.replaceChildren();
+
+  if (!state.activeLayers.length) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "No active layers";
+    elements.focusLayerSelect.append(option);
+    return;
+  }
+
+  for (const layer of state.activeLayers) {
+    const option = document.createElement("option");
+    option.value = layer.id;
+    option.textContent = layerDisplayLabel(layer);
+    elements.focusLayerSelect.append(option);
+  }
+
+  if (layerById(state.focusedLayerId)) {
+    elements.focusLayerSelect.value = state.focusedLayerId;
+  }
+}
+
+function replaceSelectOptions(select, values, emptyLabel) {
+  select.replaceChildren();
+
+  const emptyOption = document.createElement("option");
+  emptyOption.value = "";
+  emptyOption.textContent = emptyLabel;
+  select.append(emptyOption);
+
+  for (const value of values) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    select.append(option);
+  }
+}
+
+function setControlPane(paneKey) {
+  state.controlPane = paneKey === "advanced" ? "advanced" : "simple";
+  const isSimple = state.controlPane === "simple";
+
+  elements.simplePane.hidden = !isSimple;
+  elements.advancedPane.hidden = isSimple;
+  elements.simplePane.classList.toggle("is-active", isSimple);
+  elements.advancedPane.classList.toggle("is-active", !isSimple);
+  elements.simplePaneButton.classList.toggle("is-active", isSimple);
+  elements.advancedPaneButton.classList.toggle("is-active", !isSimple);
+  elements.simplePaneButton.setAttribute("aria-pressed", String(isSimple));
+  elements.advancedPaneButton.setAttribute("aria-pressed", String(!isSimple));
+}
+
+function manifestEntryByKey(datasetKey) {
+  return state.manifest.find((dataset) => dataset.key === datasetKey) ?? null;
+}
+
+function manifestLabel(datasetKey) {
+  return manifestEntryByKey(datasetKey)?.label ?? datasetKey;
+}
+
+function datasetForLayer(layer) {
+  return state.datasetCache.get(layer.datasetKey) ?? null;
+}
+
+function focusedLayer() {
+  return layerById(state.focusedLayerId);
+}
+
+function layerById(layerId) {
+  return state.activeLayers.find((layer) => layer.id === layerId) ?? null;
+}
+
+function resolveMetricKey(dataset, metricKey) {
+  if (
+    metricKey &&
+    dataset?.metadata.metrics.some((metric) => metric.key === metricKey)
+  ) {
+    return metricKey;
+  }
+
+  return preferredMetricKey(dataset);
+}
+
+function preferredMetricKey(dataset) {
+  const preferred = dataset?.metadata.default_metric_key;
+  if (
+    preferred &&
+    dataset.metadata.metrics.some((metric) => metric.key === preferred) &&
+    dataset.records.some((record) => Number.isFinite(getMetricValue(record, preferred)))
+  ) {
+    return preferred;
+  }
+  return dataset?.metadata.metrics[0]?.key ?? "";
+}
+
+function renderOrder() {
+  const focusedId = state.focusedLayerId;
+  return [...state.activeLayers].sort((left, right) => {
+    if (left.id === focusedId) {
+      return 1;
+    }
+    if (right.id === focusedId) {
+      return -1;
+    }
+    return 0;
+  });
+}
+
+function collectVisibleRecords() {
+  return state.activeLayers.flatMap((layer) => layer.filteredRecords);
+}
+
+function ensureFocusedLayerExists() {
+  if (!layerById(state.focusedLayerId)) {
+    state.focusedLayerId = state.activeLayers[0]?.id ?? "";
+  }
+}
+
+function pruneSelectedRecords() {
+  if (!findRecordByKey(state.activeRecordKey)) {
+    state.activeRecordKey = "";
+  }
+  if (!findRecordByKey(state.hoverRecordKey)) {
+    state.hoverRecordKey = "";
+  }
+}
+
+function detailTarget() {
+  return findRecordByKey(state.hoverRecordKey) ?? findRecordByKey(state.activeRecordKey);
+}
+
+function findRecordByKey(recordKey) {
+  if (!recordKey) {
+    return null;
+  }
+
+  const [layerId, recordId] = String(recordKey).split("::");
+  const layer = layerById(layerId);
+  if (!layer) {
+    return null;
+  }
+
+  const record = layer.filteredRecords.find((entry) => entry.id === recordId);
+  if (!record) {
+    return null;
+  }
+
+  return { layer, record, recordKey };
+}
+
+function clearLayerRecordSelection(layerId) {
+  if (recordKeyBelongsToLayer(state.activeRecordKey, layerId)) {
+    state.activeRecordKey = "";
+  }
+  if (recordKeyBelongsToLayer(state.hoverRecordKey, layerId)) {
+    state.hoverRecordKey = "";
+  }
+}
+
+function clearAllRecordSelection() {
+  state.activeRecordKey = "";
+  state.hoverRecordKey = "";
+}
+
+function recordKeyBelongsToLayer(recordKey, layerId) {
+  return String(recordKey || "").startsWith(`${layerId}::`);
+}
+
+function toRecordKey(layerId, recordId) {
+  return `${layerId}::${recordId}`;
+}
+
+function disposeLayer(layer) {
+  if (layer.heatLayer) {
+    state.map.removeLayer(layer.heatLayer);
+    layer.heatLayer = null;
+  }
+  if (layer.pointLayer) {
+    layer.pointLayer.clearLayers();
+    state.map.removeLayer(layer.pointLayer);
+  }
 }
 
 function getMetricValue(record, metricKey) {
@@ -774,67 +1382,77 @@ function displayMetricValue(record, metricKey) {
   return Number.isFinite(value) ? formatMetric(value) : "No data";
 }
 
-function metricLabel(metricKey) {
-  return state.dataset?.metadata.metrics.find((metric) => metric.key === metricKey)?.label ?? metricKey;
+function metricLabel(metricKey, layer) {
+  const dataset =
+    typeof layer === "string"
+      ? state.datasetCache.get(layer) ?? null
+      : datasetForLayer(layer);
+  return dataset?.metadata.metrics.find((metric) => metric.key === metricKey)?.label ?? metricKey;
 }
 
-function preferredMetricKey(dataset) {
-  const preferred = dataset.metadata.default_metric_key;
-  if (
-    preferred &&
-    dataset.metadata.metrics.some((metric) => metric.key === preferred) &&
-    dataset.records.some((record) => Number.isFinite(getMetricValue(record, preferred)))
-  ) {
-    return preferred;
+function layerDisplayLabel(layer) {
+  return `${manifestLabel(layer.datasetKey)} - ${metricLabel(layer.metricKey, layer)}`;
+}
+
+function buildLayerFilterSummary(layer) {
+  const parts = [];
+  if (layer.stateFilter) {
+    parts.push(`State: ${layer.stateFilter}`);
   }
-  return dataset.metadata.metrics[0]?.key ?? "";
+  if (layer.groupFilter) {
+    parts.push(`Group: ${layer.groupFilter}`);
+  }
+  if (parseInputNumber(layer.minimumValue) !== null) {
+    parts.push(`Min: ${layer.minimumValue}`);
+  }
+  if (stringValue(layer.searchTerm)) {
+    parts.push(`Search: ${stringValue(layer.searchTerm)}`);
+  }
+  return parts.join(" | ") || "No advanced filters applied";
 }
 
-function markerRadius(value, maxValue, isActive = false) {
-  const baseRadius = !Number.isFinite(value) || maxValue <= 0 ? 4.2 : 4 + Math.sqrt(value / maxValue) * 10;
-  return isActive ? baseRadius + 1.2 : baseRadius;
+function viewLabel(value) {
+  if (value === "heat") {
+    return "Heatmap only";
+  }
+  if (value === "points") {
+    return "Points only";
+  }
+  return "Heatmap + points";
 }
 
-function markerColor(record, value, maxValue) {
+function markerRadius(value, maxValue, isHighlighted = false) {
+  const layerAdjustment = state.activeLayers.length > 3 ? -0.45 : 0;
+  const baseRadius =
+    !Number.isFinite(value) || maxValue <= 0
+      ? 3.2
+      : 3.8 + Math.sqrt(value / maxValue) * 7.4 + layerAdjustment;
+  return isHighlighted ? baseRadius + 1.3 : Math.max(2.8, baseRadius);
+}
+
+function markerColor(layer, value, maxValue) {
   if (!Number.isFinite(value) || maxValue <= 0) {
-    return groupColor(record.groupValue);
+    return interpolateColor("#f5ece3", layer.color, 0.42);
   }
-  const ratio = Math.max(0, Math.min(1, Math.sqrt(value / maxValue)));
-  return interpolateColor("#fee08b", "#9e0142", ratio);
+
+  const ratio = Math.max(0.18, Math.min(1, Math.sqrt(value / maxValue)));
+  return interpolateColor("#fff5d6", layer.color, ratio);
 }
 
-function groupColor(value) {
-  const normalized = stringValue(value);
-  if (!normalized) {
-    return "#8d7b68";
-  }
-  if (SPECIAL_GROUP_COLORS[normalized]) {
-    return SPECIAL_GROUP_COLORS[normalized];
-  }
-
-  const palette = [
-    "#5f8d4e",
-    "#3a7ca5",
-    "#b03a2e",
-    "#7c5c47",
-    "#9b6a6c",
-    "#8a9b0f",
-    "#7d6c97",
-    "#2f6b8f",
-    "#c97c5d",
-  ];
-  let hash = 0;
-  for (const character of normalized) {
-    hash = (hash * 31 + character.charCodeAt(0)) % 2147483647;
-  }
-  return palette[Math.abs(hash) % palette.length];
+function buildHeatGradient(baseHex) {
+  return {
+    0.2: interpolateColor("#fff5d6", baseHex, 0.3),
+    0.55: interpolateColor("#fff5d6", baseHex, 0.68),
+    0.9: adjustHexColor(baseHex, -0.24),
+  };
 }
 
-function buildHoverSummaryHtml(record) {
+function buildHoverSummaryHtml(layer, record) {
   return [
     `<div class="popup-title">${escapeHtml(record.title)}</div>`,
     record.subtitle ? `<div class="popup-line">${escapeHtml(record.subtitle)}</div>` : "",
-    `<div class="popup-line">${escapeHtml(metricLabel(state.activeMetricKey))}: ${escapeHtml(displayMetricValue(record, state.activeMetricKey))}</div>`,
+    `<div class="popup-line">${escapeHtml(layerDisplayLabel(layer))}</div>`,
+    `<div class="popup-line">${escapeHtml(metricLabel(layer.metricKey, layer))}: ${escapeHtml(displayMetricValue(record, layer.metricKey))}</div>`,
     `<div class="popup-line">${escapeHtml(record.groupValue || "Unspecified")}</div>`,
   ].join("");
 }
@@ -966,6 +1584,17 @@ function singularizeLabel(value) {
   return text || "Record";
 }
 
+function emptyMetricStats() {
+  return {
+    values: [],
+    countWithMetric: 0,
+    positiveCount: 0,
+    total: 0,
+    maxValue: null,
+    maxRecord: null,
+  };
+}
+
 function setStatus(message, tone = "info") {
   elements.statusPill.textContent = message;
   elements.statusPill.dataset.tone = tone;
@@ -976,6 +1605,12 @@ function interpolateColor(startHex, endHex, ratio) {
   const end = hexToRgb(endHex);
   const mix = (left, right) => Math.round(left + (right - left) * ratio);
   return `rgb(${mix(start.r, end.r)}, ${mix(start.g, end.g)}, ${mix(start.b, end.b)})`;
+}
+
+function adjustHexColor(hex, amount) {
+  const rgb = hexToRgb(hex);
+  const adjust = (value) => Math.max(0, Math.min(255, Math.round(value * (1 + amount))));
+  return `rgb(${adjust(rgb.r)}, ${adjust(rgb.g)}, ${adjust(rgb.b)})`;
 }
 
 function hexToRgb(hex) {
