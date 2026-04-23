@@ -1,3 +1,6 @@
 /thisnote.md
+__pycache__/
+*.pyc
 /data/private/cybersecurity/scans/
 /data/private/cybersecurity/imports/
+/data/private/cybersecurity/artifact-matches/

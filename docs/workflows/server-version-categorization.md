@@ -72,6 +72,8 @@ Each run writes:
 
 These outputs can contain sensitive exposure details and should stay private.
 
+The `service-version-categories.csv` output can be passed to `scripts/match_server_defensive_artifacts.py` to attach safe defensive hardening snippets and snippet references. See `docs/workflows/server-defensive-artifact-matching.md`.
+
 ## Categories
 
 | Category | Meaning |

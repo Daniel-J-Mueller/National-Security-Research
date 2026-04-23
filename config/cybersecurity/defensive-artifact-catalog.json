@@ -1,0 +1,324 @@
+{
+  "catalog_name": "safe-defensive-artifact-catalog",
+  "catalog_version": "2026-04-23",
+  "description": "Local defensive hardening snippets for owner-authorized server inventory enrichment. This catalog intentionally excludes malware samples, exploit code, payloads, offensive procedures, credentials, target lists, and proof-of-concept material.",
+  "artifacts": [
+    {
+      "id": "remote-admin-access-hardening",
+      "artifact_type": "defensive-hardening",
+      "title": "Remote Administration Access Hardening",
+      "summary": "Review exposed SSH, RDP, WinRM, VNC, and similar remote administration services.",
+      "priority": "high",
+      "match_any": [
+        {
+          "service_name_regex": "^(ssh|rdp|ms-wbt-server|winrm|vnc|telnet)$"
+        },
+        {
+          "port_in": [
+            22,
+            23,
+            3389,
+            5900,
+            5901,
+            5985,
+            5986
+          ]
+        },
+        {
+          "flag_contains": "remote_admin_service"
+        },
+        {
+          "flag_contains": "remote_admin_port"
+        }
+      ],
+      "match_rationale": "Remote administration services deserve tight exposure, authentication, and monitoring controls.",
+      "references": [
+        {
+          "name": "CISA Cross-Sector Cybersecurity Performance Goals",
+          "url": "https://www.cisa.gov/cybersecurity-performance-goals"
+        },
+        {
+          "name": "NIST Cybersecurity Framework 2.0",
+          "url": "https://www.nist.gov/publications/nist-cybersecurity-framework-csf-20"
+        }
+      ],
+      "snippet": "Remote administration services should be reachable only from approved management paths such as a VPN, bastion, or restricted administrative network. Require phishing-resistant MFA where feasible, disable password-only access where policy allows, remove stale local and domain accounts, and log successful and failed access attempts. Confirm the service is still required, patched through the vendor or OS package channel, and covered by alerting for unusual source locations, new administrators, and repeated failed authentication."
+    },
+    {
+      "id": "web-service-hardening-review",
+      "artifact_type": "defensive-hardening",
+      "title": "Web Service Hardening Review",
+      "summary": "Review exposed HTTP, HTTPS, reverse proxy, and application server surfaces.",
+      "priority": "medium",
+      "match_any": [
+        {
+          "service_name_regex": "^(http|https|http-alt|http-proxy)$"
+        },
+        {
+          "port_in": [
+            80,
+            443,
+            8000,
+            8080,
+            8443,
+            8888
+          ]
+        },
+        {
+          "product_regex": "(Apache|nginx|IIS|Tomcat|Jetty|Node|Express|Caddy|Traefik)"
+        }
+      ],
+      "match_rationale": "Web services are common internet-facing entry points and need baseline hardening even when the detected version is current.",
+      "references": [
+        {
+          "name": "CISA Known Exploited Vulnerabilities Catalog",
+          "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
+        },
+        {
+          "name": "CISA Cross-Sector Cybersecurity Performance Goals",
+          "url": "https://www.cisa.gov/cybersecurity-performance-goals"
+        }
+      ],
+      "snippet": "Confirm the web service is intentionally exposed and fronted by the expected reverse proxy, load balancer, or application gateway. Remove default sites, sample applications, unused modules, and stale virtual hosts. Verify TLS is enforced for authenticated or sensitive traffic, patch through the vendor or OS package channel, and make sure access logs are retained. Review whether admin consoles, debug endpoints, metrics, and backup files are blocked from untrusted networks."
+    },
+    {
+      "id": "tls-certificate-cipher-baseline",
+      "artifact_type": "defensive-hardening",
+      "title": "TLS Certificate And Cipher Baseline",
+      "summary": "Review encrypted services for certificate validity and modern TLS configuration.",
+      "priority": "medium",
+      "match_any": [
+        {
+          "service_name_regex": "^(https|ssl|imaps|pop3s|smtps|ldaps)$"
+        },
+        {
+          "port_in": [
+            443,
+            465,
+            636,
+            993,
+            995,
+            8443
+          ]
+        }
+      ],
+      "match_rationale": "Encrypted services still need certificate lifecycle, protocol, and cipher review.",
+      "references": [
+        {
+          "name": "NIST Cybersecurity Framework 2.0",
+          "url": "https://www.nist.gov/publications/nist-cybersecurity-framework-csf-20"
+        }
+      ],
+      "snippet": "Check that certificates are valid, trusted by expected clients, named correctly, and monitored before expiration. Disable legacy protocol versions and weak cipher suites according to your platform baseline. Confirm certificate private keys are protected, renewal is automated or tracked, and service owners know which load balancers, proxies, and application servers terminate TLS."
+    },
+    {
+      "id": "database-exposure-hardening",
+      "artifact_type": "defensive-hardening",
+      "title": "Database Exposure Hardening",
+      "summary": "Review database listeners for network reachability, authentication, patching, and logging.",
+      "priority": "high",
+      "match_any": [
+        {
+          "service_name_regex": "^(mysql|postgresql|ms-sql-s|mongodb|redis|elasticsearch|oracle|couchdb)$"
+        },
+        {
+          "port_in": [
+            1433,
+            1521,
+            3306,
+            5432,
+            6379,
+            9200,
+            27017
+          ]
+        },
+        {
+          "flag_contains": "database_service"
+        }
+      ],
+      "match_rationale": "Database services should usually be private, tightly authenticated, and monitored.",
+      "references": [
+        {
+          "name": "CISA Cross-Sector Cybersecurity Performance Goals",
+          "url": "https://www.cisa.gov/cybersecurity-performance-goals"
+        }
+      ],
+      "snippet": "Confirm the database listener is not exposed beyond the application or administration networks that need it. Require strong authentication, remove default or stale accounts, and enforce encryption where supported. Verify backups are protected and tested, audit logging is enabled for privileged actions, and patching follows the vendor or managed-service maintenance path. For cache and search services, confirm unauthenticated or anonymous access is disabled."
+    },
+    {
+      "id": "legacy-cleartext-service-retirement",
+      "artifact_type": "defensive-hardening",
+      "title": "Legacy Or Cleartext Service Retirement",
+      "summary": "Review FTP, Telnet, cleartext mail protocols, and other legacy services for replacement or isolation.",
+      "priority": "high",
+      "match_any": [
+        {
+          "service_name_regex": "^(ftp|telnet|pop3|imap|smtp|rlogin|rsh)$"
+        },
+        {
+          "port_in": [
+            21,
+            23,
+            25,
+            110,
+            143,
+            513,
+            514
+          ]
+        },
+        {
+          "flag_contains": "cleartext_or_legacy_service"
+        }
+      ],
+      "match_rationale": "Legacy or cleartext services can expose credentials and should be retired, wrapped, or isolated.",
+      "references": [
+        {
+          "name": "CISA Cross-Sector Cybersecurity Performance Goals",
+          "url": "https://www.cisa.gov/cybersecurity-performance-goals"
+        }
+      ],
+      "snippet": "Identify the business owner and confirm whether the legacy service is still needed. Prefer modern encrypted replacements such as SFTP, SSH, HTTPS, IMAPS, or authenticated relay designs. If retirement is not immediately possible, restrict source networks, prevent credential reuse, monitor use, and document a time-bound exception with compensating controls."
+    },
+    {
+      "id": "smb-file-sharing-hardening",
+      "artifact_type": "defensive-hardening",
+      "title": "SMB And File Sharing Hardening",
+      "summary": "Review SMB and file sharing services for exposure, signing, access control, and backup coverage.",
+      "priority": "high",
+      "match_any": [
+        {
+          "service_name_regex": "^(microsoft-ds|netbios-ssn|smb)$"
+        },
+        {
+          "port_in": [
+            139,
+            445
+          ]
+        },
+        {
+          "product_regex": "(Samba|Windows file sharing|Microsoft Windows)"
+        }
+      ],
+      "match_rationale": "File sharing services often carry sensitive data and lateral-movement risk if broadly reachable.",
+      "references": [
+        {
+          "name": "CISA Known Exploited Vulnerabilities Catalog",
+          "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
+        },
+        {
+          "name": "CISA Cross-Sector Cybersecurity Performance Goals",
+          "url": "https://www.cisa.gov/cybersecurity-performance-goals"
+        }
+      ],
+      "snippet": "Confirm SMB is only reachable from trusted internal networks and not from the public internet. Disable unsupported protocol versions, require signing where your environment supports it, and review share permissions for least privilege. Monitor privileged file access, verify endpoint and server patching, and ensure critical shares are included in offline or immutable backup coverage."
+    },
+    {
+      "id": "linux-package-backport-version-check",
+      "artifact_type": "defensive-reference",
+      "title": "Linux Package Backport Version Check",
+      "summary": "Treat older-looking Linux service banners as leads until package-level vendor support is checked.",
+      "priority": "medium",
+      "match_any": [
+        {
+          "product_regex": "(OpenSSH|Apache|nginx|Postfix|Dovecot|Samba|OpenSSL)"
+        },
+        {
+          "cpe_regex": "cpe:/[ao]:linux"
+        }
+      ],
+      "match_rationale": "Linux distributions often backport security fixes while retaining older upstream version strings.",
+      "references": [
+        {
+          "name": "NIST Cybersecurity Framework 2.0",
+          "url": "https://www.nist.gov/publications/nist-cybersecurity-framework-csf-20"
+        }
+      ],
+      "snippet": "Do not treat the banner version alone as proof of vulnerability. Check the OS distribution, package name, package release, and vendor security advisory status. Record whether the package is supported, whether security updates are enabled, and whether the host is receiving updates from the expected repository or management system."
+    },
+    {
+      "id": "windows-server-role-hardening",
+      "artifact_type": "defensive-hardening",
+      "title": "Windows Server Role Hardening",
+      "summary": "Review Windows server roles for patching, privileged access, logging, and exposed management paths.",
+      "priority": "medium",
+      "match_any": [
+        {
+          "product_regex": "(Microsoft Windows|Windows Server|IIS|MSRPC|Terminal Services)"
+        },
+        {
+          "service_name_regex": "^(msrpc|microsoft-ds|ms-wbt-server|winrm)$"
+        },
+        {
+          "port_in": [
+            135,
+            139,
+            445,
+            3389,
+            5985,
+            5986
+          ]
+        }
+      ],
+      "match_rationale": "Windows server roles need patching, role minimization, privileged-access controls, and event visibility.",
+      "references": [
+        {
+          "name": "CISA Cross-Sector Cybersecurity Performance Goals",
+          "url": "https://www.cisa.gov/cybersecurity-performance-goals"
+        }
+      ],
+      "snippet": "Verify the host is enrolled in patch management and that only required Windows roles and features are enabled. Restrict RDP and WinRM to approved administration paths, use separate privileged accounts, and review local Administrators group membership. Confirm event forwarding or centralized logging covers authentication, service changes, new local accounts, and privilege changes."
+    },
+    {
+      "id": "known-exploited-vulnerability-triage",
+      "artifact_type": "defensive-reference",
+      "title": "Known Exploited Vulnerability Triage",
+      "summary": "Prioritize lifecycle findings against CISA KEV and vendor advisories before deciding remediation order.",
+      "priority": "high",
+      "match_any": [
+        {
+          "vx_category_in": [
+            "vx-baseline-behind",
+            "vx-eol-or-legacy"
+          ]
+        },
+        {
+          "requires_version": true
+        },
+        {
+          "cpe_regex": "cpe:/[aho]:"
+        }
+      ],
+      "match_rationale": "Versioned services and lifecycle findings should be checked against known exploited vulnerability and vendor advisory sources.",
+      "references": [
+        {
+          "name": "CISA Known Exploited Vulnerabilities Catalog",
+          "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
+        }
+      ],
+      "snippet": "Use the detected product, version, CPE, and vendor package metadata to check whether the asset maps to a known exploited vulnerability or urgent vendor advisory. Record the source, advisory identifier, due date if applicable, and remediation owner. If the version appears old but the vendor backports fixes, document the package release evidence instead of relying on the banner alone."
+    },
+    {
+      "id": "general-service-inventory-review",
+      "artifact_type": "general-review",
+      "title": "General Service Inventory Review",
+      "summary": "Fallback defensive review for inventory rows that do not match a more specific artifact.",
+      "priority": "review",
+      "fallback": true,
+      "match_any": [
+        {}
+      ],
+      "match_rationale": "Fallback item assigned so every server CSV row has at least one defensive reference.",
+      "references": [
+        {
+          "name": "CISA Cross-Sector Cybersecurity Performance Goals",
+          "url": "https://www.cisa.gov/cybersecurity-performance-goals"
+        },
+        {
+          "name": "NIST Cybersecurity Framework 2.0",
+          "url": "https://www.nist.gov/publications/nist-cybersecurity-framework-csf-20"
+        }
+      ],
+      "snippet": "Confirm the service is expected, owned, patched, monitored, backed up where applicable, and reachable only from intended networks. Record the asset owner, business purpose, patch source, authentication model, logging location, and retirement plan if the service is no longer required. Treat this item as a prompt for manual review, not as proof of vulnerability."
+    }
+  ]
+}

@@ -123,6 +123,13 @@ This source log supports defensive, aggregate cybersecurity and cyber-physical r
 - Use: background context only for the idea of collection-style malware/threat research sorting
 - Notes: vx-underground is a malware and cybersecurity archive. Do not download samples, import malware material, collect IOCs into target lists, or use the archive as an exploit source in this repository. The local `vx-safe-version-taxonomy` workflow is defensive and categorizes owner-authorized service-version scan results only.
 
+### Local Defensive Artifact Catalog
+
+- URL: `config/cybersecurity/defensive-artifact-catalog.json`
+- Verified: April 23, 2026
+- Use: safe hardening snippet matching for owner-authorized server inventory CSVs
+- Notes: this local catalog contains defensive prompts and references only. It is the approved replacement for downloading malware archives or extracting offensive snippets.
+
 ## Handling Notes
 
 - Prefer official government, regulator, standards, and sector-risk-management sources.
