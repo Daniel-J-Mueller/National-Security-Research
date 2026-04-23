@@ -1,0 +1,29 @@
+{
+  "generated_at_utc": "2026-04-22T07:19:30.100973+00:00",
+  "source_files": [
+    "data\\raw\\electrical\\eia860\\2024\\2___Plant_Y2024.xlsx",
+    "data\\raw\\electrical\\eia860\\2024\\3_1_Generator_Y2024.xlsx",
+    "data\\raw\\electrical\\eia860\\2024\\6_1_EnviroAssoc_Y2024.xlsx",
+    "data\\raw\\electrical\\eia860\\2024\\6_2_EnviroEquip_Y2024.xlsx",
+    "data\\processed\\electrical\\eia860\\plants_2024_clean.csv",
+    "data\\raw\\electrical\\epa\\egrid2023_data_rev2.xlsx",
+    "data\\raw\\electrical\\epa\\egrid_pm25_2018_2021.xlsx"
+  ],
+  "output_file": "data\\private\\electrical\\eia860_2024\\plant_profiles_private.csv",
+  "plant_count": 16132,
+  "coordinate_rows_present": 16104,
+  "carbon_capture_plants": 6,
+  "co2_rows": 3358,
+  "co2e_rows": 3568,
+  "ch4_rows": 3502,
+  "n2o_rows": 3502,
+  "so2_rows": 3406,
+  "nox_rows": 3357,
+  "mercury_rows": 161,
+  "particulate_rows": 3533,
+  "notes": [
+    "CO2, CO2e, CH4, N2O, NOx, SO2, and mercury columns are populated from EPA eGRID2023 plant-level data when available.",
+    "Particulate matter values are populated from EPA's eGRID PM2.5 2021 supplemental workbook when available, otherwise the file falls back to EIA-860 design-rate fields.",
+    "Radioisotopic emissions remain blank because they were not available in the downloaded official EPA sources used for this build."
+  ]
+}

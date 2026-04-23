@@ -1,0 +1,11 @@
+{
+  "generated_at_utc": "2026-04-22T17:34:00.023782+00:00",
+  "source_files": [
+    "data\\raw\\raws\\usgs\\critical_mineral_deposits_bundle\\Critical_mineral_deposits_table_v2_csv.csv",
+    "data\\raw\\raws\\epa\\2023_data_summary_spreadsheets\\ghgp_data_2023.xlsx"
+  ],
+  "output_file": "data\\private\\raws\\raw_material_sites_2023_private.csv",
+  "row_count": 987,
+  "ore_site_count": 684,
+  "steel_facility_count": 303
+}

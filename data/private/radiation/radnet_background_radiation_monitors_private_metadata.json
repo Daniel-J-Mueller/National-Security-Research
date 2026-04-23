@@ -1,0 +1,17 @@
+{
+  "generated_at_utc": "2026-04-22T21:40:31.946052+00:00",
+  "source_files": [
+    "data\\raw\\radiation\\epa_radnet\\radnet_zip_manifest.json",
+    "data\\raw\\radiation\\epa_radnet\\zips",
+    "data\\raw\\people\\census\\2024_Gaz_place_national\\2024_Gaz_place_national.txt"
+  ],
+  "output_file": "data\\private\\radiation\\radnet_background_radiation_monitors_private.csv",
+  "monitor_count": 138,
+  "gamma_only_monitor_count": 6,
+  "missing_coordinate_matches": [
+    "nj_edison_2025-2007.zip"
+  ],
+  "notes": [
+    "Private output retains archive ZIP provenance, raw EPA location labels, and per-channel gamma averages."
+  ]
+}

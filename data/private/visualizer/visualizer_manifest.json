@@ -1,0 +1,50 @@
+{
+  "generated_at_utc": "2026-04-22T21:40:44.503579+00:00",
+  "datasets": [
+    {
+      "key": "electrical",
+      "label": "Electrical",
+      "path": "../../data/private/visualizer/datasets/electrical.json",
+      "record_count": 16104,
+      "default_metric_key": "co2_emissions_value",
+      "group_label": "Fuel",
+      "description": "Private plant-level electrical generation and emissions records."
+    },
+    {
+      "key": "people",
+      "label": "People",
+      "path": "../../data/private/visualizer/datasets/people.json",
+      "record_count": 19461,
+      "default_metric_key": "population_2024",
+      "group_label": "Coordinate Basis",
+      "description": "Municipal population points anchored to matched town halls where available."
+    },
+    {
+      "key": "agriculture",
+      "label": "Agriculture",
+      "path": "../../data/private/visualizer/datasets/agriculture.json",
+      "record_count": 3070,
+      "default_metric_key": "corn_grain_harvested_share_pct",
+      "group_label": "Dominant Output",
+      "description": "County-level food-output proxies from the USDA 2022 Ag Census web maps."
+    },
+    {
+      "key": "raws",
+      "label": "Raws",
+      "path": "../../data/private/visualizer/datasets/raws.json",
+      "record_count": 987,
+      "default_metric_key": "presence_count",
+      "group_label": "Asset Type",
+      "description": "Coordinate-backed ore sites and steel facilities from official USGS and EPA sources."
+    },
+    {
+      "key": "radiation",
+      "label": "Radiation",
+      "path": "../../data/private/visualizer/datasets/radiation.json",
+      "record_count": 138,
+      "default_metric_key": "dose_equivalent_rate_avg_nsvh",
+      "group_label": "Background Band",
+      "description": "EPA RadNet station summaries for ambient gamma background and dose-equivalent measurements."
+    }
+  ]
+}

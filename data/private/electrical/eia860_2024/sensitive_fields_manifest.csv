@@ -1,0 +1,6 @@
+field_name,form_eia-860_schedule,form_eia-860_line_number,description,notes,private_handling_status,recommended_safe_alternative
+Street Address,1,3,Street address of the operator/owner,,withheld_exact_location_values,"Use city, county, state, NERC region, balancing authority, or other coarse geography."
+Street Address,2,2,Plant street address,,withheld_exact_location_values,"Use city, county, state, NERC region, balancing authority, or other coarse geography."
+Latitude,2,3,The latitude of a plant's coordinates,,withheld_exact_location_values,"Use city, county, state, NERC region, balancing authority, or other coarse geography."
+Longitude,2,3,The longitude of a plant's coordinates,,withheld_exact_location_values,"Use city, county, state, NERC region, balancing authority, or other coarse geography."
+Owner Street Address,4,,Steet address of owner,,withheld_exact_location_values,"Use city, county, state, NERC region, balancing authority, or other coarse geography."

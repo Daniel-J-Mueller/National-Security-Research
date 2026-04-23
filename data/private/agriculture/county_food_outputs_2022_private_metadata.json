@@ -1,0 +1,15 @@
+{
+  "generated_at_utc": "2026-04-22T17:34:02.924642+00:00",
+  "source_files": [
+    "data\\raw\\agriculture\\usda\\NASSAgCensusDownload2022_175maps_Links.xlsx",
+    "data\\raw\\agriculture\\census\\2024_Gaz_counties_national\\2024_Gaz_counties_national.txt"
+  ],
+  "output_file": "data\\private\\agriculture\\county_food_outputs_2022_private.csv",
+  "county_count": 3070,
+  "selected_metric_count": 14,
+  "missing_county_coordinates": 9,
+  "notes": [
+    "Private output retains USDA value text, class ranges, and disclosure-status flags for each selected metric.",
+    "Rows still use county centroids rather than farm-level locations."
+  ]
+}
