@@ -7,8 +7,9 @@ We will be analyzing and visualizing CO2 and mercury outputs, as well as ambient
 ## Research Boundaries
 
 - Focus on sector-level analysis, policy, resilience, redundancy, supply chains, and public consequence modeling.
-- Give exact coordinates, route-by-route mapping, access details, security weaknesses, and operating procedures for sensitive sites.
-- As geographic context is needed, use broad regional or state-level summaries as well as precise point data.
+- Do not give exact coordinates, route-by-route mapping, access details, security weaknesses, and operating procedures for sensitive sites.
+- As geographic context is needed, prefer broad regional or state-level summaries; use precise point data only when clearly benign, public, and not sensitive.
+- Cybersecurity work is defensive, aggregate, and source-led. Do not compile exploit steps, credentials, exposed-system lists, facility cyber architecture, or targeting instructions.
 
 ## Core Subject Areas
 
@@ -111,6 +112,18 @@ We will be analyzing and visualizing CO2 and mercury outputs, as well as ambient
 - Livestock transport corridors
 - Grain storage concentration
 
+### 11. Cybersecurity And Cyber-Physical Resilience
+
+- Critical infrastructure cyber governance
+- IT and OT dependency patterns
+- Identity, cloud, telecom, and vendor concentration
+- Ransomware and recovery constraints at a sector level
+- Cyber-physical interdependence
+- Incident reporting and information-sharing pathways
+- Secure-by-design and software supply-chain resilience
+- Defensive maturity indicators by sector
+- Coarse cyber risk summaries without exploit detail
+
 ## Critical Considerations
 
 - Interdependence between electric power, telecom, water, fuel, and transportation
@@ -171,6 +184,7 @@ Suggested files:
 - `docs/sectors/healthcare.md`
 - `docs/sectors/finance.md`
 - `docs/sectors/defense.md`
+- `docs/sectors/cybersecurity.md`
 - `docs/dependencies/cross-sector-risk.md`
 
 ## Suggested Method
@@ -252,3 +266,4 @@ See `docs/plant-emissions-visualizer/README.md` for the local workflow and CSV f
 - Add a source log for public datasets and official reports
 - Add a schema for non-sensitive regional summaries
 - Add a map workflow that uses broad service regions instead of exact sensitive coordinates
+- Build the cybersecurity track from `docs/sectors/cybersecurity.md`, `docs/sources/cybersecurity-sources.md`, and `schemas/cyber-risk-summary.schema.json`

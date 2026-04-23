@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CyberRiskSummary",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "summary_id": {
+      "type": "string"
+    },
+    "sector": {
+      "type": "string",
+      "enum": [
+        "chemical",
+        "commercial_facilities",
+        "communications",
+        "critical_manufacturing",
+        "dams",
+        "defense_industrial_base",
+        "emergency_services",
+        "energy",
+        "financial_services",
+        "food_and_agriculture",
+        "government_facilities",
+        "healthcare_and_public_health",
+        "information_technology",
+        "nuclear",
+        "transportation_systems",
+        "water_and_wastewater",
+        "cross_sector"
+      ]
+    },
+    "subsector": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "geography_type": {
+      "type": "string",
+      "enum": [
+        "national",
+        "census_region",
+        "state",
+        "multistate",
+        "sector",
+        "organization_class",
+        "none"
+      ]
+    },
+    "geography_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "dependency_type": {
+      "type": "string",
+      "enum": [
+        "identity_access",
+        "cloud_saas",
+        "telecom",
+        "electric_power",
+        "fuel",
+        "water_wastewater",
+        "healthcare_delivery",
+        "finance_payments",
+        "transportation_logistics",
+        "vendor_supply_chain",
+        "operational_technology",
+        "data_backup_recovery",
+        "workforce",
+        "policy_reporting",
+        "other"
+      ]
+    },
+    "risk_theme": {
+      "type": "string",
+      "enum": [
+        "ransomware",
+        "credential_compromise",
+        "exploited_vulnerability",
+        "insecure_remote_access",
+        "ot_it_convergence",
+        "supply_chain_compromise",
+        "cloud_dependency",
+        "data_integrity",
+        "availability_loss",
+        "incident_reporting",
+        "recovery_capacity",
+        "governance_maturity",
+        "other"
+      ]
+    },
+    "framework_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "public_consequence": {
+      "type": "string"
+    },
+    "defensive_focus": {
+      "type": "string"
+    },
+    "data_granularity": {
+      "type": "string",
+      "enum": [
+        "national_aggregate",
+        "sector_aggregate",
+        "state_aggregate",
+        "regional_aggregate",
+        "facility_class",
+        "non_location_specific"
+      ]
+    },
+    "sensitivity": {
+      "type": "string",
+      "enum": [
+        "public",
+        "coarse",
+        "restricted_review"
+      ]
+    },
+    "source_name": {
+      "type": "string"
+    },
+    "source_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "source_date": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "verified_date": {
+      "type": "string"
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "excluded_details": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "no_exploit_steps": {
+          "const": true
+        },
+        "no_credentials_or_secrets": {
+          "const": true
+        },
+        "no_public_target_lists": {
+          "const": true
+        },
+        "no_precise_sensitive_architecture": {
+          "const": true
+        },
+        "no_facility_remote_access_details": {
+          "const": true
+        }
+      },
+      "required": [
+        "no_exploit_steps",
+        "no_credentials_or_secrets",
+        "no_public_target_lists",
+        "no_precise_sensitive_architecture",
+        "no_facility_remote_access_details"
+      ]
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "summary_id",
+    "sector",
+    "geography_type",
+    "dependency_type",
+    "risk_theme",
+    "public_consequence",
+    "defensive_focus",
+    "data_granularity",
+    "sensitivity",
+    "source_name",
+    "source_url",
+    "verified_date",
+    "confidence",
+    "excluded_details"
+  ]
+}
