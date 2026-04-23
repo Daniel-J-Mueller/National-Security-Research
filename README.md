@@ -263,13 +263,16 @@ See `docs/plant-emissions-visualizer/README.md` for the local workflow and CSV f
 ## Cybersecurity Version Categorization
 
 An owner-authorized service-version categorization workflow lives at `docs/workflows/server-version-categorization.md`.
+A small batch workflow for a server IP list lives at `docs/workflows/server-ip-list-version-scan.md`.
 A defensive CSV artifact-matching workflow lives at `docs/workflows/server-defensive-artifact-matching.md`.
 
 Use it to:
 
 - enter the IP address or DNS name of a server you own
+- run version detection across a small JSON/CSV/TXT server list
 - run standard Nmap service-version detection
 - categorize detected product/version strings into defensive VX-style lifecycle buckets
+- write JSON scan chunks capped at 75 MB by default
 - enrich an owned server CSV with safe hardening snippets and snippet references
 - keep raw scan results under `data/private/cybersecurity/scans/`
 
@@ -277,6 +280,7 @@ Example:
 
 ```powershell
 C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\categorize_server_versions.py --target 203.0.113.10 --i-own-this-server
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\scan_server_ip_list.py --targets data\private\cybersecurity\imports\server-ip-list.json --i-own-these-servers
 C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\match_server_defensive_artifacts.py --servers-csv data\private\cybersecurity\imports\office-home-servers.csv
 ```
 
