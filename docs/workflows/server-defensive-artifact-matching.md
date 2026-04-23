@@ -11,7 +11,7 @@ It does not download vx-underground, malware samples, exploit code, payloads, cr
 - A CSV of servers or service scan results that you own or are authorized to assess.
 - A local defensive artifact catalog, defaulting to `config/cybersecurity/defensive-artifact-catalog.json`.
 
-The CSV can come from your own inventory export or from `scripts/categorize_server_versions.py`. The matcher looks for common columns such as:
+The CSV can come from your own inventory export or from `scripts/cyber/categorize_server_versions.py`. The matcher looks for common columns such as:
 
 - `server`, `host`, `hostname`, `ip`, `target`, or `asset_id`
 - `port`
@@ -25,7 +25,7 @@ The CSV can come from your own inventory export or from `scripts/categorize_serv
 ## Default Command
 
 ```powershell
-C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\match_server_defensive_artifacts.py --servers-csv data\private\cybersecurity\imports\office-home-servers.csv
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\match_server_defensive_artifacts.py --servers-csv data\private\cybersecurity\imports\office-home-servers.csv
 ```
 
 ## Chunked Catalog Processing
@@ -33,7 +33,7 @@ C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\match_server_defensiv
 For a larger safe catalog, place JSON, JSONL, or CSV chunks in a directory and point `--catalog` at that directory:
 
 ```powershell
-C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\match_server_defensive_artifacts.py --servers-csv data\private\cybersecurity\imports\office-home-servers.csv --catalog data\private\cybersecurity\safe-catalog-chunks --stop-when-covered
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\match_server_defensive_artifacts.py --servers-csv data\private\cybersecurity\imports\office-home-servers.csv --catalog data\private\cybersecurity\safe-catalog-chunks --stop-when-covered
 ```
 
 The `--stop-when-covered` option stops after every row has at least one non-fallback defensive artifact. Without it, the script reads every supplied catalog chunk and attaches up to `--max-artifacts-per-row` matches per row.

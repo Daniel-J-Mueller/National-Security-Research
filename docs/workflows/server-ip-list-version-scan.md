@@ -43,7 +43,7 @@ Replace the example TEST-NET addresses with your own authorized server IPs.
 ## Default Command
 
 ```powershell
-C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\scan_server_ip_list.py --targets data\private\cybersecurity\imports\server-ip-list.json --i-own-these-servers
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\scan_server_ip_list.py --targets data\private\cybersecurity\imports\server-ip-list.json --i-own-these-servers
 ```
 
 The `--i-own-these-servers` flag is required before the script will run Nmap. Use `--dry-run` first if you want to validate the target file and write planned commands without scanning.
@@ -53,25 +53,25 @@ The `--i-own-these-servers` flag is required before the script will run Nmap. Us
 Scan only specific ports:
 
 ```powershell
-C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\scan_server_ip_list.py --targets data\private\cybersecurity\imports\server-ip-list.json --i-own-these-servers --ports 22,80,443
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\scan_server_ip_list.py --targets data\private\cybersecurity\imports\server-ip-list.json --i-own-these-servers --ports 22,80,443
 ```
 
 Use Nmap's top-ports mode:
 
 ```powershell
-C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\scan_server_ip_list.py --targets data\private\cybersecurity\imports\server-ip-list.json --i-own-these-servers --top-ports 200
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\scan_server_ip_list.py --targets data\private\cybersecurity\imports\server-ip-list.json --i-own-these-servers --top-ports 200
 ```
 
 If ICMP probes are blocked for your servers:
 
 ```powershell
-C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\scan_server_ip_list.py --targets data\private\cybersecurity\imports\server-ip-list.json --i-own-these-servers --assume-host-up
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\scan_server_ip_list.py --targets data\private\cybersecurity\imports\server-ip-list.json --i-own-these-servers --assume-host-up
 ```
 
 Change the JSON chunk cap:
 
 ```powershell
-C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\scan_server_ip_list.py --targets data\private\cybersecurity\imports\server-ip-list.json --i-own-these-servers --chunk-size-mb 75
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\scan_server_ip_list.py --targets data\private\cybersecurity\imports\server-ip-list.json --i-own-these-servers --chunk-size-mb 75
 ```
 
 ## What The Script Runs

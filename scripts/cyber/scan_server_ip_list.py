@@ -25,15 +25,26 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from categorize_server_versions import (
-    DEFAULT_OUTPUT_DIR,
-    DEFAULT_RULES,
-    check_nmap,
-    clean_label,
-    load_rules,
-    parse_nmap_xml,
-    utc_timestamp,
-)
+try:
+    from categorize_server_versions import (
+        DEFAULT_OUTPUT_DIR,
+        DEFAULT_RULES,
+        check_nmap,
+        clean_label,
+        load_rules,
+        parse_nmap_xml,
+        utc_timestamp,
+    )
+except ImportError:
+    from .categorize_server_versions import (
+        DEFAULT_OUTPUT_DIR,
+        DEFAULT_RULES,
+        check_nmap,
+        clean_label,
+        load_rules,
+        parse_nmap_xml,
+        utc_timestamp,
+    )
 
 
 DEFAULT_MAX_CHUNK_MB = 75

@@ -15,7 +15,7 @@ The reference to vx-underground is used only as a loose sorting inspiration: col
 ## Default Command
 
 ```powershell
-C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\categorize_server_versions.py --target 203.0.113.10 --i-own-this-server
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\categorize_server_versions.py --target 203.0.113.10 --i-own-this-server
 ```
 
 Replace `203.0.113.10` with your server IP. The `--i-own-this-server` flag is required before the script will run Nmap.
@@ -25,25 +25,25 @@ Replace `203.0.113.10` with your server IP. The `--i-own-this-server` flag is re
 Scan only specific ports:
 
 ```powershell
-C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\categorize_server_versions.py --target 203.0.113.10 --i-own-this-server --ports 22,80,443
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\categorize_server_versions.py --target 203.0.113.10 --i-own-this-server --ports 22,80,443
 ```
 
 Use Nmap's top-ports mode:
 
 ```powershell
-C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\categorize_server_versions.py --target 203.0.113.10 --i-own-this-server --top-ports 200
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\categorize_server_versions.py --target 203.0.113.10 --i-own-this-server --top-ports 200
 ```
 
 Parse an existing Nmap XML file instead of scanning:
 
 ```powershell
-C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\categorize_server_versions.py --from-nmap-xml data\private\cybersecurity\imports\server-scan.xml --target-label my-server
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\categorize_server_versions.py --from-nmap-xml data\private\cybersecurity\imports\server-scan.xml --target-label my-server
 ```
 
 If ICMP probes are blocked for your server:
 
 ```powershell
-C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\categorize_server_versions.py --target 203.0.113.10 --i-own-this-server --assume-host-up
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\categorize_server_versions.py --target 203.0.113.10 --i-own-this-server --assume-host-up
 ```
 
 ## What The Script Runs
@@ -72,7 +72,7 @@ Each run writes:
 
 These outputs can contain sensitive exposure details and should stay private.
 
-The `service-version-categories.csv` output can be passed to `scripts/match_server_defensive_artifacts.py` to attach safe defensive hardening snippets and snippet references. See `docs/workflows/server-defensive-artifact-matching.md`.
+The `service-version-categories.csv` output can be passed to `scripts/cyber/match_server_defensive_artifacts.py` to attach safe defensive hardening snippets and snippet references. See `docs/workflows/server-defensive-artifact-matching.md`.
 
 ## Categories
 

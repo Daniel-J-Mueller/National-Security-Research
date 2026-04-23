@@ -279,9 +279,9 @@ Use it to:
 Example:
 
 ```powershell
-C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\categorize_server_versions.py --target 203.0.113.10 --i-own-this-server
-C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\scan_server_ip_list.py --targets data\private\cybersecurity\imports\server-ip-list.json --i-own-these-servers
-C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\match_server_defensive_artifacts.py --servers-csv data\private\cybersecurity\imports\office-home-servers.csv
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\categorize_server_versions.py --target 203.0.113.10 --i-own-this-server
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\scan_server_ip_list.py --targets data\private\cybersecurity\imports\server-ip-list.json --i-own-these-servers
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\match_server_defensive_artifacts.py --servers-csv data\private\cybersecurity\imports\office-home-servers.csv
 ```
 
 ## Next Build-Out
