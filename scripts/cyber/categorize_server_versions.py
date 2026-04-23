@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-Run an owner-authorized Nmap service-version scan and categorize results.
+Run an Nmap service-version scan and categorize results.
 
-The categories are defensive lifecycle buckets, not exploit or malware labels.
 Raw scan artifacts are written under data/private by default.
 """
 

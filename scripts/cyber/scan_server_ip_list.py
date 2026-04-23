@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Run owner-authorized Nmap service-version scans for a small server IP list.
+Run owner-authorized Nmap service-version scans for a server IP list.
 
 Outputs are JSON-first and service records are chunked so no JSON output file
 exceeds the configured size limit. The workflow performs inventory-oriented

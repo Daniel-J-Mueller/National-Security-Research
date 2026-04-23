@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-Enrich an owner-authorized server CSV with safe defensive hardening artifacts.
+Enrich a server CSV with defensive hardening artifacts.
 
-This workflow does not download malware archives or extract exploit snippets.
-It processes local defensive catalog chunks, writes matched hardening snippets,
+This workflow processes local defensive catalog chunks, writes matched hardening snippets,
 and outputs a CSV with snippet references for each server inventory row.
 """
 
