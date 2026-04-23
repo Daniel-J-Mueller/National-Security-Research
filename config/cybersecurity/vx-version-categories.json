@@ -1,0 +1,112 @@
+{
+  "taxonomy_name": "vx-safe-version-taxonomy",
+  "taxonomy_version": "2026-04-23",
+  "description": "Defensive service-version categories inspired by vx-underground-style collection sorting. This taxonomy does not contain malware samples, exploit procedures, IOCs, target data, or vulnerability proof-of-concept material.",
+  "default_category": "vx-review-versioned",
+  "categories": [
+    {
+      "id": "vx-unknown-fingerprint",
+      "sort_order": 10,
+      "label": "Unknown fingerprint",
+      "meaning": "A service is exposed but the scanner did not identify a usable product/version.",
+      "recommended_action": "Manually identify the service and decide whether version disclosure, hardening, or retirement is needed."
+    },
+    {
+      "id": "vx-review-versioned",
+      "sort_order": 20,
+      "label": "Versioned service review",
+      "meaning": "A product/version was detected but no local lifecycle baseline rule matched it.",
+      "recommended_action": "Compare the detected version against vendor support status, CISA KEV, and your organization's patch baseline."
+    },
+    {
+      "id": "vx-baseline-accepted",
+      "sort_order": 30,
+      "label": "Accepted baseline",
+      "meaning": "The detected version matched a configured local baseline rule and met the minimum supported version.",
+      "recommended_action": "Keep monitoring vendor advisories and patch cadence."
+    },
+    {
+      "id": "vx-baseline-behind",
+      "sort_order": 40,
+      "label": "Behind baseline",
+      "meaning": "The detected version matched a configured local baseline rule but is below the minimum supported version.",
+      "recommended_action": "Schedule remediation or document an exception with compensating controls."
+    },
+    {
+      "id": "vx-eol-or-legacy",
+      "sort_order": 50,
+      "label": "EOL or legacy line",
+      "meaning": "The detected version matched a configured rule that marks it as below an end-of-life or legacy threshold.",
+      "recommended_action": "Prioritize upgrade, isolation, replacement, or a formally approved exception."
+    }
+  ],
+  "service_flags": [
+    {
+      "id": "remote_admin_service",
+      "label": "Remote administration service",
+      "service_names": [
+        "ssh",
+        "rdp",
+        "ms-wbt-server",
+        "telnet",
+        "vnc",
+        "winrm"
+      ],
+      "recommended_action": "Confirm access is restricted, monitored, and protected with strong authentication."
+    },
+    {
+      "id": "database_service",
+      "label": "Database service",
+      "service_names": [
+        "mysql",
+        "postgresql",
+        "ms-sql-s",
+        "mongodb",
+        "redis",
+        "elasticsearch"
+      ],
+      "recommended_action": "Confirm the database is not publicly reachable unless explicitly required and strongly controlled."
+    },
+    {
+      "id": "cleartext_or_legacy_service",
+      "label": "Cleartext or legacy service",
+      "service_names": [
+        "ftp",
+        "telnet",
+        "pop3",
+        "imap",
+        "smtp"
+      ],
+      "recommended_action": "Confirm encryption, authentication controls, and whether the service is still required."
+    }
+  ],
+  "version_rules": [
+    {
+      "id": "example-disabled-openssh-baseline",
+      "enabled": false,
+      "service_name_regex": "^ssh$",
+      "product_regex": "OpenSSH",
+      "minimum_supported_version": "9.6",
+      "eol_below_version": "8.4",
+      "notes": "Example only. Enable and adjust to your own approved baseline after checking vendor support and package backport policy."
+    },
+    {
+      "id": "example-disabled-apache-httpd-baseline",
+      "enabled": false,
+      "service_name_regex": "^(http|https|http-alt)$",
+      "product_regex": "Apache httpd|Apache httpd",
+      "minimum_supported_version": "2.4.58",
+      "eol_below_version": "2.4.0",
+      "notes": "Example only. Distro backports can make apparent upstream versions misleading; verify with your OS vendor."
+    },
+    {
+      "id": "example-disabled-nginx-baseline",
+      "enabled": false,
+      "service_name_regex": "^(http|https|http-alt)$",
+      "product_regex": "nginx",
+      "minimum_supported_version": "1.24.0",
+      "eol_below_version": "1.20.0",
+      "notes": "Example only. Enable only after confirming your chosen vendor or distribution support baseline."
+    }
+  ]
+}

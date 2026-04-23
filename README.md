@@ -260,6 +260,23 @@ Then open:
 
 See `docs/plant-emissions-visualizer/README.md` for the local workflow and CSV format.
 
+## Cybersecurity Version Categorization
+
+An owner-authorized service-version categorization workflow lives at `docs/workflows/server-version-categorization.md`.
+
+Use it to:
+
+- enter the IP address or DNS name of a server you own
+- run standard Nmap service-version detection
+- categorize detected product/version strings into defensive VX-style lifecycle buckets
+- keep raw scan results under `data/private/cybersecurity/scans/`
+
+Example:
+
+```powershell
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\categorize_server_versions.py --target 203.0.113.10 --i-own-this-server
+```
+
 ## Next Build-Out
 
 - Add one markdown file per sector

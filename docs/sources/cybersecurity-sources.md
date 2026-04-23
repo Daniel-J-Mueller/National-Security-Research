@@ -116,6 +116,13 @@ This source log supports defensive, aggregate cybersecurity and cyber-physical r
 - Use: software-manufacturer responsibility, secure defaults, logging, MFA, vulnerability disclosure, patching, and vulnerability-class reduction themes
 - Notes: especially relevant to IT-sector dependency and software supply-chain risk
 
+### vx-underground Context
+
+- URL: https://vx-underground.org
+- Verified: April 23, 2026
+- Use: background context only for the idea of collection-style malware/threat research sorting
+- Notes: vx-underground is a malware and cybersecurity archive. Do not download samples, import malware material, collect IOCs into target lists, or use the archive as an exploit source in this repository. The local `vx-safe-version-taxonomy` workflow is defensive and categorizes owner-authorized service-version scan results only.
+
 ## Handling Notes
 
 - Prefer official government, regulator, standards, and sector-risk-management sources.
