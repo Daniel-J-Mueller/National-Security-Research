@@ -30,6 +30,9 @@ VISUALIZER_OUT_DIR = ROOT / "data" / "private" / "visualizer"
 VISUALIZER_DATASET_DIR = VISUALIZER_OUT_DIR / "datasets"
 VISUALIZER_MANIFEST_JSON = VISUALIZER_OUT_DIR / "visualizer_manifest.json"
 
+MAX_REPO_FILE_BYTES = 75_000_000
+DATASET_SHARD_TARGET_BYTES = 50_000_000
+
 BASE_METRICS = [
     "generator_count",
     "operable_nameplate_capacity_mw",
@@ -305,8 +308,34 @@ def build_legacy_summary(rows: list[dict[str, object]]) -> dict[str, object]:
 
 
 def write_json(path: Path, payload: object) -> None:
+    write_text_atomic(path, json.dumps(payload, indent=2))
+
+
+def write_text_atomic(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    temp_path = path.with_name(f".{path.name}.tmp")
+    temp_path.write_text(text, encoding="utf-8")
+    temp_path.replace(path)
+
+
+def compact_json_text(payload: object) -> str:
+    return json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
+
+
+def byte_count(text: str) -> int:
+    return len(text.encode("utf-8"))
+
+
+def dataset_manifest_path(key: str) -> Path:
+    return VISUALIZER_DATASET_DIR / key / "manifest.json"
+
+
+def app_relative_dataset_manifest_path(key: str) -> str:
+    return f"../../data/private/visualizer/datasets/{key}/manifest.json"
+
+
+def app_relative_dataset_shard_path(key: str, filename: str) -> str:
+    return f"../../data/private/visualizer/datasets/{key}/{filename}"
 
 
 def search_text(parts: list[str]) -> str:
@@ -330,6 +359,118 @@ def dataset_output_path(key: str) -> Path:
 
 def app_relative_dataset_path(key: str) -> str:
     return f"../../data/private/visualizer/datasets/{key}.json"
+
+
+def remove_stale_dataset_assets(key: str, *, keep_shards: bool) -> None:
+    single_path = dataset_output_path(key)
+    shard_dir = dataset_manifest_path(key).parent
+    if keep_shards:
+        if single_path.exists():
+            single_path.unlink()
+        if shard_dir.exists():
+            for shard_path in shard_dir.glob("*.json"):
+                shard_path.unlink()
+        shard_dir.mkdir(parents=True, exist_ok=True)
+        return
+
+    if shard_dir.exists():
+        for shard_path in shard_dir.glob("*.json"):
+            shard_path.unlink()
+
+
+def write_dataset_assets(
+    key: str,
+    payload: dict[str, object],
+    manifest_entry: dict[str, object],
+) -> dict[str, object]:
+    single_text = json.dumps(payload, indent=2)
+    if byte_count(single_text) <= MAX_REPO_FILE_BYTES:
+        remove_stale_dataset_assets(key, keep_shards=False)
+        output_path = dataset_output_path(key)
+        write_text_atomic(output_path, single_text)
+        manifest_entry["path"] = app_relative_dataset_path(key)
+        manifest_entry.pop("sharded", None)
+        manifest_entry.pop("shard_count", None)
+        return manifest_entry
+
+    return write_sharded_dataset_assets(key, payload, manifest_entry)
+
+
+def write_sharded_dataset_assets(
+    key: str,
+    payload: dict[str, object],
+    manifest_entry: dict[str, object],
+) -> dict[str, object]:
+    records = payload.get("records")
+    if not isinstance(records, list) or not records:
+        raise ValueError(f"Cannot shard dataset {key}: payload does not contain records")
+
+    remove_stale_dataset_assets(key, keep_shards=True)
+    shard_dir = dataset_manifest_path(key).parent
+    shard_entries: list[dict[str, object]] = []
+    current_records: list[str] = []
+    current_bytes = byte_count('{"records":[]}')
+
+    def flush_shard() -> None:
+        nonlocal current_records, current_bytes
+        if not current_records:
+            return
+
+        filename = f"part-{len(shard_entries) + 1:04d}.json"
+        shard_text = '{"records":[' + ",".join(current_records) + "]}"
+        shard_size = byte_count(shard_text)
+        if shard_size > MAX_REPO_FILE_BYTES:
+            raise ValueError(
+                f"Shard {filename} for dataset {key} would be {shard_size:,} bytes, "
+                f"above the {MAX_REPO_FILE_BYTES:,}-byte repository limit."
+            )
+
+        write_text_atomic(shard_dir / filename, shard_text)
+        shard_entries.append(
+            {
+                "file": filename,
+                "path": app_relative_dataset_shard_path(key, filename),
+                "record_count": len(current_records),
+                "bytes": shard_size,
+            }
+        )
+        current_records = []
+        current_bytes = byte_count('{"records":[]}')
+
+    for record in records:
+        record_text = compact_json_text(record)
+        record_size = byte_count(record_text)
+        separator_size = 1 if current_records else 0
+        projected_size = current_bytes + separator_size + record_size
+        if current_records and projected_size > DATASET_SHARD_TARGET_BYTES:
+            flush_shard()
+            separator_size = 0
+            projected_size = current_bytes + record_size
+
+        current_records.append(record_text)
+        current_bytes = projected_size
+
+    flush_shard()
+
+    sharded_payload = {
+        key_name: value
+        for key_name, value in payload.items()
+        if key_name != "records"
+    }
+    metadata = dict(sharded_payload.get("metadata") or {})
+    metadata["output_file"] = str(dataset_manifest_path(key).relative_to(ROOT))
+    metadata["shard_count"] = len(shard_entries)
+    metadata["shard_target_bytes"] = DATASET_SHARD_TARGET_BYTES
+    sharded_payload["metadata"] = metadata
+    sharded_payload["sharded"] = True
+    sharded_payload["record_count"] = len(records)
+    sharded_payload["shards"] = shard_entries
+    write_json(dataset_manifest_path(key), sharded_payload)
+
+    manifest_entry["path"] = app_relative_dataset_manifest_path(key)
+    manifest_entry["sharded"] = True
+    manifest_entry["shard_count"] = len(shard_entries)
+    return manifest_entry
 
 
 def build_dataset_payload(
@@ -693,7 +834,7 @@ def main() -> None:
     }
     for builder in dataset_builders:
         payload, manifest_entry = builder()
-        write_json(dataset_output_path(manifest_entry["key"]), payload)
+        manifest_entry = write_dataset_assets(manifest_entry["key"], payload, manifest_entry)
         manifest["datasets"].append(manifest_entry)
 
     write_json(VISUALIZER_MANIFEST_JSON, manifest)

@@ -16,11 +16,15 @@ The browser app reads:
 
 That manifest points to category dataset assets under:
 
-- `data/private/visualizer/datasets/electrical.json`
+- `data/private/visualizer/datasets/electrical/manifest.json`
 - `data/private/visualizer/datasets/people.json`
 - `data/private/visualizer/datasets/agriculture.json`
 - `data/private/visualizer/datasets/raws.json`
 - `data/private/visualizer/datasets/radiation.json`
+
+Large category assets are written as sharded dataset manifests. The browser
+loads each shard listed by the category manifest and hydrates them as one
+dataset in memory, keeping individual repository files below 75 MB.
 
 The legacy electrical-only asset is still generated for compatibility:
 

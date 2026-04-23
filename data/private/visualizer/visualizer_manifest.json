@@ -1,14 +1,16 @@
 {
-  "generated_at_utc": "2026-04-22T21:40:44.503579+00:00",
+  "generated_at_utc": "2026-04-23T22:54:52.000331+00:00",
   "datasets": [
     {
       "key": "electrical",
       "label": "Electrical",
-      "path": "../../data/private/visualizer/datasets/electrical.json",
+      "path": "../../data/private/visualizer/datasets/electrical/manifest.json",
       "record_count": 16104,
       "default_metric_key": "co2_emissions_value",
       "group_label": "Fuel",
-      "description": "Private plant-level electrical generation and emissions records."
+      "description": "Private plant-level electrical generation and emissions records.",
+      "sharded": true,
+      "shard_count": 2
     },
     {
       "key": "people",

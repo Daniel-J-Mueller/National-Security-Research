@@ -107,6 +107,8 @@ async function init() {
         defaultMetricKey: stringValue(dataset.default_metric_key),
         groupLabel: stringValue(dataset.group_label),
         recordCount: toNumber(dataset.record_count),
+        sharded: Boolean(dataset.sharded),
+        shardCount: toNumber(dataset.shard_count),
       }))
       .filter((dataset) => dataset.key && dataset.path);
 
@@ -444,7 +446,7 @@ async function loadDataset(datasetKey) {
     throw new Error(`Missing dataset entry for ${datasetKey}`);
   }
 
-  const payload = await fetchJson(manifestEntry.path);
+  const payload = await fetchDatasetPayload(manifestEntry);
   if (!payload || !Array.isArray(payload.records) || !payload.records.length) {
     throw new Error(`${manifestEntry.path} does not contain any mapped records.`);
   }
@@ -452,6 +454,35 @@ async function loadDataset(datasetKey) {
   const dataset = hydrateDataset(payload, manifestEntry);
   state.datasetCache.set(datasetKey, dataset);
   return dataset;
+}
+
+async function fetchDatasetPayload(manifestEntry) {
+  const payload = await fetchJson(manifestEntry.path);
+  if (!payload?.sharded) {
+    return payload;
+  }
+
+  if (!Array.isArray(payload.shards) || !payload.shards.length) {
+    throw new Error(`${manifestEntry.path} is marked as sharded but does not list any shards.`);
+  }
+
+  const shardPayloads = await Promise.all(payload.shards.map(async (shard) => {
+    const shardPath = stringValue(shard.path);
+    if (!shardPath) {
+      throw new Error(`${manifestEntry.path} contains a shard without a path.`);
+    }
+
+    const shardPayload = await fetchJson(shardPath);
+    if (!Array.isArray(shardPayload.records)) {
+      throw new Error(`${shardPath} does not contain records.`);
+    }
+    return shardPayload;
+  }));
+
+  return {
+    ...payload,
+    records: shardPayloads.flatMap((shardPayload) => shardPayload.records),
+  };
 }
 
 function hydrateDataset(payload, manifestEntry) {
