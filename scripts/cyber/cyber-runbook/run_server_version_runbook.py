@@ -101,7 +101,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--workers",
         type=int,
         default=scan.DEFAULT_WORKERS,
-        help="Concurrent per-target worker threads. Default uses all logical CPUs: %(default)s.",
+        help="Concurrent per-target Nmap workers. Default: %(default)s.",
     )
     parser.add_argument(
         "--stop-on-error",

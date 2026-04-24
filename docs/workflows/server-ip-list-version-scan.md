@@ -137,7 +137,7 @@ The CSV and JSONL rows use these fields:
 target,target_label,host,host_status,scan_status,port,protocol,service_name,product,version,extrainfo,cpe,error
 ```
 
-Rows with open ports use `scan_status=open-service`. Targets with no open services, errors, dry-run rows, or skipped rows are still represented once with the appropriate `scan_status`.
+Rows with open ports use `scan_status=open-service`. Targets with no open services are omitted from the CSV/JSONL outputs. Errors and dry-run rows are still represented once with the appropriate `scan_status`.
 
 The first CSV shard can be passed to the defensive artifact matcher:
 

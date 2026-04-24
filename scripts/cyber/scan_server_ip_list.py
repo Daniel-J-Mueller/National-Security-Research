@@ -37,7 +37,7 @@ DEFAULT_RUN_DATA = Path(__file__).with_name("cyber-runbook") / "run-data.info"
 
 DEFAULT_MAX_CHUNK_MB = 75
 DEFAULT_MAX_TARGETS = 0
-DEFAULT_WORKERS = 16
+DEFAULT_WORKERS = 128
 WORKFLOW_ID = "owner-authorized-batch-service-version-scan"
 IPV4_ZERO_BLOCK_ROWS = ipaddress.ip_network("0.0.0.0/8").num_addresses
 GENERATED_IPV4_FIRST_KEPT_ADDRESS_INDEX = IPV4_ZERO_BLOCK_ROWS
@@ -186,7 +186,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--workers",
         type=int,
         default=DEFAULT_WORKERS,
-        help="Concurrent per-target worker threads. Default uses all logical CPUs: %(default)s.",
+        help="Concurrent per-target Nmap workers. Default: %(default)s.",
     )
     parser.add_argument(
         "--stop-on-error",
@@ -1032,15 +1032,13 @@ def service_to_result_row(
     }
 
 
-def host_summary_to_result_row(host_summary: dict[str, Any]) -> dict[str, Any]:
-    host_status = str(host_summary.get("host_status") or "")
-    scan_status = "dry-run-planned" if host_status == "dry-run-planned" else "no-open-services"
+def dry_run_host_summary_to_result_row(host_summary: dict[str, Any]) -> dict[str, Any]:
     return {
         "target": host_summary.get("input_target", ""),
         "target_label": host_summary.get("target_label", ""),
         "host": host_summary.get("detected_address", ""),
-        "host_status": host_status,
-        "scan_status": scan_status,
+        "host_status": "dry-run-planned",
+        "scan_status": "dry-run-planned",
         "port": "",
         "protocol": "",
         "service_name": "",
@@ -1119,8 +1117,8 @@ def build_result_rows(
         target_rows.extend(error_to_result_row(error) for error in errors_by_target.get(key, []))
         if not target_rows:
             host_summary = first_host_summary_by_target.get(key)
-            if host_summary:
-                target_rows.append(host_summary_to_result_row(host_summary))
+            if host_summary and host_summary.get("host_status") == "dry-run-planned":
+                target_rows.append(dry_run_host_summary_to_result_row(host_summary))
         rows.extend(target_rows)
 
     return dedupe_result_rows(rows)
@@ -1194,9 +1192,10 @@ def scan_targets_to_sharded_outputs(
 
     target_iter = iter(targets)
     pending: dict[Future[TargetScanResult], tuple[int, ServerTarget]] = {}
-    completed: dict[int, TargetScanResult] = {}
+    completed_for_checkpoint: dict[int, ServerTarget] = {}
     next_submit_order = 0
-    next_flush_order = 0
+    next_checkpoint_order = 0
+    completed_count = 0
     targets_exhausted = False
     stop_requested = False
 
@@ -1217,37 +1216,44 @@ def scan_targets_to_sharded_outputs(
         pending[future] = (order, server_target)
         return True
 
-    def flush_completed_results() -> None:
-        nonlocal next_flush_order, row_count, service_count, error_count, stop_requested
-        while next_flush_order in completed:
-            result = completed.pop(next_flush_order)
-            service_count += len(result.services)
-            error_count += len(result.errors)
-            row_count += len(result.rows)
-            csv_writer.write_rows(result.rows)
-            if jsonl_writer is not None:
-                jsonl_writer.write_rows(result.rows)
+    def advance_checkpoint() -> None:
+        nonlocal next_checkpoint_order
+        if on_target_complete is None:
+            return
+        while next_checkpoint_order in completed_for_checkpoint:
+            target = completed_for_checkpoint.pop(next_checkpoint_order)
+            on_target_complete(target)
+            next_checkpoint_order += 1
 
-            if getattr(args, "echo_planned_commands", False):
-                for host in result.host_summaries:
-                    command = " ".join(str(part) for part in host.get("nmap_command", []))
-                    if command:
-                        print(f"Planned command: {command}")
+    def write_completed_result(order: int, result: TargetScanResult) -> None:
+        nonlocal completed_count, row_count, service_count, error_count, stop_requested
+        service_count += len(result.services)
+        error_count += len(result.errors)
+        row_count += len(result.rows)
+        csv_writer.write_rows(result.rows)
+        if jsonl_writer is not None:
+            jsonl_writer.write_rows(result.rows)
 
-            if on_target_complete is not None:
-                on_target_complete(result.target)
+        if getattr(args, "echo_planned_commands", False):
+            for host in result.host_summaries:
+                command = " ".join(str(part) for part in host.get("nmap_command", []))
+                if command:
+                    print(f"Planned command: {command}")
 
-            print(
-                f"Processed {next_flush_order + 1} target(s); "
-                f"latest={result.target.target}; rows={len(result.rows)}",
-                file=sys.stderr,
-                flush=True,
-            )
+        if on_target_complete is not None:
+            completed_for_checkpoint[order] = result.target
+            advance_checkpoint()
+        completed_count += 1
 
-            next_flush_order += 1
-            if result.errors and getattr(args, "stop_on_error", False):
-                stop_requested = True
-                break
+        print(
+            f"Completed {completed_count} target(s); "
+            f"latest={result.target.target}; open_services={len(result.services)}; rows={len(result.rows)}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+        if result.errors and getattr(args, "stop_on_error", False):
+            stop_requested = True
 
     executor = ThreadPoolExecutor(max_workers=worker_count)
     try:
@@ -1258,9 +1264,9 @@ def scan_targets_to_sharded_outputs(
             done, _not_done = wait(pending, return_when=FIRST_COMPLETED)
             for future in done:
                 order, server_target = pending.pop(future)
-                completed[order] = completed_future_result(future, server_target)
+                result = completed_future_result(future, server_target)
+                write_completed_result(order, result)
 
-            flush_completed_results()
             if stop_requested:
                 for future in pending:
                     future.cancel()
