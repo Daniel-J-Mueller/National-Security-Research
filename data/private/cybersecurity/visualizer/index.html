@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Runbook Flow Visualizer</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Private runbook workflow</p>
+          <h1>Runbook flow visualizer</h1>
+        </div>
+        <div class="status-block">
+          <p id="status" class="status">Loading shards...</p>
+          <button id="refresh-button" class="button secondary" type="button">Refresh</button>
+        </div>
+      </header>
+
+      <section class="metrics" aria-label="Runbook summary">
+        <div class="metric">
+          <span class="metric-label">Source</span>
+          <strong id="source-format">-</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Shards</span>
+          <strong id="shard-count">-</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Rows</span>
+          <strong id="total-rows">-</strong>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Matches</span>
+          <strong id="matching-rows">-</strong>
+        </div>
+        <div class="metric wide">
+          <span class="metric-label">Quick output</span>
+          <strong id="output-dir">-</strong>
+        </div>
+      </section>
+
+      <section class="controls-row" aria-label="Flow controls">
+        <button id="clear-button" class="button secondary" type="button">Clear filters</button>
+        <button id="export-rows-button" class="button" type="button">Export matching rows</button>
+      </section>
+
+      <section class="wizard-shell" aria-label="Runbook flow wizard">
+        <div id="wizard-columns" class="wizard-columns"></div>
+      </section>
+
+      <section class="results-shell" aria-labelledby="results-title">
+        <div class="results-header">
+          <div>
+            <p class="eyebrow">Matching entries</p>
+            <h2 id="results-title">Runbook rows</h2>
+          </div>
+          <p id="preview-note" class="note"></p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead id="results-head"></thead>
+            <tbody id="results-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
