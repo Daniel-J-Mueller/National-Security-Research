@@ -30,7 +30,7 @@ DEFAULT_OUTPUT_DIR = ROOT / "data" / "private" / "cybersecurity" / "runbook-outp
 DEFAULT_TARGETS = ROOT / "data" / "private" / "cybersecurity" / "runbook-input" / "dry-run-input.csv"
 
 DEFAULT_MAX_CHUNK_MB = 75
-DEFAULT_MAX_TARGETS = 16
+DEFAULT_MAX_TARGETS = 2**32
 WORKFLOW_ID = "owner-authorized-batch-service-version-scan"
 
 TARGET_FIELD_NAMES = ("target", "ip", "host", "hostname", "address")

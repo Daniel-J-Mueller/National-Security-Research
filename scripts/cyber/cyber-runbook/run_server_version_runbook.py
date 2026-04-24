@@ -28,7 +28,7 @@ WORKFLOW_ID = "owner-authorized-cyber-runbook-server-version-scan"
 DEFAULT_RUNBOOK_CSV = ROOT / "data" / "private" / "cybersecurity" / "runbook-input" / "dry-run-input.csv"
 DEFAULT_OUTPUT_DIR = ROOT / "data" / "private" / "cybersecurity" / "runbook-outputs"
 DEFAULT_MAX_CHUNK_MB = 75
-DEFAULT_MAX_TARGETS = 16
+DEFAULT_MAX_TARGETS = 2**32
 
 
 def build_parser() -> argparse.ArgumentParser:
