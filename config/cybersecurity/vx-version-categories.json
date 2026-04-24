@@ -52,6 +52,15 @@
         "vnc",
         "winrm"
       ],
+      "ports": [
+        22,
+        23,
+        3389,
+        5900,
+        5901,
+        5985,
+        5986
+      ],
       "recommended_action": "Confirm access is restricted, monitored, and protected with strong authentication."
     },
     {
@@ -65,6 +74,15 @@
         "redis",
         "elasticsearch"
       ],
+      "ports": [
+        1433,
+        1521,
+        3306,
+        5432,
+        6379,
+        9200,
+        27017
+      ],
       "recommended_action": "Confirm the database is not publicly reachable unless explicitly required and strongly controlled."
     },
     {
@@ -77,7 +95,135 @@
         "imap",
         "smtp"
       ],
+      "ports": [
+        21,
+        23,
+        25,
+        110,
+        143,
+        513,
+        514
+      ],
       "recommended_action": "Confirm encryption, authentication controls, and whether the service is still required."
+    },
+    {
+      "id": "dns_service",
+      "label": "DNS service",
+      "service_names": [
+        "domain",
+        "dns",
+        "dns-tcp"
+      ],
+      "ports": [
+        53,
+        853
+      ],
+      "recommended_action": "Confirm recursion, zone transfer, logging, and failover settings match the intended role."
+    },
+    {
+      "id": "mail_service",
+      "label": "Mail service",
+      "service_names": [
+        "smtp",
+        "smtps",
+        "submission",
+        "pop3",
+        "pop3s",
+        "imap",
+        "imaps"
+      ],
+      "ports": [
+        25,
+        110,
+        143,
+        465,
+        587,
+        993,
+        995
+      ],
+      "recommended_action": "Confirm relay restrictions, strong authentication, TLS policy, and abuse monitoring."
+    },
+    {
+      "id": "identity_directory_service",
+      "label": "Identity or directory service",
+      "service_names": [
+        "ldap",
+        "ldaps",
+        "kerberos",
+        "kerberos-sec",
+        "kpasswd",
+        "globalcatLDAP",
+        "globalcatLDAPssl"
+      ],
+      "ports": [
+        88,
+        389,
+        464,
+        636,
+        3268,
+        3269
+      ],
+      "recommended_action": "Confirm exposure is restricted and authentication, directory changes, and privilege changes are logged."
+    },
+    {
+      "id": "vpn_or_edge_access_service",
+      "label": "VPN or edge access service",
+      "service_names": [
+        "isakmp",
+        "ipsec",
+        "openvpn",
+        "wireguard",
+        "pptp",
+        "l2tp"
+      ],
+      "ports": [
+        500,
+        1194,
+        1701,
+        1723,
+        4500,
+        51820
+      ],
+      "recommended_action": "Confirm MFA, patching, account lifecycle, administrative restrictions, and session monitoring."
+    },
+    {
+      "id": "container_orchestration_service",
+      "label": "Container or orchestration service",
+      "service_names": [
+        "docker",
+        "kubernetes",
+        "kubelet",
+        "etcd"
+      ],
+      "ports": [
+        2375,
+        2376,
+        2379,
+        2380,
+        6443,
+        10250
+      ],
+      "recommended_action": "Confirm runtime and control-plane APIs are authenticated, encrypted, and restricted to management networks."
+    },
+    {
+      "id": "monitoring_admin_service",
+      "label": "Monitoring or observability admin service",
+      "service_names": [
+        "grafana",
+        "prometheus",
+        "alertmanager",
+        "kibana",
+        "zabbix",
+        "nagios"
+      ],
+      "ports": [
+        3000,
+        5601,
+        9090,
+        9093,
+        9100
+      ],
+      "recommended_action": "Confirm dashboards, metrics, and alerting interfaces are authenticated and not exposing sensitive data."
     }
   ],
   "version_rules": [

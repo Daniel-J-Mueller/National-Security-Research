@@ -54,6 +54,23 @@ WORKFLOW_ID = "owner-authorized-batch-service-version-scan"
 
 TARGET_FIELD_NAMES = ("target", "ip", "host", "hostname", "address")
 LABEL_FIELD_NAMES = ("label", "name", "asset_id", "server")
+SERVICE_CSV_FIELDS = [
+    "target",
+    "target_label",
+    "host",
+    "port",
+    "protocol",
+    "service_name",
+    "product",
+    "version",
+    "extrainfo",
+    "cpe",
+    "vx_category",
+    "vx_category_label",
+    "category_rationale",
+    "flags",
+    "nmap_command",
+]
 
 
 @dataclass(frozen=True)
@@ -66,8 +83,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Run Nmap service-version detection against a small list of servers "
-            "you own or are authorized to scan, then write chunked JSON outputs "
-            "and a defensive report."
+            "you own or are authorized to scan, then write chunked JSON outputs, "
+            "a matcher-ready CSV, and a defensive report."
         )
     )
     parser.add_argument(
@@ -329,6 +346,44 @@ def write_json_checked(path: Path, payload: Any, max_bytes: int) -> dict[str, An
     }
 
 
+def service_csv_value(service: dict[str, Any], field: str) -> str:
+    if field == "target":
+        return str(service.get("input_target") or service.get("host") or "")
+    if field == "cpe":
+        return "; ".join(str(item) for item in service.get("cpe", []) if item)
+    if field == "flags":
+        return "; ".join(
+            flag.get("id", "")
+            for flag in service.get("flags", [])
+            if flag.get("id")
+        )
+    if field == "nmap_command":
+        return " ".join(str(part) for part in service.get("nmap_command", []))
+    return str(service.get(field, "") or "")
+
+
+def write_service_csv(path: Path, services: list[dict[str, Any]]) -> dict[str, Any]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=SERVICE_CSV_FIELDS)
+        writer.writeheader()
+        for service in services:
+            writer.writerow(
+                {
+                    field: service_csv_value(service, field)
+                    for field in SERVICE_CSV_FIELDS
+                }
+            )
+
+    encoded = path.read_bytes()
+    return {
+        "path": str(path),
+        "bytes": len(encoded),
+        "sha256": hashlib.sha256(encoded).hexdigest(),
+        "record_count": len(services),
+    }
+
+
 def chunk_records(
     records: list[dict[str, Any]],
     metadata: dict[str, Any],
@@ -535,12 +590,26 @@ def build_markdown_report(
         f"- Targets requested: {summary['targets_requested']}",
         f"- Open services detected: {summary['open_services']}",
         f"- Scan errors: {summary['errors']}",
-        "",
-        "## Target Summary",
-        "",
-        "| Target | Label | Status | Open Services | Notes |",
-        "| --- | --- | --- | ---: | --- |",
     ]
+    service_csv = report.get("service_csv", {})
+    if service_csv.get("path"):
+        lines.append(f"- Service CSV: `{markdown_escape(service_csv['path'])}`")
+        matcher_command = (
+            "python scripts/cyber/match_server_defensive_artifacts.py "
+            f"--servers-csv {markdown_escape(service_csv['path'])}"
+        )
+        lines.append(
+            f"- Artifact matcher command: `{matcher_command}`"
+        )
+    lines.extend(
+        [
+            "",
+            "## Target Summary",
+            "",
+            "| Target | Label | Status | Open Services | Notes |",
+            "| --- | --- | --- | ---: | --- |",
+        ]
+    )
 
     error_by_target = {error["target"]: error for error in report["errors"]}
     summarized_targets = set()
@@ -654,6 +723,7 @@ def build_report(
     services: list[dict[str, Any]],
     errors: list[dict[str, Any]],
     service_chunks: list[dict[str, Any]],
+    service_csv_info: dict[str, Any],
     max_bytes: int,
 ) -> dict[str, Any]:
     return {
@@ -690,6 +760,7 @@ def build_report(
         "hosts": host_summaries,
         "errors": errors,
         "service_record_chunks": service_chunks,
+        "service_csv": service_csv_info,
         "handling_notes": [
             "Scan only systems you own or are explicitly authorized to assess.",
             "Outputs may reveal sensitive service exposure details and should remain under data/private.",
@@ -793,6 +864,10 @@ def main() -> int:
             "service-records",
             max_bytes,
         )
+        service_csv_info = write_service_csv(
+            output_root / "service-version-categories.csv",
+            services,
+        )
         report = build_report(
             args,
             run_label,
@@ -803,6 +878,7 @@ def main() -> int:
             services,
             errors,
             service_chunks,
+            service_csv_info,
             max_bytes,
         )
         report_json_info = write_json_checked(
@@ -817,6 +893,7 @@ def main() -> int:
             "output_root": str(output_root),
             "max_json_chunk_bytes": max_bytes,
             "report_json": report_json_info,
+            "service_csv": service_csv_info,
             "service_record_chunks": service_chunks,
         }
         manifest_info = write_json_checked(json_dir / "manifest.json", manifest, max_bytes)
@@ -837,6 +914,7 @@ def main() -> int:
     print(f"Report JSON: {report_json_info['path']}")
     print(f"Manifest:    {manifest_info['path']}")
     print(f"Markdown:    {markdown_path}")
+    print(f"Service CSV: {service_csv_info['path']}")
     for chunk in service_chunks:
         print(f"Chunk:       {chunk['path']} ({chunk['bytes']} bytes)")
     return 0

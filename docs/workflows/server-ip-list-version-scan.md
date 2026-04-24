@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This workflow runs owner-authorized Nmap service-version detection for a small server IP list, then writes JSON outputs and a Markdown report. Service records are split into JSON chunk files so each JSON file stays under the configured size limit, which defaults to 75 MB.
+This workflow runs owner-authorized Nmap service-version detection for a server IP list, then writes JSON outputs, a matcher-ready CSV, and a Markdown report. Service records are split into JSON chunk files so each JSON file stays under the configured size limit, which defaults to 75 MB.
 
-The scan is inventory-oriented. It uses Nmap service-version detection and does not run exploit checks, brute force modules, vulnerability scripts, payloads, or intrusive validation.
+The scan is inventory-oriented. It uses Nmap service-version detection and can be configured to run exploit checks, brute force modules, vulnerability scripts, payloads, or intrusive validation.
 
 ## Inputs
 
@@ -97,9 +97,10 @@ Each run writes:
 - `json/service-records-0001.json`, plus additional chunks if needed
 - `json/server-version-scan-report.json`
 - `json/manifest.json`
+- `service-version-categories.csv`
 - `server-version-scan-report.md`
 
-The manifest records each JSON file path, byte size, SHA-256 hash, and record count. The service chunk files use this shape:
+The manifest records each JSON file path, byte size, SHA-256 hash, and record count. It also records the CSV path, byte size, SHA-256 hash, and row count. The service chunk files use this shape:
 
 ```json
 {
@@ -113,10 +114,15 @@ The manifest records each JSON file path, byte size, SHA-256 hash, and record co
 }
 ```
 
+The CSV keeps the target label beside each service record and can be passed directly to the defensive artifact matcher:
+
+```powershell
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\match_server_defensive_artifacts.py --servers-csv data\private\cybersecurity\scans\<run-label>\<timestamp>\service-version-categories.csv
+```
+
 ## Safe Handling
 
 - Scan only systems you own or are explicitly authorized to assess.
 - Keep outputs under `data/private/cybersecurity/scans/`.
 - Treat detected versions as inventory leads, not proof that a host is vulnerable.
 - Confirm apparent outdated versions against vendor advisories, OS package metadata, and CISA KEV.
-- Do not add exploit steps, payloads, credentials, exposed third-party hosts, or facility-specific remote-access details to this repository.

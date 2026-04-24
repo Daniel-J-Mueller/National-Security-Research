@@ -11,7 +11,7 @@ It does not download vx-underground, malware samples, exploit code, payloads, cr
 - A CSV of servers or service scan results that you own or are authorized to assess.
 - A local defensive artifact catalog, defaulting to `config/cybersecurity/defensive-artifact-catalog.json`.
 
-The CSV can come from your own inventory export or from `scripts/cyber/categorize_server_versions.py`. The matcher looks for common columns such as:
+The CSV can come from your own inventory export, `scripts/cyber/categorize_server_versions.py`, or the batch `service-version-categories.csv` written by `scripts/cyber/scan_server_ip_list.py`. The matcher looks for common columns such as:
 
 - `server`, `host`, `hostname`, `ip`, `target`, or `asset_id`
 - `port`
@@ -26,6 +26,12 @@ The CSV can come from your own inventory export or from `scripts/cyber/categoriz
 
 ```powershell
 C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\match_server_defensive_artifacts.py --servers-csv data\private\cybersecurity\imports\office-home-servers.csv
+```
+
+After a batch IP-list scan, point the matcher at the generated private CSV:
+
+```powershell
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\match_server_defensive_artifacts.py --servers-csv data\private\cybersecurity\scans\<run-label>\<timestamp>\service-version-categories.csv
 ```
 
 ## Chunked Catalog Processing

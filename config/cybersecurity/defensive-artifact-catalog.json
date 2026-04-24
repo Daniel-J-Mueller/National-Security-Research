@@ -269,6 +269,228 @@
       "snippet": "Verify the host is enrolled in patch management and that only required Windows roles and features are enabled. Restrict RDP and WinRM to approved administration paths, use separate privileged accounts, and review local Administrators group membership. Confirm event forwarding or centralized logging covers authentication, service changes, new local accounts, and privilege changes."
     },
     {
+      "id": "dns-service-hardening-review",
+      "artifact_type": "defensive-hardening",
+      "title": "DNS Service Hardening Review",
+      "summary": "Review DNS listeners for recursion policy, zone-transfer controls, logging, and patching.",
+      "priority": "medium",
+      "match_any": [
+        {
+          "service_name_regex": "^(domain|dns|dns-tcp)$"
+        },
+        {
+          "port_in": [
+            53,
+            853
+          ]
+        },
+        {
+          "product_regex": "(BIND|Unbound|PowerDNS|Microsoft DNS|dnsmasq|Knot DNS)"
+        },
+        {
+          "flag_contains": "dns_service"
+        }
+      ],
+      "match_rationale": "DNS services affect availability, name resolution integrity, and exposure to abuse if recursion or transfers are misconfigured.",
+      "references": [
+        {
+          "name": "CISA Cross-Sector Cybersecurity Performance Goals",
+          "url": "https://www.cisa.gov/cybersecurity-performance-goals"
+        },
+        {
+          "name": "NIST Cybersecurity Framework 2.0",
+          "url": "https://www.nist.gov/publications/nist-cybersecurity-framework-csf-20"
+        }
+      ],
+      "snippet": "Confirm whether the DNS service is authoritative, recursive, forwarding, or internal-only. Restrict recursion to approved clients, limit zone transfers to authorized peers, and review split-horizon boundaries. Verify logging covers query volume and administrative changes, patch through the vendor or OS package channel, and confirm secondary DNS or resolver failover is documented."
+    },
+    {
+      "id": "mail-service-relay-hardening",
+      "artifact_type": "defensive-hardening",
+      "title": "Mail Service Relay And Mailbox Hardening",
+      "summary": "Review SMTP, submission, POP, IMAP, and mail gateway services for relay, authentication, TLS, and logging controls.",
+      "priority": "medium",
+      "match_any": [
+        {
+          "service_name_regex": "^(smtp|smtps|submission|pop3|pop3s|imap|imaps)$"
+        },
+        {
+          "port_in": [
+            25,
+            110,
+            143,
+            465,
+            587,
+            993,
+            995
+          ]
+        },
+        {
+          "product_regex": "(Postfix|Exim|Sendmail|Dovecot|Exchange|OpenSMTPD|Courier)"
+        },
+        {
+          "flag_contains": "mail_service"
+        }
+      ],
+      "match_rationale": "Mail services need relay restrictions, strong authentication, TLS policy, abuse monitoring, and backup delivery planning.",
+      "references": [
+        {
+          "name": "CISA Cross-Sector Cybersecurity Performance Goals",
+          "url": "https://www.cisa.gov/cybersecurity-performance-goals"
+        }
+      ],
+      "snippet": "Confirm SMTP relay is restricted to approved sources and that mailbox access requires strong authentication. Prefer encrypted submission and mailbox protocols, remove legacy cleartext access where possible, and monitor authentication failures, relay attempts, queue growth, and unusual sending patterns. Review SPF, DKIM, and DMARC ownership where applicable, and verify patching, backups, and abuse-response contacts are current."
+    },
+    {
+      "id": "identity-directory-service-hardening",
+      "artifact_type": "defensive-hardening",
+      "title": "Identity And Directory Service Hardening",
+      "summary": "Review LDAP, Kerberos, directory, and domain-controller surfaces for exposure, privileged access, and logging.",
+      "priority": "high",
+      "match_any": [
+        {
+          "service_name_regex": "^(ldap|ldaps|kerberos|kerberos-sec|kpasswd|globalcatLDAP|globalcatLDAPssl)$"
+        },
+        {
+          "port_in": [
+            88,
+            389,
+            464,
+            636,
+            3268,
+            3269
+          ]
+        },
+        {
+          "product_regex": "(Active Directory|OpenLDAP|389 Directory|FreeIPA|Kerberos|Domain Controller)"
+        },
+        {
+          "flag_contains": "identity_directory_service"
+        }
+      ],
+      "match_rationale": "Identity services are high-impact control-plane systems and should be tightly scoped, monitored, and backed up.",
+      "references": [
+        {
+          "name": "CISA Cross-Sector Cybersecurity Performance Goals",
+          "url": "https://www.cisa.gov/cybersecurity-performance-goals"
+        },
+        {
+          "name": "NIST Cybersecurity Framework 2.0",
+          "url": "https://www.nist.gov/publications/nist-cybersecurity-framework-csf-20"
+        }
+      ],
+      "snippet": "Confirm directory and Kerberos services are reachable only from intended networks and administrative paths. Review privileged groups, service accounts, stale accounts, password and MFA policy, and secure LDAP or equivalent protections where supported. Ensure logs cover authentication, directory changes, privilege changes, replication health, and new trust relationships. Verify authoritative backups and recovery procedures are tested."
+    },
+    {
+      "id": "vpn-edge-access-hardening",
+      "artifact_type": "defensive-hardening",
+      "title": "VPN And Edge Access Hardening",
+      "summary": "Review VPN and edge access services for MFA, patching, source restrictions, and session monitoring.",
+      "priority": "high",
+      "match_any": [
+        {
+          "service_name_regex": "^(isakmp|ipsec|openvpn|wireguard|pptp|l2tp)$"
+        },
+        {
+          "port_in": [
+            500,
+            1701,
+            1723,
+            1194,
+            4500,
+            51820
+          ]
+        },
+        {
+          "product_regex": "(OpenVPN|WireGuard|strongSwan|Libreswan|Cisco AnyConnect|GlobalProtect|Fortinet|Pulse Secure|SonicWall)"
+        },
+        {
+          "flag_contains": "vpn_or_edge_access_service"
+        }
+      ],
+      "match_rationale": "VPN and edge access services are common control points for remote administration and workforce access.",
+      "references": [
+        {
+          "name": "CISA Known Exploited Vulnerabilities Catalog",
+          "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
+        },
+        {
+          "name": "CISA Cross-Sector Cybersecurity Performance Goals",
+          "url": "https://www.cisa.gov/cybersecurity-performance-goals"
+        }
+      ],
+      "snippet": "Confirm the edge access service is still required, patched, and covered by vendor security advisories. Require MFA for interactive access, remove stale users and device profiles, and restrict administrative interfaces to approved management paths. Monitor new logins, unusual geographies, failed authentication spikes, configuration changes, and session duration anomalies. Document emergency access and recovery procedures separately from routine user access."
+    },
+    {
+      "id": "container-orchestration-admin-surface-review",
+      "artifact_type": "defensive-hardening",
+      "title": "Container And Orchestration Admin Surface Review",
+      "summary": "Review Docker, Kubernetes, kubelet, and etcd surfaces for authenticated administration and network exposure.",
+      "priority": "high",
+      "match_any": [
+        {
+          "product_regex": "(Docker|Kubernetes|kubelet|etcd)"
+        },
+        {
+          "port_in": [
+            2375,
+            2376,
+            2379,
+            2380,
+            6443,
+            10250
+          ]
+        },
+        {
+          "flag_contains": "container_orchestration_service"
+        }
+      ],
+      "match_rationale": "Container control-plane and runtime APIs can carry high operational impact if exposed or weakly authenticated.",
+      "references": [
+        {
+          "name": "CISA Cross-Sector Cybersecurity Performance Goals",
+          "url": "https://www.cisa.gov/cybersecurity-performance-goals"
+        },
+        {
+          "name": "NIST Cybersecurity Framework 2.0",
+          "url": "https://www.nist.gov/publications/nist-cybersecurity-framework-csf-20"
+        }
+      ],
+      "snippet": "Confirm container runtime, orchestration, and key-value store APIs are not reachable from untrusted networks. Require authenticated and encrypted administration, rotate stale credentials or tokens, and review role bindings for least privilege. Verify control-plane audit logs, admission controls, image provenance checks, backup coverage for cluster state, and patch cadence for nodes and control-plane components."
+    },
+    {
+      "id": "monitoring-observability-admin-surface-review",
+      "artifact_type": "defensive-hardening",
+      "title": "Monitoring And Observability Admin Surface Review",
+      "summary": "Review monitoring, dashboard, metrics, and log-search services for exposure, authentication, and data sensitivity.",
+      "priority": "medium",
+      "match_any": [
+        {
+          "product_regex": "(Grafana|Prometheus|Alertmanager|Kibana|Zabbix|Nagios|OpenSearch)"
+        },
+        {
+          "port_in": [
+            3000,
+            5601,
+            9090,
+            9093,
+            9100
+          ]
+        },
+        {
+          "flag_contains": "monitoring_admin_service"
+        }
+      ],
+      "match_rationale": "Monitoring tools can expose sensitive operational data and privileged administrative controls.",
+      "references": [
+        {
+          "name": "CISA Cross-Sector Cybersecurity Performance Goals",
+          "url": "https://www.cisa.gov/cybersecurity-performance-goals"
+        }
+      ],
+      "snippet": "Confirm dashboards, metrics endpoints, and log-search interfaces require authentication and are reachable only from intended networks. Review admin users, API tokens, data-source credentials, alert routing, and public sharing settings. Check whether collected logs or metrics expose sensitive hostnames, internal paths, secrets, or security events, and verify backup and recovery for alerting rules and dashboard configuration."
+    },
+    {
       "id": "known-exploited-vulnerability-triage",
       "artifact_type": "defensive-reference",
       "title": "Known Exploited Vulnerability Triage",

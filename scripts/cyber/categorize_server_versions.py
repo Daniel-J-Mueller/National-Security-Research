@@ -184,7 +184,12 @@ def detect_flags(service_name: str, port: int, rules: dict[str, Any]) -> list[di
     service_lower = service_name.lower()
     for flag in rules.get("service_flags", []):
         names = {name.lower() for name in flag.get("service_names", [])}
-        if service_lower in names:
+        ports = {
+            int(value)
+            for value in flag.get("ports", [])
+            if str(value).strip().isdigit()
+        }
+        if service_lower in names or port in ports:
             detected.append(
                 {
                     "id": flag["id"],
