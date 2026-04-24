@@ -66,6 +66,8 @@ C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\scan_server_ip_
 
 The `--i-own-these-servers` flag is required before the script will run Nmap. Use `--dry-run` first if you want to validate the target file and print planned commands without scanning.
 
+If the default input is the generated all-IPv4 dry-run file, the reader fast-forwards past the leading `0.0.0.0/8` block and starts at IPv4 address index `16,777,216` (`1.0.0.0`). In CSV line-number terms, that is line `16,777,218` because line 1 is the header and line 2 is `0.0.0.0`. Live scans still require a target file containing only systems you own or are authorized to assess.
+
 ## Useful Options
 
 Scan only specific ports:
@@ -84,6 +86,12 @@ If ICMP probes are blocked for your servers:
 
 ```powershell
 C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\scan_server_ip_list.py --i-own-these-servers --assume-host-up
+```
+
+Optionally cap one run during testing. By default there is no artificial target limit:
+
+```powershell
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\scan_server_ip_list.py --dry-run --max-targets 25
 ```
 
 Change the CSV/JSONL shard cap:
@@ -106,7 +114,7 @@ For each target, the script runs:
 nmap --open -sV --version-light -oX - <target>
 ```
 
-It scans one listed target at a time so output records keep local labels attached. Duplicate exact IPs or DNS names in the input list are scanned once. The script rejects ranges, CIDR blocks, wildcards, and comma-separated target lists by default. The default `--max-targets` value is 16.
+It scans one listed target at a time so output records keep local labels attached. Duplicate exact IPs or DNS names in the input list are scanned once. The script rejects ranges, CIDR blocks, wildcards, and comma-separated target lists by default. The default `--max-targets` value is `0`, which means no artificial limit.
 
 ## Output
 

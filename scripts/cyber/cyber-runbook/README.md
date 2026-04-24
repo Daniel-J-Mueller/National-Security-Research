@@ -27,6 +27,8 @@ ip
 
 Fill exact IP addresses or DNS names you own or are authorized to scan. The runner ignores blank rows and rejects CIDR ranges, wildcards, comma lists, whitespace targets, and other expanded target expressions.
 
+If this file was generated as the all-IPv4 dry-run input and begins with `0.0.0.0`, the scanner fast-forwards past the leading `0.0.0.0/8` block. The first scanned/planned address after that skip is IPv4 index `16,777,216`, which is `1.0.0.0` (CSV line `16,777,218` because of the header).
+
 ## Dry Run
 
 Validate the CSV and print planned commands without scanning:
@@ -81,6 +83,8 @@ The default JSONL shard limit is 75 MB:
 ```powershell
 C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\cyber-runbook\run_server_version_runbook.py --i-own-these-servers --chunk-size-mb 75
 ```
+
+There is no artificial target limit by default. During a test pass, add a positive `--max-targets` value to stop after that many rows.
 
 ## Safe Handling
 

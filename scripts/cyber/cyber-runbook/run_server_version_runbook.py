@@ -29,7 +29,7 @@ DEFAULT_RUNBOOK_CSV = ROOT / "data" / "private" / "cybersecurity" / "runbook-inp
 DEFAULT_OUTPUT_DIR = ROOT / "data" / "private" / "cybersecurity" / "runbook-outputs"
 DEFAULT_RUN_DATA = Path(__file__).with_name("run-data.info")
 DEFAULT_MAX_CHUNK_MB = 75
-DEFAULT_MAX_TARGETS = 2**32
+DEFAULT_MAX_TARGETS = scan.DEFAULT_MAX_TARGETS
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -89,7 +89,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--max-targets",
         type=int,
         default=DEFAULT_MAX_TARGETS,
-        help="Safety limit for one run. Default: %(default)s targets.",
+        help="Optional limit for one run. Use 0 for no limit. Default: %(default)s.",
     )
     parser.add_argument(
         "--timeout-seconds",
@@ -139,8 +139,8 @@ def iter_runbook_targets(
 ) -> Iterator[scan.ServerTarget]:
     if not path.exists():
         raise FileNotFoundError(f"Runbook CSV not found: {path}")
-    if max_targets < 1:
-        raise ValueError("--max-targets must be at least 1")
+    if max_targets < 0:
+        raise ValueError("--max-targets must be 0 or greater")
 
     with path.open("r", newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
@@ -153,7 +153,7 @@ def iter_runbook_targets(
         for line_number, row in enumerate(reader, start=2):
             if line_number < start_index:
                 continue
-            if target_count >= max_targets:
+            if max_targets and target_count >= max_targets:
                 break
             normalized = {key.lower(): (value or "").strip() for key, value in row.items()}
             target_value = normalized.get("ip") or normalized.get("target") or ""
@@ -190,17 +190,26 @@ def main() -> int:
             )
         if not args.runbook_csv.exists():
             raise FileNotFoundError(f"Runbook CSV not found: {args.runbook_csv}")
+        scan.guard_live_target_file(args, args.runbook_csv)
 
         max_bytes = scan.chunk_size_bytes(args.chunk_size_mb)
         output_root = args.output_dir
         first_index = 2
-        start_index = first_index
+        raw_start_index = first_index
         if args.reset_run_data:
-            scan.write_run_data_index(args.run_data, args.runbook_csv, first_index, allow_decrease=True)
+            raw_start_index = first_index
         else:
-            start_index = scan.read_run_data_index(args.run_data, args.runbook_csv, first_index)
+            raw_start_index = scan.read_run_data_index(args.run_data, args.runbook_csv, first_index)
+        start_index = scan.fast_forward_generated_ipv4_start_index(args.runbook_csv, raw_start_index)
+        if args.reset_run_data or start_index != raw_start_index:
+            scan.write_run_data_index(
+                args.run_data,
+                args.runbook_csv,
+                start_index,
+                allow_decrease=args.reset_run_data,
+            )
 
-        if start_index <= first_index:
+        if args.reset_run_data or raw_start_index <= first_index:
             reset_output_dirs(output_root)
         else:
             output_root.mkdir(parents=True, exist_ok=True)

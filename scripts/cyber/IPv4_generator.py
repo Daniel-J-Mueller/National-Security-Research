@@ -5,6 +5,9 @@ Generate a dry-run input CSV containing every possible IPv4 address.
 By default, this script writes to:
   data/private/cybersecurity/runbook-input/dry-run-input.csv
 
+This file is intended for dry-run planning and stream tests. The live scanner
+expects an explicit owned target list and refuses the generated all-IPv4 input.
+
 Output size: roughly 60-70 GB uncompressed.
 Rows: 4,294,967,296 addresses + 1 header row.
 The runbook input header is preserved, with generated IPv4 addresses written to

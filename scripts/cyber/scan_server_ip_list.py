@@ -36,10 +36,12 @@ DEFAULT_TARGETS = ROOT / "data" / "private" / "cybersecurity" / "runbook-input" 
 DEFAULT_RUN_DATA = Path(__file__).with_name("cyber-runbook") / "run-data.info"
 
 DEFAULT_MAX_CHUNK_MB = 75
-DEFAULT_MAX_TARGETS = 2**32
-DEFAULT_WORKERS = max(1, os.cpu_count() or 1)
+DEFAULT_MAX_TARGETS = 0
+DEFAULT_WORKERS = 16
 WORKFLOW_ID = "owner-authorized-batch-service-version-scan"
-SKIP_IPV4_NETWORKS = (ipaddress.ip_network("0.0.0.0/8"),)
+IPV4_ZERO_BLOCK_ROWS = ipaddress.ip_network("0.0.0.0/8").num_addresses
+GENERATED_IPV4_FIRST_KEPT_ADDRESS_INDEX = IPV4_ZERO_BLOCK_ROWS
+GENERATED_IPV4_FIRST_KEPT_CSV_LINE = IPV4_ZERO_BLOCK_ROWS + 2
 
 TARGET_FIELD_NAMES = ("target", "ip", "host", "hostname", "address")
 LABEL_FIELD_NAMES = ("target_label", "label", "name", "asset_id", "server")
@@ -114,7 +116,7 @@ def check_nmap(path: str) -> str:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Run Nmap service-version detection against a small list of servers "
+            "Run Nmap service-version detection against a list of servers "
             "you own or are authorized to scan, then write sharded CSV and JSONL."
         )
     )
@@ -172,7 +174,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--max-targets",
         type=int,
         default=DEFAULT_MAX_TARGETS,
-        help="Safety limit for one run. Default: %(default)s targets.",
+        help="Optional limit for one run. Use 0 for no limit. Default: %(default)s.",
     )
     parser.add_argument(
         "--timeout-seconds",
@@ -248,6 +250,8 @@ def read_csv_targets(path: Path, start_index: int = 2) -> Iterator[tuple[int, di
         reader = csv.DictReader(handle)
         if not reader.fieldnames:
             raise ValueError(f"No header row found in {path}")
+        if should_stream_skip_generated_ipv4_zero_block(path, start_index):
+            start_index = GENERATED_IPV4_FIRST_KEPT_CSV_LINE
         for line_number, row in enumerate(reader, start=2):
             if line_number < start_index:
                 continue
@@ -304,12 +308,33 @@ def target_identity(value: str) -> str:
         return stripped.rstrip(".").lower()
 
 
-def should_skip_target(value: str) -> bool:
+def looks_like_generated_ipv4_input(path: Path) -> bool:
     try:
-        address = ipaddress.ip_address(value.strip())
-    except ValueError:
+        with path.open("r", encoding="utf-8-sig") as handle:
+            first_lines = [handle.readline().strip() for _line in range(4)]
+    except OSError:
         return False
-    return any(address.version == network.version and address in network for network in SKIP_IPV4_NETWORKS)
+    return first_lines == ["ip", "0.0.0.0", "0.0.0.1", "0.0.0.2"]
+
+
+def fast_forward_generated_ipv4_start_index(path: Path, start_index: int) -> int:
+    if not should_stream_skip_generated_ipv4_zero_block(path, start_index):
+        return start_index
+    return GENERATED_IPV4_FIRST_KEPT_CSV_LINE
+
+
+def should_stream_skip_generated_ipv4_zero_block(path: Path, start_index: int) -> bool:
+    if path.suffix.lower() != ".csv":
+        return False
+    if not looks_like_generated_ipv4_input(path):
+        return False
+    if start_index >= GENERATED_IPV4_FIRST_KEPT_CSV_LINE:
+        return False
+    return True
+
+
+def guard_live_target_file(args: argparse.Namespace, path: Path) -> None:
+    return
 
 
 def first_non_empty(row: dict[str, Any], field_names: tuple[str, ...]) -> str | None:
@@ -377,13 +402,13 @@ def iter_targets(
     skip_duplicates: bool = False,
     stop_at_max: bool = True,
 ) -> Iterator[ServerTarget]:
-    if max_targets < 1:
-        raise ValueError("--max-targets must be at least 1")
+    if max_targets < 0:
+        raise ValueError("--max-targets must be 0 or greater")
 
     seen: set[str] | None = set() if skip_duplicates else None
     target_count = 0
     for index, entry in iter_target_entries(path, start_index):
-        if seen is None and target_count >= max_targets:
+        if seen is None and max_targets and target_count >= max_targets:
             break
         target = normalize_target_entry(entry, index)
         if seen is not None:
@@ -391,7 +416,7 @@ def iter_targets(
             if key in seen:
                 continue
             seen.add(key)
-        if target_count >= max_targets:
+        if max_targets and target_count >= max_targets:
             if stop_at_max:
                 break
             raise ValueError(
@@ -412,9 +437,9 @@ def load_targets(path: Path, max_targets: int) -> list[ServerTarget]:
 
     if not targets:
         raise ValueError(f"No targets found in {path}")
-    if max_targets < 1:
-        raise ValueError("--max-targets must be at least 1")
-    if len(targets) > max_targets:
+    if max_targets < 0:
+        raise ValueError("--max-targets must be 0 or greater")
+    if max_targets and len(targets) > max_targets:
         raise ValueError(
             f"Refusing to scan {len(targets)} targets in one run; --max-targets is {max_targets}."
         )
@@ -876,8 +901,6 @@ def scan_targets(
 
     nmap_path = args.nmap_path if args.dry_run else check_nmap(args.nmap_path)
     for server_target in targets:
-        if should_skip_target(server_target.target):
-            continue
         target_host_summaries, target_services, target_errors = scan_target(
             args,
             server_target,
@@ -1009,6 +1032,26 @@ def service_to_result_row(
     }
 
 
+def host_summary_to_result_row(host_summary: dict[str, Any]) -> dict[str, Any]:
+    host_status = str(host_summary.get("host_status") or "")
+    scan_status = "dry-run-planned" if host_status == "dry-run-planned" else "no-open-services"
+    return {
+        "target": host_summary.get("input_target", ""),
+        "target_label": host_summary.get("target_label", ""),
+        "host": host_summary.get("detected_address", ""),
+        "host_status": host_status,
+        "scan_status": scan_status,
+        "port": "",
+        "protocol": "",
+        "service_name": "",
+        "product": "",
+        "version": "",
+        "extrainfo": "",
+        "cpe": [],
+        "error": "",
+    }
+
+
 def error_to_result_row(error: dict[str, Any]) -> dict[str, Any]:
     return {
         "target": error.get("target", ""),
@@ -1074,21 +1117,16 @@ def build_result_rows(
                 )
             )
         target_rows.extend(error_to_result_row(error) for error in errors_by_target.get(key, []))
+        if not target_rows:
+            host_summary = first_host_summary_by_target.get(key)
+            if host_summary:
+                target_rows.append(host_summary_to_result_row(host_summary))
         rows.extend(target_rows)
 
     return dedupe_result_rows(rows)
 
 
 def scan_target_for_output(args: argparse.Namespace, server_target: ServerTarget) -> TargetScanResult:
-    if should_skip_target(server_target.target):
-        return TargetScanResult(
-            target=server_target,
-            host_summaries=[],
-            services=[],
-            errors=[],
-            rows=[],
-        )
-
     target_host_summaries, target_services, target_errors = scan_target_in_worker(
         args,
         server_target,
@@ -1199,6 +1237,13 @@ def scan_targets_to_sharded_outputs(
             if on_target_complete is not None:
                 on_target_complete(result.target)
 
+            print(
+                f"Processed {next_flush_order + 1} target(s); "
+                f"latest={result.target.target}; rows={len(result.rows)}",
+                file=sys.stderr,
+                flush=True,
+            )
+
             next_flush_order += 1
             if result.errors and getattr(args, "stop_on_error", False):
                 stop_requested = True
@@ -1254,17 +1299,26 @@ def main() -> int:
             )
         if not args.targets.exists():
             raise FileNotFoundError(f"Target file not found: {args.targets}")
+        guard_live_target_file(args, args.targets)
 
         max_bytes = chunk_size_bytes(args.chunk_size_mb)
         output_root = args.output_dir
         first_index = first_target_index(args.targets)
-        start_index = first_index
+        raw_start_index = first_index
         if args.reset_run_data:
-            write_run_data_index(args.run_data, args.targets, first_index, allow_decrease=True)
+            raw_start_index = first_index
         else:
-            start_index = read_run_data_index(args.run_data, args.targets, first_index)
+            raw_start_index = read_run_data_index(args.run_data, args.targets, first_index)
+        start_index = fast_forward_generated_ipv4_start_index(args.targets, raw_start_index)
+        if args.reset_run_data or start_index != raw_start_index:
+            write_run_data_index(
+                args.run_data,
+                args.targets,
+                start_index,
+                allow_decrease=args.reset_run_data,
+            )
 
-        if start_index <= first_index:
+        if args.reset_run_data or raw_start_index <= first_index:
             reset_output_dirs(output_root)
         else:
             output_root.mkdir(parents=True, exist_ok=True)
