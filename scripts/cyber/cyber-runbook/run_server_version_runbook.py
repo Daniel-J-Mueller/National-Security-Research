@@ -98,6 +98,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Per-target Nmap timeout. Default: %(default)s seconds.",
     )
     parser.add_argument(
+        "--workers",
+        type=int,
+        default=scan.DEFAULT_WORKERS,
+        help="Concurrent per-target worker threads. Default uses all logical CPUs: %(default)s.",
+    )
+    parser.add_argument(
         "--stop-on-error",
         action="store_true",
         help="Stop the batch if any target scan fails. By default, later targets still run.",
@@ -190,7 +196,7 @@ def main() -> int:
         first_index = 2
         start_index = first_index
         if args.reset_run_data:
-            scan.write_run_data_index(args.run_data, args.runbook_csv, first_index)
+            scan.write_run_data_index(args.run_data, args.runbook_csv, first_index, allow_decrease=True)
         else:
             start_index = scan.read_run_data_index(args.run_data, args.runbook_csv, first_index)
 
@@ -207,6 +213,7 @@ def main() -> int:
             ports=args.ports,
             top_ports=args.top_ports,
             timeout_seconds=args.timeout_seconds,
+            workers=args.workers,
             stop_on_error=args.stop_on_error,
             echo_planned_commands=args.dry_run,
         )

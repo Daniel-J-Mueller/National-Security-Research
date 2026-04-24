@@ -14,12 +14,16 @@ import argparse
 import csv
 import ipaddress
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
+import tempfile
+import time
 import xml.etree.ElementTree as ET
 from collections.abc import Callable, Iterable, Iterator
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -33,6 +37,7 @@ DEFAULT_RUN_DATA = Path(__file__).with_name("cyber-runbook") / "run-data.info"
 
 DEFAULT_MAX_CHUNK_MB = 75
 DEFAULT_MAX_TARGETS = 2**32
+DEFAULT_WORKERS = max(1, os.cpu_count() or 1)
 WORKFLOW_ID = "owner-authorized-batch-service-version-scan"
 SKIP_IPV4_NETWORKS = (ipaddress.ip_network("0.0.0.0/8"),)
 
@@ -74,6 +79,15 @@ class RunbookScanResult:
     row_count: int = 0
     service_count: int = 0
     error_count: int = 0
+
+
+@dataclass
+class TargetScanResult:
+    target: ServerTarget
+    host_summaries: list[dict[str, Any]]
+    services: list[dict[str, Any]]
+    errors: list[dict[str, Any]]
+    rows: list[dict[str, Any]]
 
 
 def clean_label(value: str) -> str:
@@ -165,6 +179,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=900,
         help="Per-target Nmap timeout. Default: %(default)s seconds.",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=DEFAULT_WORKERS,
+        help="Concurrent per-target worker threads. Default uses all logical CPUs: %(default)s.",
     )
     parser.add_argument(
         "--stop-on-error",
@@ -430,16 +450,95 @@ def read_run_data_index(run_data_path: Path, target_path: Path, default_index: i
         raise ValueError(f"Invalid next_index in {run_data_path}") from exc
 
 
-def write_run_data_index(run_data_path: Path, target_path: Path, next_index: int) -> None:
+def acquire_run_data_lock(lock_path: Path, timeout_seconds: float = 30.0) -> None:
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        try:
+            lock_fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            try:
+                os.write(lock_fd, f"{os.getpid()}\n{datetime.now(UTC).isoformat()}\n".encode("utf-8"))
+            finally:
+                os.close(lock_fd)
+            return
+        except FileExistsError:
+            try:
+                age_seconds = time.time() - lock_path.stat().st_mtime
+                if age_seconds > timeout_seconds:
+                    lock_path.unlink()
+                    continue
+            except FileNotFoundError:
+                continue
+        except PermissionError:
+            pass
+
+        if time.monotonic() >= deadline:
+            raise TimeoutError(f"Timed out waiting for checkpoint lock: {lock_path}")
+        time.sleep(0.05)
+
+
+def release_run_data_lock(lock_path: Path) -> None:
+    for _attempt in range(20):
+        try:
+            lock_path.unlink()
+            return
+        except FileNotFoundError:
+            return
+        except PermissionError:
+            time.sleep(0.05)
+
+
+def replace_with_retries(temp_path: Path, destination: Path, timeout_seconds: float = 10.0) -> None:
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        try:
+            temp_path.replace(destination)
+            return
+        except PermissionError:
+            if time.monotonic() >= deadline:
+                raise
+            time.sleep(0.05)
+
+
+def write_run_data_index(
+    run_data_path: Path,
+    target_path: Path,
+    next_index: int,
+    *,
+    allow_decrease: bool = False,
+) -> None:
     run_data_path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "target_file": str(target_path.resolve()),
-        "next_index": next_index,
-        "updated_at": datetime.now(UTC).isoformat(timespec="seconds"),
-    }
-    temp_path = run_data_path.with_name(f"{run_data_path.name}.tmp")
-    temp_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    temp_path.replace(run_data_path)
+    lock_path = run_data_path.with_name(f"{run_data_path.name}.lock")
+    temp_path: Path | None = None
+    acquire_run_data_lock(lock_path)
+    try:
+        index_to_write = next_index
+        if not allow_decrease:
+            current_index = read_run_data_index(run_data_path, target_path, next_index)
+            index_to_write = max(current_index, next_index)
+
+        payload = {
+            "target_file": str(target_path.resolve()),
+            "next_index": index_to_write,
+            "updated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        }
+        temp_fd, temp_name = tempfile.mkstemp(
+            prefix=f"{run_data_path.name}.",
+            suffix=".tmp",
+            dir=run_data_path.parent,
+            text=True,
+        )
+        temp_path = Path(temp_name)
+        with os.fdopen(temp_fd, "w", encoding="utf-8") as temp_handle:
+            temp_handle.write(json.dumps(payload, indent=2) + "\n")
+        replace_with_retries(temp_path, run_data_path)
+        temp_path = None
+    finally:
+        release_run_data_lock(lock_path)
+        if temp_path is not None:
+            try:
+                temp_path.unlink()
+            except FileNotFoundError:
+                pass
 
 
 def chunk_size_bytes(chunk_size_mb: float) -> int:
@@ -910,31 +1009,6 @@ def service_to_result_row(
     }
 
 
-def host_summary_to_result_row(host: dict[str, Any]) -> dict[str, Any]:
-    host_status = str(host.get("host_status") or "")
-    if host_status == "dry-run-planned":
-        scan_status = "dry-run-planned"
-    elif int(host.get("open_service_count") or 0) == 0:
-        scan_status = "no-open-services"
-    else:
-        scan_status = "host-summary"
-    return {
-        "target": host.get("input_target", ""),
-        "target_label": host.get("target_label", ""),
-        "host": host.get("detected_address", ""),
-        "host_status": host_status,
-        "scan_status": scan_status,
-        "port": "",
-        "protocol": "",
-        "service_name": "",
-        "product": "",
-        "version": "",
-        "extrainfo": "",
-        "cpe": [],
-        "error": "",
-    }
-
-
 def error_to_result_row(error: dict[str, Any]) -> dict[str, Any]:
     return {
         "target": error.get("target", ""),
@@ -950,24 +1024,6 @@ def error_to_result_row(error: dict[str, Any]) -> dict[str, Any]:
         "extrainfo": "",
         "cpe": [],
         "error": error.get("error", ""),
-    }
-
-
-def not_scanned_row(target: ServerTarget) -> dict[str, Any]:
-    return {
-        "target": target.target,
-        "target_label": target.label,
-        "host": "",
-        "host_status": "",
-        "scan_status": "not-scanned",
-        "port": "",
-        "protocol": "",
-        "service_name": "",
-        "product": "",
-        "version": "",
-        "extrainfo": "",
-        "cpe": [],
-        "error": "",
     }
 
 
@@ -990,7 +1046,6 @@ def build_result_rows(
     errors: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     services_by_target: dict[str, list[dict[str, Any]]] = {}
-    hosts_by_target: dict[str, list[dict[str, Any]]] = {}
     errors_by_target: dict[str, list[dict[str, Any]]] = {}
     host_summaries_by_target_host: dict[tuple[str, str], dict[str, Any]] = {}
     first_host_summary_by_target: dict[str, dict[str, Any]] = {}
@@ -999,7 +1054,6 @@ def build_result_rows(
         services_by_target.setdefault(host_key(service), []).append(service)
     for host in host_summaries:
         key = host_key(host)
-        hosts_by_target.setdefault(key, []).append(host)
         first_host_summary_by_target.setdefault(key, host)
         detected_address = str(host.get("detected_address") or "")
         if detected_address:
@@ -1019,14 +1073,57 @@ def build_result_rows(
                     first_host_summary_by_target,
                 )
             )
-        if not target_rows and key not in errors_by_target:
-            target_rows.extend(host_summary_to_result_row(host) for host in hosts_by_target.get(key, []))
         target_rows.extend(error_to_result_row(error) for error in errors_by_target.get(key, []))
-        if not target_rows:
-            target_rows.append(not_scanned_row(target))
         rows.extend(target_rows)
 
     return dedupe_result_rows(rows)
+
+
+def scan_target_for_output(args: argparse.Namespace, server_target: ServerTarget) -> TargetScanResult:
+    if should_skip_target(server_target.target):
+        return TargetScanResult(
+            target=server_target,
+            host_summaries=[],
+            services=[],
+            errors=[],
+            rows=[],
+        )
+
+    target_host_summaries, target_services, target_errors = scan_target_in_worker(
+        args,
+        server_target,
+    )
+    target_rows = build_result_rows(
+        [server_target],
+        target_host_summaries,
+        target_services,
+        target_errors,
+    )
+    return TargetScanResult(
+        target=server_target,
+        host_summaries=target_host_summaries,
+        services=target_services,
+        errors=target_errors,
+        rows=target_rows,
+    )
+
+
+def completed_future_result(
+    future: Future[TargetScanResult],
+    server_target: ServerTarget,
+) -> TargetScanResult:
+    try:
+        return future.result()
+    except Exception as exc:
+        errors = worker_error(server_target, f"Per-target worker failed unexpectedly: {exc}")
+        rows = build_result_rows([server_target], [], [], errors)
+        return TargetScanResult(
+            target=server_target,
+            host_summaries=[],
+            services=[],
+            errors=errors,
+            rows=rows,
+        )
 
 
 def scan_targets_to_sharded_outputs(
@@ -1053,43 +1150,81 @@ def scan_targets_to_sharded_outputs(
     row_count = 0
     service_count = 0
     error_count = 0
+    worker_count = int(getattr(args, "workers", DEFAULT_WORKERS) or DEFAULT_WORKERS)
+    if worker_count < 1:
+        raise ValueError("--workers must be at least 1")
 
-    for server_target in targets:
+    target_iter = iter(targets)
+    pending: dict[Future[TargetScanResult], tuple[int, ServerTarget]] = {}
+    completed: dict[int, TargetScanResult] = {}
+    next_submit_order = 0
+    next_flush_order = 0
+    targets_exhausted = False
+    stop_requested = False
+
+    def submit_next(executor: ThreadPoolExecutor) -> bool:
+        nonlocal next_submit_order, target_count, targets_exhausted
+        if targets_exhausted:
+            return False
+        try:
+            server_target = next(target_iter)
+        except StopIteration:
+            targets_exhausted = True
+            return False
+
+        order = next_submit_order
+        next_submit_order += 1
         target_count += 1
-        if should_skip_target(server_target.target):
+        future = executor.submit(scan_target_for_output, args, server_target)
+        pending[future] = (order, server_target)
+        return True
+
+    def flush_completed_results() -> None:
+        nonlocal next_flush_order, row_count, service_count, error_count, stop_requested
+        while next_flush_order in completed:
+            result = completed.pop(next_flush_order)
+            service_count += len(result.services)
+            error_count += len(result.errors)
+            row_count += len(result.rows)
+            csv_writer.write_rows(result.rows)
+            if jsonl_writer is not None:
+                jsonl_writer.write_rows(result.rows)
+
+            if getattr(args, "echo_planned_commands", False):
+                for host in result.host_summaries:
+                    command = " ".join(str(part) for part in host.get("nmap_command", []))
+                    if command:
+                        print(f"Planned command: {command}")
+
             if on_target_complete is not None:
-                on_target_complete(server_target)
-            continue
+                on_target_complete(result.target)
 
-        target_host_summaries, target_services, target_errors = scan_target_in_worker(
-            args,
-            server_target,
-        )
-        service_count += len(target_services)
-        error_count += len(target_errors)
+            next_flush_order += 1
+            if result.errors and getattr(args, "stop_on_error", False):
+                stop_requested = True
+                break
 
-        target_rows = build_result_rows(
-            [server_target],
-            target_host_summaries,
-            target_services,
-            target_errors,
-        )
-        row_count += len(target_rows)
-        csv_writer.write_rows(target_rows)
-        if jsonl_writer is not None:
-            jsonl_writer.write_rows(target_rows)
+    executor = ThreadPoolExecutor(max_workers=worker_count)
+    try:
+        while len(pending) < worker_count and submit_next(executor):
+            pass
 
-        if getattr(args, "echo_planned_commands", False):
-            for host in target_host_summaries:
-                command = " ".join(str(part) for part in host.get("nmap_command", []))
-                if command:
-                    print(f"Planned command: {command}")
+        while pending:
+            done, _not_done = wait(pending, return_when=FIRST_COMPLETED)
+            for future in done:
+                order, server_target = pending.pop(future)
+                completed[order] = completed_future_result(future, server_target)
 
-        if on_target_complete is not None:
-            on_target_complete(server_target)
+            flush_completed_results()
+            if stop_requested:
+                for future in pending:
+                    future.cancel()
+                break
 
-        if target_errors and getattr(args, "stop_on_error", False):
-            break
+            while len(pending) < worker_count and submit_next(executor):
+                pass
+    finally:
+        executor.shutdown(wait=True, cancel_futures=True)
 
     if target_count == 0:
         raise ValueError("No targets found.")
@@ -1125,7 +1260,7 @@ def main() -> int:
         first_index = first_target_index(args.targets)
         start_index = first_index
         if args.reset_run_data:
-            write_run_data_index(args.run_data, args.targets, first_index)
+            write_run_data_index(args.run_data, args.targets, first_index, allow_decrease=True)
         else:
             start_index = read_run_data_index(args.run_data, args.targets, first_index)
 
