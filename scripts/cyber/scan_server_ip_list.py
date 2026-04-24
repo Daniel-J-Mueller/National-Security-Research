@@ -50,10 +50,16 @@ except ImportError:
 DEFAULT_MAX_CHUNK_MB = 75
 DEFAULT_MAX_TARGETS = 16
 DEFAULT_REPORT_SERVICE_LIMIT = 200
+DEFAULT_TARGETS = (
+    DEFAULT_OUTPUT_DIR.parent
+    / "runbook-outputs"
+    / "_tmp-validation"
+    / "dry-run-input.csv"
+)
 WORKFLOW_ID = "owner-authorized-batch-service-version-scan"
 
 TARGET_FIELD_NAMES = ("target", "ip", "host", "hostname", "address")
-LABEL_FIELD_NAMES = ("label", "name", "asset_id", "server")
+LABEL_FIELD_NAMES = ("target_label", "label", "name", "asset_id", "server")
 SERVICE_CSV_FIELDS = [
     "target",
     "target_label",
@@ -90,10 +96,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--targets",
         type=Path,
-        required=True,
+        default=DEFAULT_TARGETS,
         help=(
             "Path to a JSON, JSONL, CSV, or TXT list of server IPs/hostnames. "
-            "JSON may be a list or an object with a targets/servers/hosts list."
+            "JSON may be a list or an object with a targets/servers/hosts list. "
+            "Default: %(default)s"
         ),
     )
     parser.add_argument(
