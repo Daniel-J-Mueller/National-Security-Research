@@ -6,6 +6,8 @@ __pycache__/
 /data/private/cybersecurity/artifact-matches/
 /data/private/cybersecurity/runbook-outputs/
 /data/private/cybersecurity/runbook-input
+/data/private/cybersecurity/multicaster-targets.txt
 /data/private/cybersecurity/runbook-outputs/csv
 /data/private/cybersecurity/runbook-outputs/jsonl
 /data/private/cybersecurity/runbook-input/dry-run-input.csv
+data/private/cybersecurity/runbook-input/dry-run-input.csv
