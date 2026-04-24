@@ -19,7 +19,7 @@ import shutil
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -29,10 +29,12 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT_DIR = ROOT / "data" / "private" / "cybersecurity" / "runbook-outputs"
 DEFAULT_TARGETS = ROOT / "data" / "private" / "cybersecurity" / "runbook-input" / "dry-run-input.csv"
+DEFAULT_RUN_DATA = Path(__file__).with_name("cyber-runbook") / "run-data.info"
 
 DEFAULT_MAX_CHUNK_MB = 75
 DEFAULT_MAX_TARGETS = 2**32
 WORKFLOW_ID = "owner-authorized-batch-service-version-scan"
+SKIP_IPV4_NETWORKS = (ipaddress.ip_network("0.0.0.0/8"),)
 
 TARGET_FIELD_NAMES = ("target", "ip", "host", "hostname", "address")
 LABEL_FIELD_NAMES = ("target_label", "label", "name", "asset_id", "server")
@@ -57,6 +59,7 @@ RESULT_CSV_FIELDS = [
 class ServerTarget:
     target: str
     label: str
+    source_index: int = 0
 
 
 @dataclass
@@ -68,6 +71,9 @@ class RunbookScanResult:
     csv_shards: list[dict[str, Any]]
     jsonl_shards: list[dict[str, Any]]
     target_count: int = 0
+    row_count: int = 0
+    service_count: int = 0
+    error_count: int = 0
 
 
 def clean_label(value: str) -> str:
@@ -175,6 +181,17 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Write only the CSV output and skip JSONL shards.",
     )
+    parser.add_argument(
+        "--run-data",
+        type=Path,
+        default=DEFAULT_RUN_DATA,
+        help="Small checkpoint file that stores the next input index for resumable CSV streaming.",
+    )
+    parser.add_argument(
+        "--reset-run-data",
+        action="store_true",
+        help="Ignore and reset the checkpoint so this run starts at the first input row.",
+    )
     return parser
 
 
@@ -192,34 +209,40 @@ def read_json_targets(path: Path) -> list[Any]:
     )
 
 
-def read_jsonl_targets(path: Path) -> Iterator[Any]:
+def read_jsonl_targets(path: Path, start_index: int = 1) -> Iterator[tuple[int, Any]]:
     with path.open("r", encoding="utf-8") as handle:
         for line_number, line in enumerate(handle, start=1):
+            if line_number < start_index:
+                continue
             stripped = line.strip()
             if not stripped or stripped.startswith("#"):
                 continue
             try:
-                yield json.loads(stripped)
+                yield line_number, json.loads(stripped)
             except json.JSONDecodeError as exc:
                 raise ValueError(f"Invalid JSONL on line {line_number}: {exc}") from exc
 
 
-def read_csv_targets(path: Path) -> Iterator[dict[str, str]]:
+def read_csv_targets(path: Path, start_index: int = 2) -> Iterator[tuple[int, dict[str, str]]]:
     with path.open("r", newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
         if not reader.fieldnames:
             raise ValueError(f"No header row found in {path}")
-        for row in reader:
-            yield dict(row)
+        for line_number, row in enumerate(reader, start=2):
+            if line_number < start_index:
+                continue
+            yield line_number, dict(row)
 
 
-def read_text_targets(path: Path) -> Iterator[str]:
+def read_text_targets(path: Path, start_index: int = 1) -> Iterator[tuple[int, str]]:
     with path.open("r", encoding="utf-8") as handle:
-        for line in handle:
+        for line_number, line in enumerate(handle, start=1):
+            if line_number < start_index:
+                continue
             stripped = line.strip()
             if not stripped or stripped.startswith("#"):
                 continue
-            yield stripped
+            yield line_number, stripped
 
 
 def looks_like_single_target(value: str) -> bool:
@@ -261,6 +284,14 @@ def target_identity(value: str) -> str:
         return stripped.rstrip(".").lower()
 
 
+def should_skip_target(value: str) -> bool:
+    try:
+        address = ipaddress.ip_address(value.strip())
+    except ValueError:
+        return False
+    return any(address.version == network.version and address in network for network in SKIP_IPV4_NETWORKS)
+
+
 def first_non_empty(row: dict[str, Any], field_names: tuple[str, ...]) -> str | None:
     lower_map = {key.lower(): value for key, value in row.items()}
     for field in field_names:
@@ -273,7 +304,7 @@ def first_non_empty(row: dict[str, Any], field_names: tuple[str, ...]) -> str | 
 def normalize_target_entry(entry: Any, index: int) -> ServerTarget:
     if isinstance(entry, str):
         target = validate_target(entry)
-        return ServerTarget(target=target, label=clean_label(target))
+        return ServerTarget(target=target, label=clean_label(target), source_index=index)
 
     if not isinstance(entry, dict):
         raise ValueError(f"Target entry {index} must be a string or object.")
@@ -293,50 +324,72 @@ def normalize_target_entry(entry: Any, index: int) -> ServerTarget:
 
     target = validate_target(str(target_value))
     label = clean_label(label_value or target)
-    return ServerTarget(target=target, label=label)
+    return ServerTarget(target=target, label=label, source_index=index)
 
 
-def iter_target_entries(path: Path) -> Iterator[Any]:
+def first_target_index(path: Path) -> int:
+    return 2 if path.suffix.lower() == ".csv" else 1
+
+
+def iter_target_entries(path: Path, start_index: int | None = None) -> Iterator[tuple[int, Any]]:
     if not path.exists():
         raise FileNotFoundError(f"Target file not found: {path}")
 
+    start = max(start_index or first_target_index(path), first_target_index(path))
     suffix = path.suffix.lower()
     if suffix == ".json":
-        yield from read_json_targets(path)
+        for index, entry in enumerate(read_json_targets(path), start=1):
+            if index >= start:
+                yield index, entry
     elif suffix in {".jsonl", ".ndjson"}:
-        yield from read_jsonl_targets(path)
+        yield from read_jsonl_targets(path, start)
     elif suffix == ".csv":
-        yield from read_csv_targets(path)
+        yield from read_csv_targets(path, start)
     else:
-        yield from read_text_targets(path)
+        yield from read_text_targets(path, start)
 
 
-def iter_targets(path: Path, max_targets: int) -> Iterator[ServerTarget]:
+def iter_targets(
+    path: Path,
+    max_targets: int,
+    start_index: int | None = None,
+    *,
+    skip_duplicates: bool = False,
+    stop_at_max: bool = True,
+) -> Iterator[ServerTarget]:
     if max_targets < 1:
         raise ValueError("--max-targets must be at least 1")
 
-    seen: set[str] = set()
+    seen: set[str] | None = set() if skip_duplicates else None
     target_count = 0
-    for index, entry in enumerate(iter_target_entries(path), start=1):
+    for index, entry in iter_target_entries(path, start_index):
+        if seen is None and target_count >= max_targets:
+            break
         target = normalize_target_entry(entry, index)
-        key = target_identity(target.target)
-        if key in seen:
-            continue
-        seen.add(key)
-        target_count += 1
-        if target_count > max_targets:
+        if seen is not None:
+            key = target_identity(target.target)
+            if key in seen:
+                continue
+            seen.add(key)
+        if target_count >= max_targets:
+            if stop_at_max:
+                break
             raise ValueError(
                 f"Refusing to scan more than {max_targets} targets in one run; "
                 f"--max-targets is {max_targets}."
             )
+        target_count += 1
         yield target
 
     if target_count == 0:
-        raise ValueError(f"No targets found in {path}")
+        raise ValueError(
+            f"No targets found in {path} at or after index {start_index or first_target_index(path)}"
+        )
 
 
 def load_targets(path: Path, max_targets: int) -> list[ServerTarget]:
-    targets = list(iter_targets(path, max_targets))
+    targets = list(iter_targets(path, max_targets, skip_duplicates=True, stop_at_max=False))
+
     if not targets:
         raise ValueError(f"No targets found in {path}")
     if max_targets < 1:
@@ -348,11 +401,45 @@ def load_targets(path: Path, max_targets: int) -> list[ServerTarget]:
     return targets
 
 
-def validate_target_file(path: Path, max_targets: int) -> int:
-    target_count = 0
-    for _target in iter_targets(path, max_targets):
-        target_count += 1
-    return target_count
+def read_run_data_index(run_data_path: Path, target_path: Path, default_index: int) -> int:
+    if not run_data_path.exists():
+        return default_index
+
+    text = run_data_path.read_text(encoding="utf-8").strip()
+    if not text:
+        return default_index
+
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        try:
+            return max(default_index, int(text))
+        except ValueError as exc:
+            raise ValueError(f"Invalid run-data checkpoint in {run_data_path}") from exc
+
+    if not isinstance(payload, dict):
+        raise ValueError(f"Invalid run-data checkpoint in {run_data_path}")
+
+    recorded_target = payload.get("target_file")
+    if recorded_target and str(recorded_target) != str(target_path.resolve()):
+        return default_index
+
+    try:
+        return max(default_index, int(payload.get("next_index", default_index)))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Invalid next_index in {run_data_path}") from exc
+
+
+def write_run_data_index(run_data_path: Path, target_path: Path, next_index: int) -> None:
+    run_data_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "target_file": str(target_path.resolve()),
+        "next_index": next_index,
+        "updated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+    }
+    temp_path = run_data_path.with_name(f"{run_data_path.name}.tmp")
+    temp_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    temp_path.replace(run_data_path)
 
 
 def chunk_size_bytes(chunk_size_mb: float) -> int:
@@ -379,6 +466,19 @@ def csv_bytes_for_row(row: dict[str, Any] | None = None) -> bytes:
     return buffer.getvalue().encode("utf-8")
 
 
+def next_shard_index(output_dir: Path, stem: str, suffix: str) -> int:
+    if not output_dir.exists():
+        return 1
+
+    pattern = re.compile(rf"^{re.escape(stem)}-(\d+)\.{re.escape(suffix)}$")
+    highest = 0
+    for path in output_dir.iterdir():
+        match = pattern.match(path.name)
+        if match:
+            highest = max(highest, int(match.group(1)))
+    return highest + 1
+
+
 class CsvShardWriter:
     """Append CSV rows without keeping shard file handles open between writes."""
 
@@ -392,7 +492,7 @@ class CsvShardWriter:
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.shards: list[dict[str, Any]] = []
-        self.shard_index = 1
+        self.shard_index = next_shard_index(output_dir, stem, "csv")
         self.current_size = 0
         self.current_record_count = 0
 
@@ -441,7 +541,7 @@ class JsonlShardWriter:
         self.max_bytes = max_bytes
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.shards: list[dict[str, Any]] = []
-        self.shard_index = 1
+        self.shard_index = next_shard_index(output_dir, stem, "jsonl")
         self.current_size = 0
         self.current_record_count = 0
 
@@ -677,6 +777,8 @@ def scan_targets(
 
     nmap_path = args.nmap_path if args.dry_run else check_nmap(args.nmap_path)
     for server_target in targets:
+        if should_skip_target(server_target.target):
+            continue
         target_host_summaries, target_services, target_errors = scan_target(
             args,
             server_target,
@@ -933,6 +1035,7 @@ def scan_targets_to_sharded_outputs(
     output_root: Path,
     max_bytes: int,
     write_jsonl: bool,
+    on_target_complete: Callable[[ServerTarget], None] | None = None,
 ) -> RunbookScanResult:
     if not args.dry_run and not getattr(args, "i_own_these_servers", False):
         raise PermissionError(
@@ -946,22 +1049,24 @@ def scan_targets_to_sharded_outputs(
         else None
     )
 
-    host_summaries: list[dict[str, Any]] = []
-    services: list[dict[str, Any]] = []
-    errors: list[dict[str, Any]] = []
-    rows: list[dict[str, Any]] = []
     target_count = 0
+    row_count = 0
+    service_count = 0
+    error_count = 0
 
-    target_iter = iter(targets)
-    for server_target in target_iter:
+    for server_target in targets:
         target_count += 1
+        if should_skip_target(server_target.target):
+            if on_target_complete is not None:
+                on_target_complete(server_target)
+            continue
+
         target_host_summaries, target_services, target_errors = scan_target_in_worker(
             args,
             server_target,
         )
-        host_summaries.extend(target_host_summaries)
-        services.extend(target_services)
-        errors.extend(target_errors)
+        service_count += len(target_services)
+        error_count += len(target_errors)
 
         target_rows = build_result_rows(
             [server_target],
@@ -969,32 +1074,37 @@ def scan_targets_to_sharded_outputs(
             target_services,
             target_errors,
         )
-        rows.extend(target_rows)
+        row_count += len(target_rows)
         csv_writer.write_rows(target_rows)
         if jsonl_writer is not None:
             jsonl_writer.write_rows(target_rows)
 
+        if getattr(args, "echo_planned_commands", False):
+            for host in target_host_summaries:
+                command = " ".join(str(part) for part in host.get("nmap_command", []))
+                if command:
+                    print(f"Planned command: {command}")
+
+        if on_target_complete is not None:
+            on_target_complete(server_target)
+
         if target_errors and getattr(args, "stop_on_error", False):
-            for skipped_target in target_iter:
-                target_count += 1
-                skipped_rows = [not_scanned_row(skipped_target)]
-                rows.extend(skipped_rows)
-                csv_writer.write_rows(skipped_rows)
-                if jsonl_writer is not None:
-                    jsonl_writer.write_rows(skipped_rows)
             break
 
     if target_count == 0:
         raise ValueError("No targets found.")
 
     return RunbookScanResult(
-        host_summaries=host_summaries,
-        services=services,
-        errors=errors,
-        rows=rows,
+        host_summaries=[],
+        services=[],
+        errors=[],
+        rows=[],
         csv_shards=csv_writer.finalize(),
         jsonl_shards=jsonl_writer.finalize() if jsonl_writer is not None else [],
         target_count=target_count,
+        row_count=row_count,
+        service_count=service_count,
+        error_count=error_count,
     )
 
 
@@ -1007,42 +1117,55 @@ def main() -> int:
             raise PermissionError(
                 "Refusing to scan without --i-own-these-servers. Only scan systems you own or are authorized to assess."
             )
+        if not args.targets.exists():
+            raise FileNotFoundError(f"Target file not found: {args.targets}")
 
-        validate_target_file(args.targets, args.max_targets)
-        targets = iter_targets(args.targets, args.max_targets)
         max_bytes = chunk_size_bytes(args.chunk_size_mb)
         output_root = args.output_dir
-        reset_output_dirs(output_root)
+        first_index = first_target_index(args.targets)
+        start_index = first_index
+        if args.reset_run_data:
+            write_run_data_index(args.run_data, args.targets, first_index)
+        else:
+            start_index = read_run_data_index(args.run_data, args.targets, first_index)
 
+        if start_index <= first_index:
+            reset_output_dirs(output_root)
+        else:
+            output_root.mkdir(parents=True, exist_ok=True)
+
+        args.echo_planned_commands = bool(args.dry_run)
+        targets = iter_targets(args.targets, args.max_targets, start_index=start_index)
         result = scan_targets_to_sharded_outputs(
             args,
             targets,
             output_root,
             max_bytes,
             write_jsonl=not args.no_jsonl,
+            on_target_complete=lambda target: write_run_data_index(
+                args.run_data,
+                args.targets,
+                (target.source_index or start_index) + 1,
+            ),
         )
-        host_summaries = result.host_summaries
-        services = result.services
-        errors = result.errors
-        rows = result.rows
         csv_shards = result.csv_shards
         jsonl_shards = result.jsonl_shards
         target_count = result.target_count
+        row_count = result.row_count
+        service_count = result.service_count
+        error_count = result.error_count
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
     print(f"Targets processed: {target_count}")
-    print(f"Rows written: {len(rows)}")
-    print(f"Open services detected: {len(services)}")
-    print(f"Errors: {len(errors)}")
+    print(f"Rows written: {row_count}")
+    print(f"Open services detected: {service_count}")
+    print(f"Errors: {error_count}")
     for shard in csv_shards:
         print(f"CSV shard: {shard['path']} ({shard['bytes']} bytes)")
     for shard in jsonl_shards:
         print(f"JSONL shard: {shard['path']} ({shard['bytes']} bytes)")
-    if args.dry_run:
-        for host in host_summaries:
-            print("Planned command: " + " ".join(str(part) for part in host.get("nmap_command", [])))
     return 0
 
 

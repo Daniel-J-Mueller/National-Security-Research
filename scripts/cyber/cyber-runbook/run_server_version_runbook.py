@@ -12,8 +12,8 @@ import argparse
 import csv
 import shutil
 import sys
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
 
 
 CYBER_DIR = Path(__file__).resolve().parents[1]
@@ -27,6 +27,7 @@ import scan_server_ip_list as scan  # noqa: E402
 WORKFLOW_ID = "owner-authorized-cyber-runbook-server-version-scan"
 DEFAULT_RUNBOOK_CSV = ROOT / "data" / "private" / "cybersecurity" / "runbook-input" / "dry-run-input.csv"
 DEFAULT_OUTPUT_DIR = ROOT / "data" / "private" / "cybersecurity" / "runbook-outputs"
+DEFAULT_RUN_DATA = Path(__file__).with_name("run-data.info")
 DEFAULT_MAX_CHUNK_MB = 75
 DEFAULT_MAX_TARGETS = 2**32
 
@@ -111,12 +112,29 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Write only the CSV output and skip JSONL shards.",
     )
+    parser.add_argument(
+        "--run-data",
+        type=Path,
+        default=DEFAULT_RUN_DATA,
+        help="Small checkpoint file that stores the next CSV row number for resumable streaming.",
+    )
+    parser.add_argument(
+        "--reset-run-data",
+        action="store_true",
+        help="Ignore and reset the checkpoint so this run starts at the first CSV row.",
+    )
     return parser
 
 
-def read_runbook_targets(path: Path, max_targets: int) -> list[scan.ServerTarget]:
+def iter_runbook_targets(
+    path: Path,
+    max_targets: int,
+    start_index: int = 2,
+) -> Iterator[scan.ServerTarget]:
     if not path.exists():
         raise FileNotFoundError(f"Runbook CSV not found: {path}")
+    if max_targets < 1:
+        raise ValueError("--max-targets must be at least 1")
 
     with path.open("r", newline="", encoding="utf-8-sig") as handle:
         reader = csv.DictReader(handle)
@@ -125,9 +143,12 @@ def read_runbook_targets(path: Path, max_targets: int) -> list[scan.ServerTarget
         if "ip" not in normalized_fieldnames and "target" not in normalized_fieldnames:
             raise ValueError("Runbook CSV must contain an ip column.")
 
-        targets: list[scan.ServerTarget] = []
-        seen: set[str] = set()
+        target_count = 0
         for line_number, row in enumerate(reader, start=2):
+            if line_number < start_index:
+                continue
+            if target_count >= max_targets:
+                break
             normalized = {key.lower(): (value or "").strip() for key, value in row.items()}
             target_value = normalized.get("ip") or normalized.get("target") or ""
             if not any(normalized.values()):
@@ -136,22 +157,12 @@ def read_runbook_targets(path: Path, max_targets: int) -> list[scan.ServerTarget
                 raise ValueError(f"Row {line_number} has data but no ip value.")
 
             target = scan.validate_target(target_value)
-            key = scan.target_identity(target)
-            if key in seen:
-                continue
-            seen.add(key)
             label = scan.clean_label(normalized.get("target_label") or target)
-            targets.append(scan.ServerTarget(target=target, label=label))
+            target_count += 1
+            yield scan.ServerTarget(target=target, label=label, source_index=line_number)
 
-    if not targets:
-        raise ValueError(f"No targets found in {path}. Fill the ip column for 2-3 rows.")
-    if max_targets < 1:
-        raise ValueError("--max-targets must be at least 1")
-    if len(targets) > max_targets:
-        raise ValueError(
-            f"Refusing to scan {len(targets)} targets in one run; --max-targets is {max_targets}."
-        )
-    return targets
+    if target_count == 0:
+        raise ValueError(f"No targets found in {path} at or after row {start_index}.")
 
 
 def reset_output_dirs(output_root: Path) -> None:
@@ -171,11 +182,22 @@ def main() -> int:
             raise PermissionError(
                 "Refusing to scan without --i-own-these-servers. Only scan systems you own or are authorized to assess."
             )
+        if not args.runbook_csv.exists():
+            raise FileNotFoundError(f"Runbook CSV not found: {args.runbook_csv}")
 
-        targets = read_runbook_targets(args.runbook_csv, args.max_targets)
         max_bytes = scan.chunk_size_bytes(args.chunk_size_mb)
         output_root = args.output_dir
-        reset_output_dirs(output_root)
+        first_index = 2
+        start_index = first_index
+        if args.reset_run_data:
+            scan.write_run_data_index(args.run_data, args.runbook_csv, first_index)
+        else:
+            start_index = scan.read_run_data_index(args.run_data, args.runbook_csv, first_index)
+
+        if start_index <= first_index:
+            reset_output_dirs(output_root)
+        else:
+            output_root.mkdir(parents=True, exist_ok=True)
 
         scan_args = argparse.Namespace(
             nmap_path=args.nmap_path,
@@ -186,35 +208,39 @@ def main() -> int:
             top_ports=args.top_ports,
             timeout_seconds=args.timeout_seconds,
             stop_on_error=args.stop_on_error,
+            echo_planned_commands=args.dry_run,
         )
+        targets = iter_runbook_targets(args.runbook_csv, args.max_targets, start_index=start_index)
         result = scan.scan_targets_to_sharded_outputs(
             scan_args,
             targets,
             output_root,
             max_bytes,
             write_jsonl=not args.no_jsonl,
+            on_target_complete=lambda target: scan.write_run_data_index(
+                args.run_data,
+                args.runbook_csv,
+                (target.source_index or start_index) + 1,
+            ),
         )
-        host_summaries = result.host_summaries
-        services = result.services
-        errors = result.errors
-        rows = result.rows
         csv_shards = result.csv_shards
         jsonl_shards = result.jsonl_shards
+        target_count = result.target_count
+        row_count = result.row_count
+        service_count = result.service_count
+        error_count = result.error_count
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
-    print(f"Targets processed: {len(targets)}")
-    print(f"Rows written: {len(rows)}")
-    print(f"Open services detected: {len(services)}")
-    print(f"Errors: {len(errors)}")
+    print(f"Targets processed: {target_count}")
+    print(f"Rows written: {row_count}")
+    print(f"Open services detected: {service_count}")
+    print(f"Errors: {error_count}")
     for shard in csv_shards:
         print(f"CSV shard: {shard['path']} ({shard['bytes']} bytes)")
     for shard in jsonl_shards:
         print(f"JSONL shard: {shard['path']} ({shard['bytes']} bytes)")
-    if args.dry_run:
-        for host in host_summaries:
-            print("Planned command: " + " ".join(str(part) for part in host.get("nmap_command", [])))
     return 0
 
 
