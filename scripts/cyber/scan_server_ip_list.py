@@ -58,6 +58,16 @@ class ServerTarget:
     label: str
 
 
+@dataclass
+class RunbookScanResult:
+    host_summaries: list[dict[str, Any]]
+    services: list[dict[str, Any]]
+    errors: list[dict[str, Any]]
+    rows: list[dict[str, Any]]
+    csv_shards: list[dict[str, Any]]
+    jsonl_shards: list[dict[str, Any]]
+
+
 def clean_label(value: str) -> str:
     label = re.sub(r"[^A-Za-z0-9_.-]+", "_", value.strip())
     return label.strip("._") or "server"
@@ -346,53 +356,119 @@ def csv_bytes_for_row(row: dict[str, Any] | None = None) -> bytes:
     return buffer.getvalue().encode("utf-8")
 
 
+class CsvShardWriter:
+    """Append CSV rows without keeping shard file handles open between writes."""
+
+    def __init__(self, output_dir: Path, stem: str, max_bytes: int) -> None:
+        self.output_dir = output_dir
+        self.stem = stem
+        self.max_bytes = max_bytes
+        self.header = csv_bytes_for_row()
+        if len(self.header) > max_bytes:
+            raise ValueError("CSV header is larger than the configured shard size.")
+
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.shards: list[dict[str, Any]] = []
+        self.shard_index = 1
+        self.current_size = 0
+        self.current_record_count = 0
+
+    def write_rows(self, rows: list[dict[str, Any]]) -> None:
+        for row in rows:
+            row_bytes = csv_bytes_for_row(row)
+            if len(self.header) + len(row_bytes) > self.max_bytes:
+                raise ValueError("A single CSV row is larger than the configured shard size.")
+            if not self.shards or (
+                self.current_record_count > 0 and self.current_size + len(row_bytes) > self.max_bytes
+            ):
+                self._start_shard()
+            self._append_to_current_shard(row_bytes, record_count_delta=1)
+
+    def finalize(self) -> list[dict[str, Any]]:
+        if not self.shards:
+            self._start_shard()
+        return self.shards
+
+    def _start_shard(self) -> None:
+        path = self.output_dir / f"{self.stem}-{self.shard_index:04d}.csv"
+        self.shards.append({"path": str(path), "bytes": 0, "record_count": 0})
+        self.shard_index += 1
+        with path.open("wb") as handle:
+            handle.write(self.header)
+        self.shards[-1]["bytes"] = len(self.header)
+        self.current_size = len(self.header)
+        self.current_record_count = 0
+
+    def _append_to_current_shard(self, payload: bytes, record_count_delta: int = 0) -> None:
+        path = Path(self.shards[-1]["path"])
+        with path.open("ab") as handle:
+            handle.write(payload)
+        self.shards[-1]["bytes"] += len(payload)
+        self.shards[-1]["record_count"] += record_count_delta
+        self.current_size += len(payload)
+        self.current_record_count += record_count_delta
+
+
+class JsonlShardWriter:
+    """Append JSONL rows without keeping shard file handles open between writes."""
+
+    def __init__(self, output_dir: Path, stem: str, max_bytes: int) -> None:
+        self.output_dir = output_dir
+        self.stem = stem
+        self.max_bytes = max_bytes
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.shards: list[dict[str, Any]] = []
+        self.shard_index = 1
+        self.current_size = 0
+        self.current_record_count = 0
+
+    def write_rows(self, rows: list[dict[str, Any]]) -> None:
+        for row in rows:
+            line = (
+                json.dumps({field: row.get(field, "") for field in RESULT_CSV_FIELDS}, ensure_ascii=False)
+                + "\n"
+            ).encode("utf-8")
+            if len(line) > self.max_bytes:
+                raise ValueError("A single JSONL row is larger than the configured shard size.")
+            if not self.shards or (
+                self.current_record_count > 0 and self.current_size + len(line) > self.max_bytes
+            ):
+                self._start_shard()
+            self._append_to_current_shard(line, record_count_delta=1)
+
+    def finalize(self) -> list[dict[str, Any]]:
+        if not self.shards:
+            self._start_shard()
+        return self.shards
+
+    def _start_shard(self) -> None:
+        path = self.output_dir / f"{self.stem}-{self.shard_index:04d}.jsonl"
+        self.shards.append({"path": str(path), "bytes": 0, "record_count": 0})
+        self.shard_index += 1
+        self.current_size = 0
+        self.current_record_count = 0
+        with path.open("wb"):
+            pass
+
+    def _append_to_current_shard(self, payload: bytes, record_count_delta: int = 0) -> None:
+        path = Path(self.shards[-1]["path"])
+        with path.open("ab") as handle:
+            handle.write(payload)
+        self.shards[-1]["bytes"] += len(payload)
+        self.shards[-1]["record_count"] += record_count_delta
+        self.current_size += len(payload)
+        self.current_record_count += record_count_delta
+
+
 def write_csv_shards(
     output_dir: Path,
     stem: str,
     rows: list[dict[str, Any]],
     max_bytes: int,
 ) -> list[dict[str, Any]]:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    shards: list[dict[str, Any]] = []
-    header = csv_bytes_for_row()
-    if len(header) > max_bytes:
-        raise ValueError("CSV header is larger than the configured shard size.")
-
-    shard_rows: list[bytes] = []
-    shard_record_count = 0
-    shard_size = len(header)
-    shard_index = 1
-
-    def flush() -> None:
-        nonlocal shard_index, shard_rows, shard_record_count, shard_size
-        payload = header + b"".join(shard_rows)
-        path = output_dir / f"{stem}-{shard_index:04d}.csv"
-        path.write_bytes(payload)
-        shards.append(
-            {
-                "path": str(path),
-                "bytes": len(payload),
-                "record_count": shard_record_count,
-            }
-        )
-        shard_index += 1
-        shard_rows = []
-        shard_record_count = 0
-        shard_size = len(header)
-
-    for row in rows:
-        row_bytes = csv_bytes_for_row(row)
-        if len(header) + len(row_bytes) > max_bytes:
-            raise ValueError("A single CSV row is larger than the configured shard size.")
-        if shard_rows and shard_size + len(row_bytes) > max_bytes:
-            flush()
-        shard_rows.append(row_bytes)
-        shard_record_count += 1
-        shard_size += len(row_bytes)
-
-    if shard_rows or not shards:
-        flush()
-    return shards
+    writer = CsvShardWriter(output_dir, stem, max_bytes)
+    writer.write_rows(rows)
+    return writer.finalize()
 
 
 def write_jsonl_shards(
@@ -401,46 +477,9 @@ def write_jsonl_shards(
     rows: list[dict[str, Any]],
     max_bytes: int,
 ) -> list[dict[str, Any]]:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    shards: list[dict[str, Any]] = []
-    shard_lines: list[bytes] = []
-    shard_record_count = 0
-    shard_size = 0
-    shard_index = 1
-
-    def flush() -> None:
-        nonlocal shard_index, shard_lines, shard_record_count, shard_size
-        payload = b"".join(shard_lines)
-        path = output_dir / f"{stem}-{shard_index:04d}.jsonl"
-        path.write_bytes(payload)
-        shards.append(
-            {
-                "path": str(path),
-                "bytes": len(payload),
-                "record_count": shard_record_count,
-            }
-        )
-        shard_index += 1
-        shard_lines = []
-        shard_record_count = 0
-        shard_size = 0
-
-    for row in rows:
-        line = (
-            json.dumps({field: row.get(field, "") for field in RESULT_CSV_FIELDS}, ensure_ascii=False)
-            + "\n"
-        ).encode("utf-8")
-        if len(line) > max_bytes:
-            raise ValueError("A single JSONL row is larger than the configured shard size.")
-        if shard_lines and shard_size + len(line) > max_bytes:
-            flush()
-        shard_lines.append(line)
-        shard_record_count += 1
-        shard_size += len(line)
-
-    if shard_lines or not shards:
-        flush()
-    return shards
+    writer = JsonlShardWriter(output_dir, stem, max_bytes)
+    writer.write_rows(rows)
+    return writer.finalize()
 
 
 def build_nmap_command(nmap_path: str, target: str, args: argparse.Namespace) -> list[str]:
@@ -573,6 +612,38 @@ def planned_host_summary(server_target: ServerTarget, command: list[str]) -> dic
     }
 
 
+def scan_target(
+    args: argparse.Namespace,
+    server_target: ServerTarget,
+    nmap_path: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    command = build_nmap_command(nmap_path, server_target.target, args)
+    if args.dry_run:
+        return [planned_host_summary(server_target, command)], [], []
+
+    try:
+        xml_text, nmap_stderr, returncode = run_nmap(command, args.timeout_seconds)
+        if returncode != 0:
+            raise RuntimeError(
+                f"Nmap exited with {returncode}. STDERR: {nmap_stderr.strip()}"
+            )
+        services = enrich_services(parse_open_services(xml_text), server_target)
+        host_summaries = parse_host_summaries(xml_text, server_target, command, nmap_stderr)
+        return host_summaries, services, []
+    except Exception as exc:
+        return (
+            [],
+            [],
+            [
+                {
+                    "target": server_target.target,
+                    "target_label": server_target.label,
+                    "error": str(exc),
+                }
+            ],
+        )
+
+
 def scan_targets(
     args: argparse.Namespace,
     targets: list[ServerTarget],
@@ -583,33 +654,97 @@ def scan_targets(
 
     nmap_path = args.nmap_path if args.dry_run else check_nmap(args.nmap_path)
     for server_target in targets:
-        command = build_nmap_command(nmap_path, server_target.target, args)
-        if args.dry_run:
-            host_summaries.append(planned_host_summary(server_target, command))
-            continue
-
-        try:
-            xml_text, nmap_stderr, returncode = run_nmap(command, args.timeout_seconds)
-            if returncode != 0:
-                raise RuntimeError(
-                    f"Nmap exited with {returncode}. STDERR: {nmap_stderr.strip()}"
-                )
-            services.extend(enrich_services(parse_open_services(xml_text), server_target))
-            host_summaries.extend(
-                parse_host_summaries(xml_text, server_target, command, nmap_stderr)
-            )
-        except Exception as exc:
-            errors.append(
-                {
-                    "target": server_target.target,
-                    "target_label": server_target.label,
-                    "error": str(exc),
-                }
-            )
-            if args.stop_on_error:
-                break
+        target_host_summaries, target_services, target_errors = scan_target(
+            args,
+            server_target,
+            nmap_path,
+        )
+        host_summaries.extend(target_host_summaries)
+        services.extend(target_services)
+        errors.extend(target_errors)
+        if target_errors and args.stop_on_error:
+            break
 
     return host_summaries, services, errors
+
+
+def build_target_worker_command(args: argparse.Namespace, server_target: ServerTarget) -> list[str]:
+    worker_path = Path(__file__).with_name("scan_server_ip_once.py")
+    command = [
+        sys.executable,
+        str(worker_path),
+        "--target",
+        server_target.target,
+        "--target-label",
+        server_target.label,
+        "--nmap-path",
+        args.nmap_path,
+        "--timeout-seconds",
+        str(args.timeout_seconds),
+    ]
+    if args.dry_run:
+        command.append("--dry-run")
+    elif getattr(args, "i_own_these_servers", False):
+        command.append("--i-own-these-servers")
+    if args.assume_host_up:
+        command.append("--assume-host-up")
+    if args.ports:
+        command.extend(["--ports", args.ports])
+    elif args.top_ports:
+        command.extend(["--top-ports", str(args.top_ports)])
+    return command
+
+
+def worker_error(server_target: ServerTarget, message: str) -> list[dict[str, Any]]:
+    return [
+        {
+            "target": server_target.target,
+            "target_label": server_target.label,
+            "error": message,
+        }
+    ]
+
+
+def scan_target_in_worker(
+    args: argparse.Namespace,
+    server_target: ServerTarget,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    command = build_target_worker_command(args, server_target)
+    timeout_seconds = 60 if args.dry_run else int(args.timeout_seconds) + 60
+    try:
+        completed = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return [], [], worker_error(
+            server_target,
+            f"Per-target worker timed out after {timeout_seconds} seconds: {exc}",
+        )
+
+    if completed.returncode != 0:
+        message = (completed.stderr or completed.stdout or "").strip()
+        return [], [], worker_error(
+            server_target,
+            f"Per-target worker exited with {completed.returncode}: {message}",
+        )
+
+    try:
+        payload = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        return [], [], worker_error(
+            server_target,
+            f"Per-target worker returned invalid JSON: {exc}",
+        )
+
+    return (
+        list(payload.get("host_summaries") or []),
+        list(payload.get("services") or []),
+        list(payload.get("errors") or []),
+    )
 
 
 def reset_output_dirs(output_root: Path) -> None:
@@ -769,6 +904,69 @@ def build_result_rows(
     return dedupe_result_rows(rows)
 
 
+def scan_targets_to_sharded_outputs(
+    args: argparse.Namespace,
+    targets: list[ServerTarget],
+    output_root: Path,
+    max_bytes: int,
+    write_jsonl: bool,
+) -> RunbookScanResult:
+    if not args.dry_run and not getattr(args, "i_own_these_servers", False):
+        raise PermissionError(
+            "Refusing to scan without --i-own-these-servers. Only scan systems you own or are authorized to assess."
+        )
+
+    csv_writer = CsvShardWriter(output_root / "csv", "runbook-results", max_bytes)
+    jsonl_writer = (
+        JsonlShardWriter(output_root / "jsonl", "runbook-results", max_bytes)
+        if write_jsonl
+        else None
+    )
+
+    host_summaries: list[dict[str, Any]] = []
+    services: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
+
+    for index, server_target in enumerate(targets):
+        target_host_summaries, target_services, target_errors = scan_target_in_worker(
+            args,
+            server_target,
+        )
+        host_summaries.extend(target_host_summaries)
+        services.extend(target_services)
+        errors.extend(target_errors)
+
+        target_rows = build_result_rows(
+            [server_target],
+            target_host_summaries,
+            target_services,
+            target_errors,
+        )
+        rows.extend(target_rows)
+        csv_writer.write_rows(target_rows)
+        if jsonl_writer is not None:
+            jsonl_writer.write_rows(target_rows)
+
+        if target_errors and getattr(args, "stop_on_error", False):
+            for skipped_target in targets[index + 1 :]:
+                skipped_rows = [not_scanned_row(skipped_target)]
+                rows.extend(skipped_rows)
+                csv_writer.write_rows(skipped_rows)
+                if jsonl_writer is not None:
+                    jsonl_writer.write_rows(skipped_rows)
+            break
+
+    return RunbookScanResult(
+        host_summaries=host_summaries,
+        services=services,
+        errors=errors,
+        rows=rows,
+        csv_shards=csv_writer.finalize(),
+        jsonl_shards=jsonl_writer.finalize() if jsonl_writer is not None else [],
+    )
+
+
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
@@ -784,22 +982,19 @@ def main() -> int:
         output_root = args.output_dir
         reset_output_dirs(output_root)
 
-        host_summaries, services, errors = scan_targets(args, targets)
-        rows = build_result_rows(targets, host_summaries, services, errors)
-        csv_shards = write_csv_shards(
-            output_root / "csv",
-            "runbook-results",
-            rows,
+        result = scan_targets_to_sharded_outputs(
+            args,
+            targets,
+            output_root,
             max_bytes,
+            write_jsonl=not args.no_jsonl,
         )
-        jsonl_shards: list[dict[str, Any]] = []
-        if not args.no_jsonl:
-            jsonl_shards = write_jsonl_shards(
-                output_root / "jsonl",
-                "runbook-results",
-                rows,
-                max_bytes,
-            )
+        host_summaries = result.host_summaries
+        services = result.services
+        errors = result.errors
+        rows = result.rows
+        csv_shards = result.csv_shards
+        jsonl_shards = result.jsonl_shards
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

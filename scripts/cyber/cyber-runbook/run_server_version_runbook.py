@@ -180,28 +180,26 @@ def main() -> int:
         scan_args = argparse.Namespace(
             nmap_path=args.nmap_path,
             dry_run=args.dry_run,
+            i_own_these_servers=args.i_own_these_servers,
             assume_host_up=args.assume_host_up,
             ports=args.ports,
             top_ports=args.top_ports,
             timeout_seconds=args.timeout_seconds,
             stop_on_error=args.stop_on_error,
         )
-        host_summaries, services, errors = scan.scan_targets(scan_args, targets)
-        rows = scan.build_result_rows(targets, host_summaries, services, errors)
-        csv_shards = scan.write_csv_shards(
-            output_root / "csv",
-            "runbook-results",
-            rows,
+        result = scan.scan_targets_to_sharded_outputs(
+            scan_args,
+            targets,
+            output_root,
             max_bytes,
+            write_jsonl=not args.no_jsonl,
         )
-        jsonl_shards: list[dict[str, Any]] = []
-        if not args.no_jsonl:
-            jsonl_shards = scan.write_jsonl_shards(
-                output_root / "jsonl",
-                "runbook-results",
-                rows,
-                max_bytes,
-            )
+        host_summaries = result.host_summaries
+        services = result.services
+        errors = result.errors
+        rows = result.rows
+        csv_shards = result.csv_shards
+        jsonl_shards = result.jsonl_shards
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

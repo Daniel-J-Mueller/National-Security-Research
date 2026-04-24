@@ -121,6 +121,8 @@ Each run writes:
 - `csv/runbook-results-0001.csv`, plus additional CSV shards if needed
 - `jsonl/runbook-results-0001.jsonl`, plus additional JSONL shards if needed
 
+The runner starts a one-target worker process for each IP or DNS name, appends that target's rows to the active shards, closes the CSV/JSONL files, and only then moves to the next target.
+
 The CSV and JSONL rows use these fields:
 
 ```text
