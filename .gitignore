@@ -12,3 +12,4 @@ __pycache__/
 /data/private/cybersecurity/runbook-input/dry-run-input.csv
 data/private/cybersecurity/runbook-input/dry-run-input.csv
 /scripts/cyber/cyber-runbook/run-data.info*
+/broad_note.md
