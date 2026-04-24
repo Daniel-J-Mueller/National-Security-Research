@@ -3,12 +3,12 @@
 Generate a dry-run input CSV containing every possible IPv4 address.
 
 By default, this script writes to:
-  F:/Advancements/National-Security-Research/data/private/cybersecurity/runbook-outputs/_tmp-validation/dry-run-input.csv
+  data/private/cybersecurity/runbook-input/dry-run-input.csv
 
-Output size: roughly 60–70 GB uncompressed.
+Output size: roughly 60-70 GB uncompressed.
 Rows: 4,294,967,296 addresses + 1 header row.
-The runbook header is preserved, with generated IPv4 addresses written to the
-ip column and the remaining columns left blank.
+The runbook input header is preserved, with generated IPv4 addresses written to
+the ip column.
 
 Usage:
   python IPv4_generator.py
@@ -25,16 +25,15 @@ import ipaddress
 from pathlib import Path
 import sys
 
+
 TOTAL_IPV4 = 2**32
-WORKSPACE_ROOT = Path(r"F:\Advancements")
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT_PATH = (
-    WORKSPACE_ROOT
-    / "National-Security-Research"
+    ROOT
     / "data"
     / "private"
     / "cybersecurity"
-    / "runbook-outputs"
-    / "_tmp-validation"
+    / "runbook-input"
     / "dry-run-input.csv"
 )
 
@@ -60,22 +59,6 @@ def build_parser() -> argparse.ArgumentParser:
 
 RUNBOOK_FIELDS = [
     "ip",
-    "target_label",
-    "host",
-    "port",
-    "protocol",
-    "service_name",
-    "product",
-    "version",
-    "extrainfo",
-    "cpe",
-    "vx_category",
-    "vx_category_label",
-    "category_rationale",
-    "flags",
-    "nmap_command",
-    "scan_status",
-    "error",
 ]
 
 
@@ -90,8 +73,8 @@ def main(argv: list[str] | None = None) -> int:
     output_path = args.output
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with open_output(output_path) as f:
-        writer = csv.DictWriter(f, fieldnames=RUNBOOK_FIELDS)
+    with open_output(output_path) as handle:
+        writer = csv.DictWriter(handle, fieldnames=RUNBOOK_FIELDS)
         writer.writeheader()
 
         for i in range(TOTAL_IPV4):

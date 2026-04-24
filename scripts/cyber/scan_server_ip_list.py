@@ -2,68 +2,45 @@
 """
 Run owner-authorized Nmap service-version scans for a server IP list.
 
-Outputs are JSON-first and service records are chunked so no JSON output file
-exceeds the configured size limit. The workflow performs inventory-oriented
-version detection only; it does not run exploit checks, brute force modules, or
-vulnerability validation scripts.
+The batch workflow keeps output intentionally small: sharded CSV plus optional
+sharded JSONL rows. It records service inventory from open ports only and does
+not run exploit checks, brute force modules, vulnerability scripts, payloads, or
+intrusive validation.
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
-import hashlib
 import ipaddress
 import json
 import re
+import shutil
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
-from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-try:
-    from categorize_server_versions import (
-        DEFAULT_OUTPUT_DIR,
-        DEFAULT_RULES,
-        check_nmap,
-        clean_label,
-        load_rules,
-        parse_nmap_xml,
-        utc_timestamp,
-    )
-except ImportError:
-    from .categorize_server_versions import (
-        DEFAULT_OUTPUT_DIR,
-        DEFAULT_RULES,
-        check_nmap,
-        clean_label,
-        load_rules,
-        parse_nmap_xml,
-        utc_timestamp,
-    )
 
+ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_OUTPUT_DIR = ROOT / "data" / "private" / "cybersecurity" / "runbook-outputs"
+DEFAULT_TARGETS = ROOT / "data" / "private" / "cybersecurity" / "runbook-input" / "dry-run-input.csv"
 
 DEFAULT_MAX_CHUNK_MB = 75
 DEFAULT_MAX_TARGETS = 16
-DEFAULT_REPORT_SERVICE_LIMIT = 200
-DEFAULT_TARGETS = (
-    DEFAULT_OUTPUT_DIR.parent
-    / "runbook-outputs"
-    / "_tmp-validation"
-    / "dry-run-input.csv"
-)
 WORKFLOW_ID = "owner-authorized-batch-service-version-scan"
 
 TARGET_FIELD_NAMES = ("target", "ip", "host", "hostname", "address")
 LABEL_FIELD_NAMES = ("target_label", "label", "name", "asset_id", "server")
-SERVICE_CSV_FIELDS = [
+RESULT_CSV_FIELDS = [
     "target",
     "target_label",
     "host",
+    "host_status",
+    "scan_status",
     "port",
     "protocol",
     "service_name",
@@ -71,11 +48,7 @@ SERVICE_CSV_FIELDS = [
     "version",
     "extrainfo",
     "cpe",
-    "vx_category",
-    "vx_category_label",
-    "category_rationale",
-    "flags",
-    "nmap_command",
+    "error",
 ]
 
 
@@ -85,12 +58,32 @@ class ServerTarget:
     label: str
 
 
+def clean_label(value: str) -> str:
+    label = re.sub(r"[^A-Za-z0-9_.-]+", "_", value.strip())
+    return label.strip("._") or "server"
+
+
+def utc_timestamp() -> str:
+    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+
+
+def check_nmap(path: str) -> str:
+    resolved = shutil.which(path)
+    if resolved:
+        return resolved
+    candidate = Path(path)
+    if candidate.exists():
+        return str(candidate)
+    raise FileNotFoundError(
+        "Nmap was not found. Install Nmap or pass --nmap-path with the executable path."
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Run Nmap service-version detection against a small list of servers "
-            "you own or are authorized to scan, then write chunked JSON outputs, "
-            "a matcher-ready CSV, and a defensive report."
+            "you own or are authorized to scan, then write sharded CSV and JSONL."
         )
     )
     parser.add_argument(
@@ -110,7 +103,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--run-label",
-        help="Safe local label for the output folder. Defaults to the target file name.",
+        help="Deprecated; outputs are written directly under --output-dir.",
     )
     parser.add_argument(
         "--ports",
@@ -132,12 +125,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to nmap executable. Default: %(default)s",
     )
     parser.add_argument(
-        "--rules",
-        type=Path,
-        default=DEFAULT_RULES,
-        help="Category taxonomy and optional version baseline rules.",
-    )
-    parser.add_argument(
         "--output-dir",
         type=Path,
         default=DEFAULT_OUTPUT_DIR,
@@ -147,7 +134,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--chunk-size-mb",
         type=float,
         default=DEFAULT_MAX_CHUNK_MB,
-        help="Maximum size for each JSON output file. Default: %(default)s MB.",
+        help="Maximum size for each JSONL shard. Default: %(default)s MB.",
     )
     parser.add_argument(
         "--max-targets",
@@ -169,13 +156,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Validate inputs and write the planned commands without running Nmap.",
+        help="Validate inputs and write planned target rows without running Nmap.",
     )
     parser.add_argument(
-        "--report-service-limit",
-        type=int,
-        default=DEFAULT_REPORT_SERVICE_LIMIT,
-        help="Maximum service rows to include in the Markdown report table.",
+        "--no-jsonl",
+        action="store_true",
+        help="Write only the CSV output and skip JSONL shards.",
     )
     return parser
 
@@ -258,6 +244,14 @@ def validate_target(value: str) -> str:
     return target
 
 
+def target_identity(value: str) -> str:
+    stripped = value.strip()
+    try:
+        return ipaddress.ip_address(stripped).compressed.lower()
+    except ValueError:
+        return stripped.rstrip(".").lower()
+
+
 def first_non_empty(row: dict[str, Any], field_names: tuple[str, ...]) -> str | None:
     lower_map = {key.lower(): value for key, value in row.items()}
     for field in field_names:
@@ -311,7 +305,7 @@ def load_targets(path: Path, max_targets: int) -> list[ServerTarget]:
     seen: set[str] = set()
     for index, entry in enumerate(raw_entries, start=1):
         target = normalize_target_entry(entry, index)
-        key = target.target.lower()
+        key = target_identity(target.target)
         if key in seen:
             continue
         seen.add(key)
@@ -334,123 +328,123 @@ def chunk_size_bytes(chunk_size_mb: float) -> int:
     return int(chunk_size_mb * 1024 * 1024)
 
 
-def serialize_json_bytes(payload: Any) -> bytes:
-    return (json.dumps(payload, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+def csv_cell(value: Any) -> str:
+    if isinstance(value, list):
+        return "; ".join(str(item) for item in value if item)
+    return str(value or "")
 
 
-def write_json_checked(path: Path, payload: Any, max_bytes: int) -> dict[str, Any]:
-    encoded = serialize_json_bytes(payload)
-    if len(encoded) > max_bytes:
-        raise ValueError(
-            f"Refusing to write {path}; JSON would be {len(encoded):,} bytes, above the {max_bytes:,}-byte limit."
-        )
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(encoded)
-    return {
-        "path": str(path),
-        "bytes": len(encoded),
-        "sha256": hashlib.sha256(encoded).hexdigest(),
-    }
+def csv_bytes_for_row(row: dict[str, Any] | None = None) -> bytes:
+    from io import StringIO
 
-
-def service_csv_value(service: dict[str, Any], field: str) -> str:
-    if field == "target":
-        return str(service.get("input_target") or service.get("host") or "")
-    if field == "cpe":
-        return "; ".join(str(item) for item in service.get("cpe", []) if item)
-    if field == "flags":
-        return "; ".join(
-            flag.get("id", "")
-            for flag in service.get("flags", [])
-            if flag.get("id")
-        )
-    if field == "nmap_command":
-        return " ".join(str(part) for part in service.get("nmap_command", []))
-    return str(service.get(field, "") or "")
-
-
-def write_service_csv(path: Path, services: list[dict[str, Any]]) -> dict[str, Any]:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=SERVICE_CSV_FIELDS)
+    buffer = StringIO(newline="")
+    writer = csv.DictWriter(buffer, fieldnames=RESULT_CSV_FIELDS, lineterminator="\n")
+    if row is None:
         writer.writeheader()
-        for service in services:
-            writer.writerow(
-                {
-                    field: service_csv_value(service, field)
-                    for field in SERVICE_CSV_FIELDS
-                }
-            )
-
-    encoded = path.read_bytes()
-    return {
-        "path": str(path),
-        "bytes": len(encoded),
-        "sha256": hashlib.sha256(encoded).hexdigest(),
-        "record_count": len(services),
-    }
+    else:
+        writer.writerow({field: csv_cell(row.get(field, "")) for field in RESULT_CSV_FIELDS})
+    return buffer.getvalue().encode("utf-8")
 
 
-def chunk_records(
-    records: list[dict[str, Any]],
-    metadata: dict[str, Any],
+def write_csv_shards(
     output_dir: Path,
     stem: str,
+    rows: list[dict[str, Any]],
     max_bytes: int,
 ) -> list[dict[str, Any]]:
     output_dir.mkdir(parents=True, exist_ok=True)
-    chunks: list[dict[str, Any]] = []
-    current_records: list[dict[str, Any]] = []
-    chunk_index = 1
+    shards: list[dict[str, Any]] = []
+    header = csv_bytes_for_row()
+    if len(header) > max_bytes:
+        raise ValueError("CSV header is larger than the configured shard size.")
 
-    def make_payload(index: int, chunk_rows: list[dict[str, Any]]) -> dict[str, Any]:
-        return {
-            "metadata": metadata,
-            "chunk": {
-                "index": index,
-                "record_count": len(chunk_rows),
-                "max_bytes": max_bytes,
-            },
-            "records": chunk_rows,
-        }
+    shard_rows: list[bytes] = []
+    shard_record_count = 0
+    shard_size = len(header)
+    shard_index = 1
 
-    if not records:
-        path = output_dir / f"{stem}-0001.json"
-        info = write_json_checked(path, make_payload(1, []), max_bytes)
-        info["record_count"] = 0
-        chunks.append(info)
-        return chunks
+    def flush() -> None:
+        nonlocal shard_index, shard_rows, shard_record_count, shard_size
+        payload = header + b"".join(shard_rows)
+        path = output_dir / f"{stem}-{shard_index:04d}.csv"
+        path.write_bytes(payload)
+        shards.append(
+            {
+                "path": str(path),
+                "bytes": len(payload),
+                "record_count": shard_record_count,
+            }
+        )
+        shard_index += 1
+        shard_rows = []
+        shard_record_count = 0
+        shard_size = len(header)
 
-    for record in records:
-        candidate_records = current_records + [record]
-        candidate_payload = make_payload(chunk_index, candidate_records)
-        if len(serialize_json_bytes(candidate_payload)) <= max_bytes:
-            current_records = candidate_records
-            continue
+    for row in rows:
+        row_bytes = csv_bytes_for_row(row)
+        if len(header) + len(row_bytes) > max_bytes:
+            raise ValueError("A single CSV row is larger than the configured shard size.")
+        if shard_rows and shard_size + len(row_bytes) > max_bytes:
+            flush()
+        shard_rows.append(row_bytes)
+        shard_record_count += 1
+        shard_size += len(row_bytes)
 
-        if not current_records:
-            raise ValueError(
-                "A single service record is larger than the configured JSON chunk size."
-            )
+    if shard_rows or not shards:
+        flush()
+    return shards
 
-        path = output_dir / f"{stem}-{chunk_index:04d}.json"
-        info = write_json_checked(path, make_payload(chunk_index, current_records), max_bytes)
-        info["record_count"] = len(current_records)
-        chunks.append(info)
-        chunk_index += 1
-        current_records = [record]
 
-    if current_records:
-        path = output_dir / f"{stem}-{chunk_index:04d}.json"
-        info = write_json_checked(path, make_payload(chunk_index, current_records), max_bytes)
-        info["record_count"] = len(current_records)
-        chunks.append(info)
+def write_jsonl_shards(
+    output_dir: Path,
+    stem: str,
+    rows: list[dict[str, Any]],
+    max_bytes: int,
+) -> list[dict[str, Any]]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    shards: list[dict[str, Any]] = []
+    shard_lines: list[bytes] = []
+    shard_record_count = 0
+    shard_size = 0
+    shard_index = 1
 
-    return chunks
+    def flush() -> None:
+        nonlocal shard_index, shard_lines, shard_record_count, shard_size
+        payload = b"".join(shard_lines)
+        path = output_dir / f"{stem}-{shard_index:04d}.jsonl"
+        path.write_bytes(payload)
+        shards.append(
+            {
+                "path": str(path),
+                "bytes": len(payload),
+                "record_count": shard_record_count,
+            }
+        )
+        shard_index += 1
+        shard_lines = []
+        shard_record_count = 0
+        shard_size = 0
+
+    for row in rows:
+        line = (
+            json.dumps({field: row.get(field, "") for field in RESULT_CSV_FIELDS}, ensure_ascii=False)
+            + "\n"
+        ).encode("utf-8")
+        if len(line) > max_bytes:
+            raise ValueError("A single JSONL row is larger than the configured shard size.")
+        if shard_lines and shard_size + len(line) > max_bytes:
+            flush()
+        shard_lines.append(line)
+        shard_record_count += 1
+        shard_size += len(line)
+
+    if shard_lines or not shards:
+        flush()
+    return shards
 
 
 def build_nmap_command(nmap_path: str, target: str, args: argparse.Namespace) -> list[str]:
-    command = [nmap_path, "-sV", "--version-light", "-oX", "-"]
+    command = [nmap_path, "--open", "-sV", "--version-light", "-oX", "-"]
     if args.assume_host_up:
         command.append("-Pn")
     if args.ports:
@@ -484,32 +478,21 @@ def parse_host_summaries(
         status_node = host.find("status")
         address_node = host.find("address")
         ports_node = host.find("ports")
-        hostnames_node = host.find("hostnames")
 
-        state_counts: Counter[str] = Counter()
+        open_service_count = 0
         if ports_node is not None:
             for port_node in ports_node.findall("port"):
                 state_node = port_node.find("state")
-                state = state_node.get("state", "unknown") if state_node is not None else "unknown"
-                state_counts[state] += 1
-
-        hostnames = []
-        if hostnames_node is not None:
-            hostnames = [
-                item.get("name", "")
-                for item in hostnames_node.findall("hostname")
-                if item.get("name")
-            ]
+                if state_node is not None and state_node.get("state") == "open":
+                    open_service_count += 1
 
         summaries.append(
             {
                 "input_target": server_target.target,
                 "target_label": server_target.label,
                 "detected_address": address_node.get("addr", "") if address_node is not None else "",
-                "hostnames": hostnames,
                 "host_status": status_node.get("state", "unknown") if status_node is not None else "unknown",
-                "port_state_counts": dict(sorted(state_counts.items())),
-                "open_service_count": state_counts.get("open", 0),
+                "open_service_count": open_service_count,
                 "nmap_command": command,
                 "nmap_stderr": nmap_stderr.strip(),
             }
@@ -523,9 +506,7 @@ def parse_host_summaries(
             "input_target": server_target.target,
             "target_label": server_target.label,
             "detected_address": "",
-            "hostnames": [],
             "host_status": "no-host-record",
-            "port_state_counts": {},
             "open_service_count": 0,
             "nmap_command": command,
             "nmap_stderr": nmap_stderr.strip(),
@@ -533,249 +514,51 @@ def parse_host_summaries(
     ]
 
 
+def parse_open_services(xml_text: str) -> list[dict[str, Any]]:
+    root = ET.fromstring(xml_text)
+    services: list[dict[str, Any]] = []
+    for host in root.findall("host"):
+        address_node = host.find("address")
+        host_address = address_node.get("addr") if address_node is not None else ""
+        ports_node = host.find("ports")
+        if ports_node is None:
+            continue
+        for port_node in ports_node.findall("port"):
+            state_node = port_node.find("state")
+            if state_node is None or state_node.get("state") != "open":
+                continue
+            service_node = port_node.find("service")
+            cpes = [
+                cpe.text.strip()
+                for cpe in (service_node.findall("cpe") if service_node is not None else [])
+                if cpe.text and cpe.text.strip()
+            ]
+            services.append(
+                {
+                    "host": host_address,
+                    "port": port_node.get("portid", ""),
+                    "protocol": port_node.get("protocol", ""),
+                    "service_name": service_node.get("name", "") if service_node is not None else "",
+                    "product": service_node.get("product", "") if service_node is not None else "",
+                    "version": service_node.get("version", "") if service_node is not None else "",
+                    "extrainfo": service_node.get("extrainfo", "") if service_node is not None else "",
+                    "cpe": cpes,
+                }
+            )
+    return sorted(services, key=lambda item: (str(item["host"]), str(item["protocol"]), int(item["port"] or 0)))
+
+
 def enrich_services(
     services: list[dict[str, Any]],
     server_target: ServerTarget,
-    command: list[str],
 ) -> list[dict[str, Any]]:
     enriched: list[dict[str, Any]] = []
     for service in services:
         record = dict(service)
         record["input_target"] = server_target.target
         record["target_label"] = server_target.label
-        record["nmap_command"] = command
         enriched.append(record)
     return enriched
-
-
-def summarize_run(
-    targets: list[ServerTarget],
-    host_summaries: list[dict[str, Any]],
-    services: list[dict[str, Any]],
-    errors: list[dict[str, Any]],
-) -> dict[str, Any]:
-    categories = Counter(service.get("vx_category", "") for service in services)
-    flags = Counter(flag["id"] for service in services for flag in service.get("flags", []))
-    ports = Counter(str(service.get("port", "")) for service in services)
-    services_by_target = Counter(service.get("target_label", "") for service in services)
-    hosts_by_status = Counter(host.get("host_status", "unknown") for host in host_summaries)
-    return {
-        "targets_requested": len(targets),
-        "hosts_reported": len(host_summaries),
-        "targets_with_errors": len({error.get("target") for error in errors}),
-        "errors": len(errors),
-        "open_services": len(services),
-        "hosts_by_status": dict(sorted(hosts_by_status.items())),
-        "categories": dict(sorted(categories.items())),
-        "flags": dict(sorted(flags.items())),
-        "open_ports": dict(sorted(ports.items(), key=lambda item: int(item[0]) if item[0].isdigit() else 0)),
-        "services_by_target": dict(sorted(services_by_target.items())),
-    }
-
-
-def markdown_escape(value: Any) -> str:
-    text = "" if value is None else str(value)
-    return text.replace("|", "\\|").replace("\n", " ")
-
-
-def flags_text(service: dict[str, Any]) -> str:
-    return ", ".join(flag.get("id", "") for flag in service.get("flags", []) if flag.get("id"))
-
-
-def build_markdown_report(
-    report: dict[str, Any],
-    services: list[dict[str, Any]],
-    service_limit: int,
-) -> str:
-    summary = report["summary"]
-    lines = [
-        "# Server Version Scan Report",
-        "",
-        f"- Generated UTC: {report['generated_at_utc']}",
-        f"- Run label: `{markdown_escape(report['run_label'])}`",
-        f"- Target file: `{markdown_escape(report['input_path'])}`",
-        f"- Targets requested: {summary['targets_requested']}",
-        f"- Open services detected: {summary['open_services']}",
-        f"- Scan errors: {summary['errors']}",
-    ]
-    service_csv = report.get("service_csv", {})
-    if service_csv.get("path"):
-        lines.append(f"- Service CSV: `{markdown_escape(service_csv['path'])}`")
-        matcher_command = (
-            "python scripts/cyber/match_server_defensive_artifacts.py "
-            f"--servers-csv {markdown_escape(service_csv['path'])}"
-        )
-        lines.append(
-            f"- Artifact matcher command: `{matcher_command}`"
-        )
-    lines.extend(
-        [
-            "",
-            "## Target Summary",
-            "",
-            "| Target | Label | Status | Open Services | Notes |",
-            "| --- | --- | --- | ---: | --- |",
-        ]
-    )
-
-    error_by_target = {error["target"]: error for error in report["errors"]}
-    summarized_targets = set()
-    for host in report["hosts"]:
-        summarized_targets.add(host["input_target"])
-        notes = error_by_target.get(host["input_target"], {}).get("error", "")
-        lines.append(
-            "| "
-            + " | ".join(
-                [
-                    markdown_escape(host["input_target"]),
-                    markdown_escape(host["target_label"]),
-                    markdown_escape(host["host_status"]),
-                    markdown_escape(host["open_service_count"]),
-                    markdown_escape(notes),
-                ]
-            )
-            + " |"
-        )
-
-    if report["errors"]:
-        for error in report["errors"]:
-            if error.get("target") in summarized_targets:
-                continue
-            lines.append(
-                "| "
-                + " | ".join(
-                    [
-                        markdown_escape(error.get("target", "")),
-                        markdown_escape(error.get("target_label", "")),
-                        "error",
-                        "0",
-                        markdown_escape(error.get("error", "")),
-                    ]
-                )
-                + " |"
-            )
-
-    lines.extend(["", "## Category Summary", ""])
-    if summary["categories"]:
-        for category, count in summary["categories"].items():
-            lines.append(f"- `{category}`: {count}")
-    else:
-        lines.append("- No open services were categorized.")
-
-    lines.extend(["", "## Flag Summary", ""])
-    if summary["flags"]:
-        for flag, count in summary["flags"].items():
-            lines.append(f"- `{flag}`: {count}")
-    else:
-        lines.append("- No defensive service flags were detected.")
-
-    lines.extend(
-        [
-            "",
-            "## Service Findings",
-            "",
-            "| Target | Port | Service | Product | Version | Category | Flags |",
-            "| --- | ---: | --- | --- | --- | --- | --- |",
-        ]
-    )
-
-    rows = services[: max(service_limit, 0)]
-    for service in rows:
-        lines.append(
-            "| "
-            + " | ".join(
-                [
-                    markdown_escape(service.get("target_label", service.get("host", ""))),
-                    markdown_escape(service.get("port", "")),
-                    markdown_escape(service.get("service_name", "")),
-                    markdown_escape(service.get("product", "")),
-                    markdown_escape(service.get("version", "")),
-                    markdown_escape(service.get("vx_category", "")),
-                    markdown_escape(flags_text(service)),
-                ]
-            )
-            + " |"
-        )
-
-    if len(services) > len(rows):
-        lines.extend(
-            [
-                "",
-                f"Only the first {len(rows)} service rows are shown here. See the JSON chunks for all records.",
-            ]
-        )
-    elif not services:
-        lines.append("|  |  |  |  |  | No open services detected |  |")
-
-    lines.extend(
-        [
-            "",
-            "## Handling Notes",
-            "",
-        ]
-    )
-    for note in report["handling_notes"]:
-        lines.append(f"- {note}")
-
-    return "\n".join(lines) + "\n"
-
-
-def build_report(
-    args: argparse.Namespace,
-    run_label: str,
-    output_root: Path,
-    targets: list[ServerTarget],
-    rules: dict[str, Any],
-    host_summaries: list[dict[str, Any]],
-    services: list[dict[str, Any]],
-    errors: list[dict[str, Any]],
-    service_chunks: list[dict[str, Any]],
-    service_csv_info: dict[str, Any],
-    max_bytes: int,
-) -> dict[str, Any]:
-    return {
-        "workflow": WORKFLOW_ID,
-        "generated_at_utc": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-        "run_label": run_label,
-        "output_root": str(output_root),
-        "input_path": str(args.targets),
-        "dry_run": args.dry_run,
-        "scan_options": {
-            "ports": args.ports,
-            "top_ports": args.top_ports,
-            "assume_host_up": args.assume_host_up,
-            "timeout_seconds": args.timeout_seconds,
-        },
-        "limits": {
-            "max_targets": args.max_targets,
-            "max_json_chunk_bytes": max_bytes,
-            "report_service_limit": args.report_service_limit,
-        },
-        "taxonomy": {
-            "name": rules.get("taxonomy_name"),
-            "version": rules.get("taxonomy_version"),
-            "rules_path": str(args.rules),
-        },
-        "targets": [
-            {
-                "target": target.target,
-                "label": target.label,
-            }
-            for target in targets
-        ],
-        "summary": summarize_run(targets, host_summaries, services, errors),
-        "hosts": host_summaries,
-        "errors": errors,
-        "service_record_chunks": service_chunks,
-        "service_csv": service_csv_info,
-        "handling_notes": [
-            "Scan only systems you own or are explicitly authorized to assess.",
-            "Outputs may reveal sensitive service exposure details and should remain under data/private.",
-            "The Nmap command uses service-version detection only and does not perform exploitation or vulnerability validation.",
-            "Version strings can be misleading when distributions backport security patches; confirm findings with vendor package metadata and advisories.",
-            "This batch workflow rejects ranges, CIDR blocks, wildcards, and comma target lists by default.",
-        ],
-    }
 
 
 def planned_host_summary(server_target: ServerTarget, command: list[str]) -> dict[str, Any]:
@@ -783,9 +566,7 @@ def planned_host_summary(server_target: ServerTarget, command: list[str]) -> dic
         "input_target": server_target.target,
         "target_label": server_target.label,
         "detected_address": "",
-        "hostnames": [],
         "host_status": "dry-run-planned",
-        "port_state_counts": {},
         "open_service_count": 0,
         "nmap_command": command,
         "nmap_stderr": "",
@@ -795,7 +576,6 @@ def planned_host_summary(server_target: ServerTarget, command: list[str]) -> dic
 def scan_targets(
     args: argparse.Namespace,
     targets: list[ServerTarget],
-    rules: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     services: list[dict[str, Any]] = []
     host_summaries: list[dict[str, Any]] = []
@@ -814,8 +594,7 @@ def scan_targets(
                 raise RuntimeError(
                     f"Nmap exited with {returncode}. STDERR: {nmap_stderr.strip()}"
                 )
-            parsed_services = parse_nmap_xml(xml_text, rules)
-            services.extend(enrich_services(parsed_services, server_target, command))
+            services.extend(enrich_services(parse_open_services(xml_text), server_target))
             host_summaries.extend(
                 parse_host_summaries(xml_text, server_target, command, nmap_stderr)
             )
@@ -825,13 +604,169 @@ def scan_targets(
                     "target": server_target.target,
                     "target_label": server_target.label,
                     "error": str(exc),
-                    "nmap_command": command,
                 }
             )
             if args.stop_on_error:
                 break
 
     return host_summaries, services, errors
+
+
+def reset_output_dirs(output_root: Path) -> None:
+    output_root.mkdir(parents=True, exist_ok=True)
+    for child_name in ("csv", "jsonl"):
+        child = output_root / child_name
+        if child.exists():
+            shutil.rmtree(child)
+
+
+def host_key(row: dict[str, Any]) -> str:
+    return target_identity(str(row.get("input_target") or row.get("target") or ""))
+
+
+def service_to_result_row(
+    service: dict[str, Any],
+    host_summaries: dict[tuple[str, str], dict[str, Any]],
+    target_summaries: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    target = str(service.get("input_target") or service.get("host") or "")
+    host = str(service.get("host") or "")
+    target_key = target_identity(target)
+    summary = host_summaries.get((target_key, host)) or target_summaries.get(target_key, {})
+    return {
+        "target": target,
+        "target_label": service.get("target_label", ""),
+        "host": host,
+        "host_status": summary.get("host_status", ""),
+        "scan_status": "open-service",
+        "port": service.get("port", ""),
+        "protocol": service.get("protocol", ""),
+        "service_name": service.get("service_name", ""),
+        "product": service.get("product", ""),
+        "version": service.get("version", ""),
+        "extrainfo": service.get("extrainfo", ""),
+        "cpe": service.get("cpe", []),
+        "error": "",
+    }
+
+
+def host_summary_to_result_row(host: dict[str, Any]) -> dict[str, Any]:
+    host_status = str(host.get("host_status") or "")
+    if host_status == "dry-run-planned":
+        scan_status = "dry-run-planned"
+    elif int(host.get("open_service_count") or 0) == 0:
+        scan_status = "no-open-services"
+    else:
+        scan_status = "host-summary"
+    return {
+        "target": host.get("input_target", ""),
+        "target_label": host.get("target_label", ""),
+        "host": host.get("detected_address", ""),
+        "host_status": host_status,
+        "scan_status": scan_status,
+        "port": "",
+        "protocol": "",
+        "service_name": "",
+        "product": "",
+        "version": "",
+        "extrainfo": "",
+        "cpe": [],
+        "error": "",
+    }
+
+
+def error_to_result_row(error: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "target": error.get("target", ""),
+        "target_label": error.get("target_label", ""),
+        "host": "",
+        "host_status": "",
+        "scan_status": "error",
+        "port": "",
+        "protocol": "",
+        "service_name": "",
+        "product": "",
+        "version": "",
+        "extrainfo": "",
+        "cpe": [],
+        "error": error.get("error", ""),
+    }
+
+
+def not_scanned_row(target: ServerTarget) -> dict[str, Any]:
+    return {
+        "target": target.target,
+        "target_label": target.label,
+        "host": "",
+        "host_status": "",
+        "scan_status": "not-scanned",
+        "port": "",
+        "protocol": "",
+        "service_name": "",
+        "product": "",
+        "version": "",
+        "extrainfo": "",
+        "cpe": [],
+        "error": "",
+    }
+
+
+def dedupe_result_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[tuple[str, ...]] = set()
+    unique_rows: list[dict[str, Any]] = []
+    for row in rows:
+        key = tuple(csv_cell(row.get(field, "")) for field in RESULT_CSV_FIELDS)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique_rows.append(row)
+    return unique_rows
+
+
+def build_result_rows(
+    targets: list[ServerTarget],
+    host_summaries: list[dict[str, Any]],
+    services: list[dict[str, Any]],
+    errors: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    services_by_target: dict[str, list[dict[str, Any]]] = {}
+    hosts_by_target: dict[str, list[dict[str, Any]]] = {}
+    errors_by_target: dict[str, list[dict[str, Any]]] = {}
+    host_summaries_by_target_host: dict[tuple[str, str], dict[str, Any]] = {}
+    first_host_summary_by_target: dict[str, dict[str, Any]] = {}
+
+    for service in services:
+        services_by_target.setdefault(host_key(service), []).append(service)
+    for host in host_summaries:
+        key = host_key(host)
+        hosts_by_target.setdefault(key, []).append(host)
+        first_host_summary_by_target.setdefault(key, host)
+        detected_address = str(host.get("detected_address") or "")
+        if detected_address:
+            host_summaries_by_target_host.setdefault((key, detected_address), host)
+    for error in errors:
+        errors_by_target.setdefault(target_identity(str(error.get("target") or "")), []).append(error)
+
+    rows: list[dict[str, Any]] = []
+    for target in targets:
+        key = target_identity(target.target)
+        target_rows: list[dict[str, Any]] = []
+        for service in services_by_target.get(key, []):
+            target_rows.append(
+                service_to_result_row(
+                    service,
+                    host_summaries_by_target_host,
+                    first_host_summary_by_target,
+                )
+            )
+        if not target_rows and key not in errors_by_target:
+            target_rows.extend(host_summary_to_result_row(host) for host in hosts_by_target.get(key, []))
+        target_rows.extend(error_to_result_row(error) for error in errors_by_target.get(key, []))
+        if not target_rows:
+            target_rows.append(not_scanned_row(target))
+        rows.extend(target_rows)
+
+    return dedupe_result_rows(rows)
 
 
 def main() -> int:
@@ -845,85 +780,41 @@ def main() -> int:
             )
 
         targets = load_targets(args.targets, args.max_targets)
-        rules = load_rules(args.rules)
         max_bytes = chunk_size_bytes(args.chunk_size_mb)
-        run_label = clean_label(args.run_label or args.targets.stem or "server-ip-list")
-        timestamp = utc_timestamp()
-        output_root = args.output_dir / run_label / timestamp
-        json_dir = output_root / "json"
+        output_root = args.output_dir
+        reset_output_dirs(output_root)
 
-        host_summaries, services, errors = scan_targets(args, targets, rules)
-        metadata = {
-            "workflow": WORKFLOW_ID,
-            "generated_at_utc": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-            "run_label": run_label,
-            "input_path": str(args.targets),
-            "taxonomy": {
-                "name": rules.get("taxonomy_name"),
-                "version": rules.get("taxonomy_version"),
-                "rules_path": str(args.rules),
-            },
-        }
-        service_chunks = chunk_records(
-            services,
-            metadata,
-            json_dir,
-            "service-records",
+        host_summaries, services, errors = scan_targets(args, targets)
+        rows = build_result_rows(targets, host_summaries, services, errors)
+        csv_shards = write_csv_shards(
+            output_root / "csv",
+            "runbook-results",
+            rows,
             max_bytes,
         )
-        service_csv_info = write_service_csv(
-            output_root / "service-version-categories.csv",
-            services,
-        )
-        report = build_report(
-            args,
-            run_label,
-            output_root,
-            targets,
-            rules,
-            host_summaries,
-            services,
-            errors,
-            service_chunks,
-            service_csv_info,
-            max_bytes,
-        )
-        report_json_info = write_json_checked(
-            json_dir / "server-version-scan-report.json",
-            report,
-            max_bytes,
-        )
-        manifest = {
-            "workflow": WORKFLOW_ID,
-            "generated_at_utc": report["generated_at_utc"],
-            "run_label": run_label,
-            "output_root": str(output_root),
-            "max_json_chunk_bytes": max_bytes,
-            "report_json": report_json_info,
-            "service_csv": service_csv_info,
-            "service_record_chunks": service_chunks,
-        }
-        manifest_info = write_json_checked(json_dir / "manifest.json", manifest, max_bytes)
-
-        markdown_path = output_root / "server-version-scan-report.md"
-        markdown_path.parent.mkdir(parents=True, exist_ok=True)
-        markdown_path.write_text(
-            build_markdown_report(report, services, args.report_service_limit),
-            encoding="utf-8",
-        )
+        jsonl_shards: list[dict[str, Any]] = []
+        if not args.no_jsonl:
+            jsonl_shards = write_jsonl_shards(
+                output_root / "jsonl",
+                "runbook-results",
+                rows,
+                max_bytes,
+            )
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
     print(f"Targets processed: {len(targets)}")
+    print(f"Rows written: {len(rows)}")
     print(f"Open services detected: {len(services)}")
     print(f"Errors: {len(errors)}")
-    print(f"Report JSON: {report_json_info['path']}")
-    print(f"Manifest:    {manifest_info['path']}")
-    print(f"Markdown:    {markdown_path}")
-    print(f"Service CSV: {service_csv_info['path']}")
-    for chunk in service_chunks:
-        print(f"Chunk:       {chunk['path']} ({chunk['bytes']} bytes)")
+    for shard in csv_shards:
+        print(f"CSV shard: {shard['path']} ({shard['bytes']} bytes)")
+    for shard in jsonl_shards:
+        print(f"JSONL shard: {shard['path']} ({shard['bytes']} bytes)")
+    if args.dry_run:
+        for host in host_summaries:
+            print("Planned command: " + " ".join(str(part) for part in host.get("nmap_command", [])))
     return 0
 
 

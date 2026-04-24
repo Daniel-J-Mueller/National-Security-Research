@@ -2,32 +2,34 @@
 
 ## Purpose
 
-This runbook scans a small owner-authorized server IP list, fills the same CSV columns used by the runbook template, and writes sharded CSV and JSONL outputs under:
+This runbook scans a small owner-authorized server target list and writes sharded CSV plus optional sharded JSONL rows under:
 
 ```text
 data\private\cybersecurity\runbook-outputs
 ```
 
-The workflow is inventory-oriented. It uses Nmap service-version detection only and does not run exploit checks, brute force modules, vulnerability scripts, payloads, or intrusive validation.
+The workflow is inventory-oriented. It uses Nmap service-version detection on open ports only and does not run exploit checks, brute force modules, vulnerability scripts, payloads, or intrusive validation.
 
-## Runbook CSV
+## Runbook Input
 
 Edit:
 
 ```text
-scripts\cyber\cyber-runbook\server-version-runbook.csv
+data\private\cybersecurity\runbook-input\dry-run-input.csv
 ```
 
-The CSV header is the output contract. Leave every column blank except:
+The input is intentionally just one column:
 
-- `ip`: Fill 2-3 exact IP addresses or DNS names you own or are authorized to scan.
-- `target_label`: Optional safe local label for each row.
+```csv
+ip
+127.0.0.1
+```
 
-The runner ignores fully blank rows. It rejects CIDR ranges, wildcards, comma lists, whitespace targets, and other expanded target expressions.
+Fill exact IP addresses or DNS names you own or are authorized to scan. The runner ignores blank rows and rejects CIDR ranges, wildcards, comma lists, whitespace targets, and other expanded target expressions.
 
 ## Dry Run
 
-Validate the CSV and write planned commands without scanning:
+Validate the CSV and print planned commands without scanning:
 
 ```powershell
 C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\cyber-runbook\run_server_version_runbook.py --dry-run
@@ -55,20 +57,24 @@ C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\cyber-runbook\r
 
 ## Outputs
 
-Each run writes a timestamped folder:
+Each run resets and writes directly to:
 
 ```text
-data\private\cybersecurity\runbook-outputs\<run-label>\<timestamp>\
+data\private\cybersecurity\runbook-outputs\
 ```
 
 Files written:
 
-- `csv\runbook-results-0001.csv`, with additional numbered shards as needed.
-- `jsonl\runbook-results-0001.jsonl`, with additional numbered shards as needed.
-- `runbook-summary.json`
-- `manifest.json`
+- `csv\runbook-results-0001.csv`, with additional CSV shards as needed
+- `jsonl\runbook-results-0001.jsonl`, with additional JSONL shards as needed
 
-The CSV and JSONL result shards use the same columns as the runbook CSV. The default shard limit is 75 MB:
+The CSV and JSONL output rows use these columns:
+
+```text
+target,target_label,host,host_status,scan_status,port,protocol,service_name,product,version,extrainfo,cpe,error
+```
+
+The default JSONL shard limit is 75 MB:
 
 ```powershell
 C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\cyber-runbook\run_server_version_runbook.py --i-own-these-servers --chunk-size-mb 75

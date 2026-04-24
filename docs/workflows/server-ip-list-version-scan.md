@@ -2,15 +2,21 @@
 
 ## Purpose
 
-This workflow runs owner-authorized Nmap service-version detection for a server IP list, then writes JSON outputs, a matcher-ready CSV, and a Markdown report. Service records are split into JSON chunk files so each JSON file stays under the configured size limit, which defaults to 75 MB.
+This workflow runs owner-authorized Nmap service-version detection for a server IP list, then writes sharded CSV plus optional sharded JSONL rows. The scanner keeps only concise service inventory fields for open ports.
 
-The scan is inventory-oriented. It uses Nmap service-version detection and can be configured to run exploit checks, brute force modules, vulnerability scripts, payloads, or intrusive validation.
+The scan is inventory-oriented. It does not run exploit checks, brute force modules, vulnerability scripts, payloads, or intrusive validation.
 
 ## Inputs
 
 - A JSON, JSONL, CSV, or TXT file containing exact server IP addresses or DNS names that you own or are authorized to scan.
 - Nmap installed locally.
-- Optional lifecycle baseline rules in `config/cybersecurity/vx-version-categories.json`.
+
+The CSV shape can be as small as:
+
+```csv
+target,target_label
+127.0.0.1,local-loopback
+```
 
 The JSON shape can be either a list:
 
@@ -38,7 +44,7 @@ Or an object with labels:
 }
 ```
 
-Replace the example TEST-NET addresses with your own authorized server IPs.
+Replace the example addresses with your own authorized server IPs.
 
 ## Default Command
 
@@ -46,13 +52,19 @@ Replace the example TEST-NET addresses with your own authorized server IPs.
 C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\scan_server_ip_list.py --i-own-these-servers
 ```
 
-The target file path is prepopulated to `data/private/cybersecurity/runbook-outputs/_tmp-validation/dry-run-input.csv` for local validation. You can still override it when needed:
+The default target file is:
+
+```text
+data/private/cybersecurity/runbook-input/dry-run-input.csv
+```
+
+You can override it when needed:
 
 ```powershell
 C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\scan_server_ip_list.py --targets data\private\cybersecurity\imports\other-server-list.json --i-own-these-servers
 ```
 
-The `--i-own-these-servers` flag is still required before the script will run Nmap. Use `--dry-run` first if you want to validate the target file and write planned commands without scanning.
+The `--i-own-these-servers` flag is required before the script will run Nmap. Use `--dry-run` first if you want to validate the target file and print planned commands without scanning.
 
 ## Useful Options
 
@@ -74,10 +86,16 @@ If ICMP probes are blocked for your servers:
 C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\scan_server_ip_list.py --i-own-these-servers --assume-host-up
 ```
 
-Change the JSON chunk cap:
+Change the CSV/JSONL shard cap:
 
 ```powershell
 C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\scan_server_ip_list.py --i-own-these-servers --chunk-size-mb 75
+```
+
+Skip JSONL and write only the CSV shards:
+
+```powershell
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\scan_server_ip_list.py --i-own-these-servers --no-jsonl
 ```
 
 ## What The Script Runs
@@ -85,50 +103,41 @@ C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\scan_server_ip_
 For each target, the script runs:
 
 ```text
-nmap -sV --version-light -oX - <target>
+nmap --open -sV --version-light -oX - <target>
 ```
 
-It scans one listed target at a time so the output records keep your local labels attached. The script rejects ranges, CIDR blocks, wildcards, and comma-separated target lists by default. The default `--max-targets` value is 16; your planned list of about 5 servers fits inside that.
+It scans one listed target at a time so output records keep local labels attached. Duplicate exact IPs or DNS names in the input list are scanned once. The script rejects ranges, CIDR blocks, wildcards, and comma-separated target lists by default. The default `--max-targets` value is 16.
 
 ## Output
 
 Results are written under:
 
 ```text
-data/private/cybersecurity/scans/<run-label>/<timestamp>/
+data/private/cybersecurity/runbook-outputs/
 ```
 
 Each run writes:
 
-- `json/service-records-0001.json`, plus additional chunks if needed
-- `json/server-version-scan-report.json`
-- `json/manifest.json`
-- `service-version-categories.csv`
-- `server-version-scan-report.md`
+- `csv/runbook-results-0001.csv`, plus additional CSV shards if needed
+- `jsonl/runbook-results-0001.jsonl`, plus additional JSONL shards if needed
 
-The manifest records each JSON file path, byte size, SHA-256 hash, and record count. It also records the CSV path, byte size, SHA-256 hash, and row count. The service chunk files use this shape:
+The CSV and JSONL rows use these fields:
 
-```json
-{
-  "metadata": {},
-  "chunk": {
-    "index": 1,
-    "record_count": 0,
-    "max_bytes": 78643200
-  },
-  "records": []
-}
+```text
+target,target_label,host,host_status,scan_status,port,protocol,service_name,product,version,extrainfo,cpe,error
 ```
 
-The CSV keeps the target label beside each service record and can be passed directly to the defensive artifact matcher:
+Rows with open ports use `scan_status=open-service`. Targets with no open services, errors, dry-run rows, or skipped rows are still represented once with the appropriate `scan_status`.
+
+The first CSV shard can be passed to the defensive artifact matcher:
 
 ```powershell
-C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\match_server_defensive_artifacts.py --servers-csv data\private\cybersecurity\scans\<run-label>\<timestamp>\service-version-categories.csv
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\match_server_defensive_artifacts.py --servers-csv data\private\cybersecurity\runbook-outputs\csv\runbook-results-0001.csv
 ```
 
 ## Safe Handling
 
 - Scan only systems you own or are explicitly authorized to assess.
-- Keep outputs under `data/private/cybersecurity/scans/`.
+- Keep outputs under `data/private/cybersecurity/runbook-outputs/`.
 - Treat detected versions as inventory leads, not proof that a host is vulnerable.
 - Confirm apparent outdated versions against vendor advisories, OS package metadata, and CISA KEV.
