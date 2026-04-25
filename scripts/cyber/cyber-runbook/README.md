@@ -57,6 +57,12 @@ If ICMP probes are blocked for your servers:
 C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\cyber-runbook\run_server_version_runbook.py --i-own-these-servers --assume-host-up
 ```
 
+The default per-target timeout is 120 seconds. Override it when needed:
+
+```powershell
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\cyber-runbook\run_server_version_runbook.py --i-own-these-servers --timeout-seconds 180
+```
+
 ## Outputs
 
 Each run resets and writes directly to:
@@ -76,6 +82,35 @@ The CSV and JSONL output rows use these columns:
 
 ```text
 target,target_label,host,host_status,scan_status,port,protocol,service_name,product,version,extrainfo,cpe,error
+```
+
+After a run, write private coordinate records:
+
+```powershell
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\saturate_runbook_coordinates.py --i-own-these-servers
+```
+
+That script keeps `csv\runbook-results-*.csv` and `jsonl\runbook-results-*.jsonl` unchanged. It writes raw coordinate data under child directories of `data\private\cybersecurity\runbook-outputs`:
+
+- `coords\csv\ip-coordinate-lookups.csv`
+- `coords\jsonl\ip-coordinate-lookups.jsonl`
+- `coords\cache\ip-coordinate-cache-*.json`
+- `coords\cache\ip-coordinate-cache-manifest.json`
+
+Coordinate workers still write each completed IP to the private coordinate files immediately. The default `ip-api` provider uses its batch endpoint, up to 100 IPs per request, and pauses on `X-Rl`/`X-Ttl` rate-limit headers so HTTP 429 responses do not turn into thousands of permanent error rows. `--workers` mainly controls ping concurrency and the non-batched provider path.
+
+```powershell
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\saturate_runbook_coordinates.py --i-own-these-servers --workers 64
+```
+
+Use `--ip-api-batch-size 1` only when you intentionally want the older per-IP request behavior. A local GeoIP database is a better long-run option for very large refreshes because it avoids public API rate limits entirely.
+
+Consecutive runs use the sharded cache to skip both ping and provider lookup for IPs that already have cached `long`/`lat`. Use `--force-refresh` only when you want to intentionally re-probe and re-query cached addresses, and use `--reconcile-coordinate-store` only when you want to scan older raw coordinate reports to fill missing cache/report fields.
+
+For a single address:
+
+```powershell
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\saturate_runbook_coordinates.py --i-own-these-servers --only-ip 1.0.208.102
 ```
 
 The default JSONL shard limit is 75 MB:

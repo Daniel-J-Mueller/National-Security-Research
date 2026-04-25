@@ -31,7 +31,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--top-ports", type=int, help="Optional Nmap --top-ports value.")
     parser.add_argument("--assume-host-up", action="store_true", help="Pass -Pn to Nmap.")
     parser.add_argument("--nmap-path", default="nmap", help="Path to nmap executable.")
-    parser.add_argument("--timeout-seconds", type=int, default=900, help="Nmap timeout.")
+    parser.add_argument(
+        "--timeout-seconds",
+        type=int,
+        default=scan.DEFAULT_TIMEOUT_SECONDS,
+        help="Nmap timeout.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Emit the planned scan only.")
     return parser
 
@@ -45,6 +50,8 @@ def main() -> int:
             raise PermissionError(
                 "Refusing to scan without --i-own-these-servers. Only scan systems you own or are authorized to assess."
             )
+        if args.timeout_seconds <= 0:
+            raise ValueError("--timeout-seconds must be greater than 0")
 
         target = scan.validate_target(args.target)
         server_target = scan.ServerTarget(target=target, label=scan.clean_label(args.target_label))

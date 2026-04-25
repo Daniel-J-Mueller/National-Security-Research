@@ -3,7 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Runbook Flow Visualizer</title>
+    <title>Cyber Visualizer</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin=""
+    />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -11,7 +16,7 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Private runbook workflow</p>
-          <h1>Runbook flow visualizer</h1>
+          <h1>Cyber Visualizer</h1>
         </div>
         <div class="status-block">
           <p id="status" class="status">Loading shards...</p>
@@ -42,8 +47,60 @@
         </div>
       </section>
 
+      <div class="map-grid">
+        <section class="map-shell" aria-labelledby="map-title">
+          <div class="map-header">
+            <div>
+              <p class="eyebrow">Private coordinates</p>
+              <h2 id="map-title">Mapped IPs</h2>
+            </div>
+            <div class="map-header-actions">
+              <p id="map-summary" class="note">No coordinates loaded.</p>
+              <button id="clear-map-filter-button" class="button secondary small" type="button" disabled>
+                Clear map filter
+              </button>
+              <button id="zoom-map-button" class="button secondary small" type="button">Zoom mapped</button>
+            </div>
+          </div>
+          <div id="map" class="map" aria-label="Runbook coordinate map"></div>
+          <button
+            id="map-resize-handle"
+            class="map-resize-handle"
+            type="button"
+            aria-label="Resize map height"
+            title="Resize map height"
+          ></button>
+        </section>
+
+        <section class="map-shell refined-map-shell" aria-labelledby="refined-map-title">
+          <div class="map-header">
+            <div>
+              <p class="eyebrow">Selected coordinate</p>
+              <h2 id="refined-map-title">Expanded servers</h2>
+            </div>
+            <div class="map-header-actions">
+              <p id="refined-map-summary" class="note">Choose a coordinate on the left.</p>
+              <button id="zoom-refined-map-button" class="button secondary small" type="button">
+                Zoom selection
+              </button>
+            </div>
+          </div>
+          <div id="refined-map" class="map refined-map" aria-label="Expanded selected coordinate server map"></div>
+          <button
+            id="refined-map-resize-handle"
+            class="map-resize-handle"
+            type="button"
+            aria-label="Resize selection map height"
+            title="Resize selection map height"
+          ></button>
+        </section>
+      </div>
+
+      <div id="map-detail" class="map-detail map-detail-panel"></div>
+
       <section class="controls-row" aria-label="Flow controls">
         <button id="clear-button" class="button secondary" type="button">Clear filters</button>
+        <button id="export-mapped-button" class="button secondary" type="button">Export mapped IPs</button>
         <button id="export-rows-button" class="button" type="button">Export matching rows</button>
       </section>
 
@@ -57,17 +114,25 @@
             <p class="eyebrow">Matching entries</p>
             <h2 id="results-title">Runbook rows</h2>
           </div>
-          <p id="preview-note" class="note"></p>
+          <div class="results-tools">
+            <label class="search-label">
+              <span>Search rows</span>
+              <input id="results-search" class="list-search" type="search" autocomplete="off" />
+            </label>
+            <p id="preview-note" class="note"></p>
+          </div>
         </div>
-        <div class="table-wrap">
+        <div id="table-wrap" class="table-wrap">
           <table>
             <thead id="results-head"></thead>
             <tbody id="results-body"></tbody>
           </table>
         </div>
       </section>
+
     </main>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="./app.js"></script>
   </body>
 </html>

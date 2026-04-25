@@ -46,7 +46,7 @@ def main() -> None:
     server = ThreadingHTTPServer((args.bind, port), handler)
     url = f"http://{args.bind}:{port}/"
 
-    print(f"Runbook flow visualizer: {url}", flush=True)
+    print(f"Cyber Visualizer: {url}", flush=True)
     print(f"Reading CSV shards from: {CSV_DIR}", flush=True)
     print(f"Writing quick exports to: {QUICK_OUTPUT_DIR}", flush=True)
     print("Press Ctrl+C to stop.", flush=True)

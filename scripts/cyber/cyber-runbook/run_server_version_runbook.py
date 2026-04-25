@@ -30,6 +30,7 @@ DEFAULT_OUTPUT_DIR = ROOT / "data" / "private" / "cybersecurity" / "runbook-outp
 DEFAULT_RUN_DATA = Path(__file__).with_name("run-data.info")
 DEFAULT_MAX_CHUNK_MB = 75
 DEFAULT_MAX_TARGETS = scan.DEFAULT_MAX_TARGETS
+DEFAULT_TIMEOUT_SECONDS = scan.DEFAULT_TIMEOUT_SECONDS
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -94,7 +95,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--timeout-seconds",
         type=int,
-        default=900,
+        default=DEFAULT_TIMEOUT_SECONDS,
         help="Per-target Nmap timeout. Default: %(default)s seconds.",
     )
     parser.add_argument(
@@ -188,6 +189,8 @@ def main() -> int:
             raise PermissionError(
                 "Refusing to scan without --i-own-these-servers. Only scan systems you own or are authorized to assess."
             )
+        if args.timeout_seconds <= 0:
+            raise ValueError("--timeout-seconds must be greater than 0")
         if not args.runbook_csv.exists():
             raise FileNotFoundError(f"Runbook CSV not found: {args.runbook_csv}")
         scan.guard_live_target_file(args, args.runbook_csv)

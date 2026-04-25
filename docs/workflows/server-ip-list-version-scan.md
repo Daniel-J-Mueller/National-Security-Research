@@ -68,6 +68,8 @@ The `--i-own-these-servers` flag is required before the script will run Nmap. Us
 
 If the default input is the generated all-IPv4 dry-run file, the reader fast-forwards past the leading `0.0.0.0/8` block and starts at IPv4 address index `16,777,216` (`1.0.0.0`). In CSV line-number terms, that is line `16,777,218` because line 1 is the header and line 2 is `0.0.0.0`. Live scans still require a target file containing only systems you own or are authorized to assess.
 
+The default per-target timeout is 120 seconds. The runner passes that value to both Python's process timeout and Nmap's `--host-timeout`.
+
 ## Useful Options
 
 Scan only specific ports:
@@ -111,7 +113,7 @@ C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\scan_server_ip_
 For each target, the script runs:
 
 ```text
-nmap --open -sV --version-light -oX - <target>
+nmap --open -sV --version-light --host-timeout 120s -oX - <target>
 ```
 
 It scans one listed target at a time so output records keep local labels attached. Duplicate exact IPs or DNS names in the input list are scanned once. The script rejects ranges, CIDR blocks, wildcards, and comma-separated target lists by default. The default `--max-targets` value is `0`, which means no artificial limit.
@@ -138,6 +140,31 @@ target,target_label,host,host_status,scan_status,port,protocol,service_name,prod
 ```
 
 Rows with open ports use `scan_status=open-service`. Targets with no open services are omitted from the CSV/JSONL outputs. Errors and dry-run rows are still represented once with the appropriate `scan_status`.
+
+## Coordinate Lookup
+
+Runbook result CSV/JSONL shards do not carry coordinate columns. The coordinate lookup script writes raw coordinate records separately after a run:
+
+```powershell
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\saturate_runbook_coordinates.py --i-own-these-servers
+```
+
+The coordinate script writes:
+
+- `coords/csv/ip-coordinate-lookups.csv`
+- `coords/jsonl/ip-coordinate-lookups.jsonl`
+- `coords/cache/ip-coordinate-cache-*.json`
+- `coords/cache/ip-coordinate-cache-manifest.json`
+
+By default the coordinate script writes each completed IP to the private coordinate CSV/JSONL files immediately. The default `ip-api` provider uses its batch endpoint, up to 100 IPs per request, and honors the provider's `X-Rl`/`X-Ttl` rate-limit headers before continuing.
+
+```powershell
+C:\Users\Danie\AppData\Local\Python\bin\python.exe scripts\cyber\saturate_runbook_coordinates.py --i-own-these-servers --workers 64
+```
+
+Use `--only-ip 1.0.208.102` to update one address, `--fallback-provider ipapi-co` to try a second provider if the default `ip-api` lookup fails, or `--ip-api-batch-size 1` to intentionally use the older per-IP lookup behavior. For very large refreshes, a local GeoIP database is preferable because it avoids public API rate limits.
+
+Consecutive runs use the sharded cache to skip both ping and provider lookup for IPs that already have cached `long`/`lat`, unless `--force-refresh` is used. Use `--reconcile-coordinate-store` when you intentionally want to scan older raw coordinate reports and fill missing cache/report fields before processing.
 
 The first CSV shard can be passed to the defensive artifact matcher:
 

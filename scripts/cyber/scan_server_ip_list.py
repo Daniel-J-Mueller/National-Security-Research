@@ -37,6 +37,7 @@ DEFAULT_RUN_DATA = Path(__file__).with_name("cyber-runbook") / "run-data.info"
 
 DEFAULT_MAX_CHUNK_MB = 75
 DEFAULT_MAX_TARGETS = 0
+DEFAULT_TIMEOUT_SECONDS = 120
 DEFAULT_WORKERS = 128
 WORKFLOW_ID = "owner-authorized-batch-service-version-scan"
 IPV4_ZERO_BLOCK_ROWS = ipaddress.ip_network("0.0.0.0/8").num_addresses
@@ -179,7 +180,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--timeout-seconds",
         type=int,
-        default=900,
+        default=DEFAULT_TIMEOUT_SECONDS,
         help="Per-target Nmap timeout. Default: %(default)s seconds.",
     )
     parser.add_argument(
@@ -730,7 +731,17 @@ def write_jsonl_shards(
 
 
 def build_nmap_command(nmap_path: str, target: str, args: argparse.Namespace) -> list[str]:
-    command = [nmap_path, "--open", "-sV", "--version-light", "-oX", "-"]
+    timeout_seconds = int(getattr(args, "timeout_seconds", DEFAULT_TIMEOUT_SECONDS))
+    command = [
+        nmap_path,
+        "--open",
+        "-sV",
+        "--version-light",
+        "--host-timeout",
+        f"{timeout_seconds}s",
+        "-oX",
+        "-",
+    ]
     if args.assume_host_up:
         command.append("-Pn")
     if args.ports:
@@ -742,6 +753,8 @@ def build_nmap_command(nmap_path: str, target: str, args: argparse.Namespace) ->
 
 
 def run_nmap(command: list[str], timeout_seconds: int) -> tuple[str, str, int]:
+    if timeout_seconds <= 0:
+        raise ValueError("--timeout-seconds must be greater than 0")
     completed = subprocess.run(
         command,
         check=False,
@@ -1303,6 +1316,8 @@ def main() -> int:
             raise PermissionError(
                 "Refusing to scan without --i-own-these-servers. Only scan systems you own or are authorized to assess."
             )
+        if args.timeout_seconds <= 0:
+            raise ValueError("--timeout-seconds must be greater than 0")
         if not args.targets.exists():
             raise FileNotFoundError(f"Target file not found: {args.targets}")
         guard_live_target_file(args, args.targets)
