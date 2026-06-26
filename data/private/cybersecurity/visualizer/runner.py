@@ -9,8 +9,9 @@ import argparse
 import socket
 from functools import partial
 from http.server import ThreadingHTTPServer
+from pathlib import Path
 
-from server import CSV_DIR, QUICK_OUTPUT_DIR, VISUALIZER_DIR, VisualizerHandler
+import server as visualizer_server
 
 
 DEFAULT_BIND = "127.0.0.1"
@@ -36,19 +37,26 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Launch the cybersecurity runbook visualizer.")
     parser.add_argument("--bind", default=DEFAULT_BIND, help="Host or IP address to bind to.")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Preferred port to listen on.")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=visualizer_server.RUNBOOK_OUTPUTS_DIR,
+        help="Runbook output directory containing csv/, jsonl/, and optional coords/ subdirectories.",
+    )
     return parser
 
 
 def main() -> None:
     args = build_parser().parse_args()
+    visualizer_server.configure_runbook_outputs(args.output_dir)
     port = choose_port(args.bind, args.port)
-    handler = partial(VisualizerHandler, directory=str(VISUALIZER_DIR))
+    handler = partial(visualizer_server.VisualizerHandler, directory=str(visualizer_server.VISUALIZER_DIR))
     server = ThreadingHTTPServer((args.bind, port), handler)
     url = f"http://{args.bind}:{port}/"
 
     print(f"Cyber Visualizer: {url}", flush=True)
-    print(f"Reading CSV shards from: {CSV_DIR}", flush=True)
-    print(f"Writing quick exports to: {QUICK_OUTPUT_DIR}", flush=True)
+    print(f"Reading CSV shards from: {visualizer_server.CSV_DIR}", flush=True)
+    print(f"Writing quick exports to: {visualizer_server.QUICK_OUTPUT_DIR}", flush=True)
     print("Press Ctrl+C to stop.", flush=True)
 
     try:

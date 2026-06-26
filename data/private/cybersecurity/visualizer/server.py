@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import ipaddress
 import json
 import re
@@ -69,13 +70,76 @@ _DATA_CACHE: dict[str, object] = {
 
 _COORDINATE_CACHE: dict[str, object] = {
     "signature": None,
-    "lookup_rows": [],
-    "cache_rows": {},
     "source_files": [],
     "lookup_row_count": 0,
     "lookup_error_count": 0,
     "lookup_ok_count": 0,
 }
+
+_COORDINATE_RECORD_CACHE: dict[str, object] = {
+    "signature": None,
+    "source_signature": None,
+    "ips": set(),
+    "lookup_rows_by_ip": {},
+    "cache_rows_by_ip": {},
+}
+
+
+def reset_caches() -> None:
+    _DATA_CACHE.update(
+        {
+            "signature": None,
+            "rows": [],
+            "headers": [],
+            "shards": [],
+            "source_format": "",
+        }
+    )
+    _COORDINATE_CACHE.update(
+        {
+            "signature": None,
+            "source_files": [],
+            "lookup_row_count": 0,
+            "lookup_error_count": 0,
+            "lookup_ok_count": 0,
+        }
+    )
+    _COORDINATE_RECORD_CACHE.update(
+        {
+            "signature": None,
+            "source_signature": None,
+            "ips": set(),
+            "lookup_rows_by_ip": {},
+            "cache_rows_by_ip": {},
+        }
+    )
+
+
+def configure_runbook_outputs(output_dir: Path) -> None:
+    global RUNBOOK_OUTPUTS_DIR
+    global CSV_DIR
+    global JSONL_DIR
+    global QUICK_OUTPUT_DIR
+    global COORDINATE_LOOKUPS_CSV
+    global LEGACY_COORDINATE_LOOKUPS_CSV
+    global COORDINATE_LOOKUPS_CSV_ALIASES
+    global COORDINATE_CACHE_DIR
+    global LEGACY_COORDINATE_CACHE_JSON
+
+    RUNBOOK_OUTPUTS_DIR = output_dir.resolve()
+    CSV_DIR = RUNBOOK_OUTPUTS_DIR / "csv"
+    JSONL_DIR = RUNBOOK_OUTPUTS_DIR / "jsonl"
+    QUICK_OUTPUT_DIR = RUNBOOK_OUTPUTS_DIR / "quick-output"
+    COORDINATE_LOOKUPS_CSV = RUNBOOK_OUTPUTS_DIR / "coords" / "csv" / "ip-coordinate-lookups.csv"
+    LEGACY_COORDINATE_LOOKUPS_CSV = RUNBOOK_OUTPUTS_DIR / "ip-coordinate-lookups.csv"
+    COORDINATE_LOOKUPS_CSV_ALIASES = (
+        COORDINATE_LOOKUPS_CSV,
+        LEGACY_COORDINATE_LOOKUPS_CSV,
+        RUNBOOK_OUTPUTS_DIR / "ip_coordinate-lookups.csv",
+    )
+    COORDINATE_CACHE_DIR = RUNBOOK_OUTPUTS_DIR / "coords" / "cache"
+    LEGACY_COORDINATE_CACHE_JSON = RUNBOOK_OUTPUTS_DIR / "ip-coordinate-cache.json"
+    reset_caches()
 
 
 def source_files() -> tuple[str, list[Path]]:
@@ -298,26 +362,26 @@ def coordinate_record_for_ip(
 def build_map_points(
     rows: list[dict[str, str]],
     limit: int | None = MAP_POINT_LIMIT,
+    include_records: bool = False,
 ) -> tuple[list[dict[str, object]], int, int]:
     if not rows:
         return [], 0, 0
-
-    coordinate_dataset = get_coordinate_dataset()
-    lookup_rows = coordinate_dataset["lookup_rows"]  # type: ignore[assignment]
-    cache_rows = coordinate_dataset["cache_rows"]  # type: ignore[assignment]
-    assert isinstance(lookup_rows, list)
-    assert isinstance(cache_rows, dict)
 
     runbook_summaries = build_runbook_ip_summary(rows)
     if not runbook_summaries:
         return [], 0, 0
     matching_ips = set(runbook_summaries)
+    coordinate_records = get_coordinate_records_for_ips(matching_ips)
+    lookup_rows_by_ip = coordinate_records["lookup_rows_by_ip"]  # type: ignore[assignment]
+    cache_rows = coordinate_records["cache_rows_by_ip"]  # type: ignore[assignment]
+    assert isinstance(lookup_rows_by_ip, dict)
+    assert isinstance(cache_rows, dict)
 
     latest_lookup_by_ip: dict[str, dict[str, str]] = {}
-    for row in lookup_rows:
+    for ip, row in lookup_rows_by_ip.items():
+        ip = as_ip(ip)
         assert isinstance(row, dict)
-        ip = as_ip(row.get("ip"))
-        if not ip or ip not in matching_ips:
+        if not ip:
             continue
         if row_coordinates(row) is None:
             continue
@@ -357,9 +421,10 @@ def build_map_points(
                 "ports": [],
                 "services": [],
                 "scan_statuses": [],
-                "cache_records": [],
             },
         )
+        if include_records and "cache_records" not in point:
+            point["cache_records"] = []
         point["ip_count"] = int(point["ip_count"]) + 1
         point["row_count"] = int(point["row_count"]) + int(runbook_summary.get("row_count", 0) or 0)
         point["open_service_count"] = int(point["open_service_count"]) + int(
@@ -369,12 +434,10 @@ def build_map_points(
         ports = point["ports"]
         services = point["services"]
         statuses = point["scan_statuses"]
-        cache_records = point["cache_records"]
         assert isinstance(ips, list)
         assert isinstance(ports, list)
         assert isinstance(services, list)
         assert isinstance(statuses, list)
-        assert isinstance(cache_records, list)
         append_unique(ips, ip)
         for port in runbook_summary.get("ports", []):
             append_unique(ports, normalize_value(port))
@@ -382,7 +445,13 @@ def build_map_points(
             append_unique(services, normalize_value(service))
         for status in runbook_summary.get("scan_statuses", []):
             append_unique(statuses, normalize_value(status))
-        cache_records.append(coordinate_record_for_ip(ip, lookup_row, cache_record, runbook_summary))
+        for field in ("city", "region", "country", "org", "asn", "coordinate_provider", "coordinate_status"):
+            if not point.get(field):
+                point[field] = normalize_value(cache_record.get(field) or lookup_row.get(field, ""))
+        if include_records:
+            cache_records = point["cache_records"]
+            assert isinstance(cache_records, list)
+            cache_records.append(coordinate_record_for_ip(ip, lookup_row, cache_record, runbook_summary))
         mapped_ip_count += 1
 
     points = sorted(
@@ -399,8 +468,9 @@ def build_map_points(
         assert isinstance(records, list)
         records.sort(key=lambda item: normalize_value(item.get("ip") if isinstance(item, dict) else ""))
         first_record = records[0] if records and isinstance(records[0], dict) else {}
-        for field in ("city", "region", "country", "org", "asn", "coordinate_provider", "coordinate_status"):
-            point[field] = normalize_value(first_record.get(field, ""))
+        if first_record:
+            for field in ("city", "region", "country", "org", "asn", "coordinate_provider", "coordinate_status"):
+                point[field] = normalize_value(first_record.get(field, ""))
     if limit is None:
         return points, total_points, mapped_ip_count
     return points[:limit], total_points, mapped_ip_count
@@ -530,22 +600,90 @@ def coordinate_source_paths() -> list[Path]:
     return paths
 
 
-def load_coordinate_lookup_rows(path: Path) -> list[dict[str, str]]:
+def coordinate_source_signature() -> tuple[str, tuple[tuple[str, int, int], ...]]:
+    lookup_path = coordinate_lookup_csv_path()
+    return str(lookup_path), file_signature(coordinate_source_paths())
+
+
+def coordinate_source_files_payload(paths: list[Path]) -> list[dict[str, object]]:
+    return [
+        {
+            "name": path.name,
+            "relative_path": str(path.relative_to(ROOT)),
+            "bytes": path.stat().st_size,
+        }
+        for path in paths
+    ]
+
+
+def coordinate_cache_shard_id(ip: str) -> str:
+    return hashlib.sha256(ip.encode("ascii")).hexdigest()[:2]
+
+
+def coordinate_cache_path_for_ip(ip: str) -> Path:
+    return COORDINATE_CACHE_DIR / f"ip-coordinate-cache-{coordinate_cache_shard_id(ip)}.json"
+
+
+def raw_field(row: list[str], index: int | None) -> str:
+    if index is None or index >= len(row):
+        return ""
+    return row[index]
+
+
+def row_has_valid_coordinates(row: list[str], lat_index: int | None, long_index: int | None) -> bool:
+    try:
+        latitude = float(raw_field(row, lat_index))
+        longitude = float(raw_field(row, long_index))
+    except ValueError:
+        return False
+    return -90 <= latitude <= 90 and -180 <= longitude <= 180
+
+
+def normalize_csv_row(headers: list[str], row: list[str]) -> dict[str, str]:
+    return normalize_row({field: row[index] if index < len(row) else "" for index, field in enumerate(headers)})
+
+
+def scan_coordinate_lookup_csv(
+    path: Path,
+    target_ips: set[str] | None = None,
+) -> tuple[dict[str, dict[str, str]], int, int, int]:
     if not path.exists():
-        return []
+        return {}, 0, 0, 0
 
-    rows: list[dict[str, str]] = []
+    lookup_rows_by_ip: dict[str, dict[str, str]] = {}
+    row_count = 0
+    ok_count = 0
+    error_count = 0
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
-        reader = csv.DictReader(handle)
+        reader = csv.reader(handle)
+        headers = next(reader, [])
+        indexes = {field: index for index, field in enumerate(headers)}
+        ip_index = indexes.get("ip")
+        lat_index = indexes.get("lat")
+        long_index = indexes.get("long")
+        status_index = indexes.get("coordinate_status")
+
         for row in reader:
-            normalized = normalize_row(row)
-            if not as_ip(normalized.get("ip")):
+            row_count += 1
+            if row_has_valid_coordinates(row, lat_index, long_index):
+                ok_count += 1
+            else:
+                status = raw_field(row, status_index)
+                if status and status not in {"skipped-provider-none", "cached"}:
+                    error_count += 1
+
+            if target_ips is None:
                 continue
-            rows.append(normalized)
-    return rows
+
+            raw_ip = raw_field(row, ip_index).strip()
+            ip = raw_ip if raw_ip in target_ips else as_ip(raw_ip)
+            if ip and ip in target_ips:
+                lookup_rows_by_ip[ip] = normalize_csv_row(headers, row)
+
+    return lookup_rows_by_ip, row_count, ok_count, error_count
 
 
-def load_coordinate_cache_file(path: Path) -> dict[str, dict[str, str]]:
+def load_coordinate_cache_file(path: Path, target_ips: set[str] | None = None) -> dict[str, dict[str, str]]:
     rows: dict[str, dict[str, str]] = {}
     if not path.exists():
         return rows
@@ -558,59 +696,101 @@ def load_coordinate_cache_file(path: Path) -> dict[str, dict[str, str]]:
         ip = as_ip(key)
         if not ip or not isinstance(value, dict):
             continue
+        if target_ips is not None and ip not in target_ips:
+            continue
         rows[ip] = normalize_row(value)
     return rows
 
 
-def load_coordinate_cache_rows(paths: list[Path]) -> dict[str, dict[str, str]]:
+def load_coordinate_cache_rows_for_ips(ips: set[str]) -> dict[str, dict[str, str]]:
     rows: dict[str, dict[str, str]] = {}
+    if not ips:
+        return rows
+
+    if COORDINATE_CACHE_DIR.exists():
+        paths = sorted({coordinate_cache_path_for_ip(ip) for ip in ips}, key=str)
+    else:
+        paths = [
+            path
+            for path in (COORDINATE_CACHE_DIR / "ip-coordinate-cache.json", LEGACY_COORDINATE_CACHE_JSON)
+            if path.exists()
+        ]
+
     for path in paths:
-        rows.update(load_coordinate_cache_file(path))
+        rows.update(load_coordinate_cache_file(path, ips))
     return rows
 
 
-def coordinate_status_counts(rows: list[dict[str, str]]) -> tuple[int, int]:
-    ok_count = 0
-    error_count = 0
-    for row in rows:
-        status = row.get("coordinate_status", "")
-        if row_coordinates(row) is not None:
-            ok_count += 1
-        elif status and status not in {"skipped-provider-none", "cached"}:
-            error_count += 1
-    return ok_count, error_count
-
-
 def get_coordinate_dataset() -> dict[str, object]:
-    lookup_path = coordinate_lookup_csv_path()
     paths = coordinate_source_paths()
-    signature = (str(lookup_path), file_signature(paths))
+    signature = coordinate_source_signature()
     if _COORDINATE_CACHE["signature"] == signature:
         return _COORDINATE_CACHE
 
-    lookup_rows = load_coordinate_lookup_rows(lookup_path)
-    cache_rows = load_coordinate_cache_rows(coordinate_cache_paths())
-    ok_count, error_count = coordinate_status_counts(lookup_rows)
+    _lookup_rows, lookup_row_count, ok_count, error_count = scan_coordinate_lookup_csv(coordinate_lookup_csv_path())
 
     _COORDINATE_CACHE.update(
         {
             "signature": signature,
-            "lookup_rows": lookup_rows,
-            "cache_rows": cache_rows,
-            "source_files": [
-                {
-                    "name": path.name,
-                    "relative_path": str(path.relative_to(ROOT)),
-                    "bytes": path.stat().st_size,
-                }
-                for path in paths
-            ],
-            "lookup_row_count": len(lookup_rows),
+            "source_files": coordinate_source_files_payload(paths),
+            "lookup_row_count": lookup_row_count,
             "lookup_error_count": error_count,
             "lookup_ok_count": ok_count,
         }
     )
     return _COORDINATE_CACHE
+
+
+def get_coordinate_records_for_ips(ips: set[str]) -> dict[str, object]:
+    source_signature = coordinate_source_signature()
+    signature = (source_signature, tuple(sorted(ips)))
+    if _COORDINATE_RECORD_CACHE["signature"] == signature:
+        return _COORDINATE_RECORD_CACHE
+
+    cached_ips = _COORDINATE_RECORD_CACHE.get("ips", set())
+    if (
+        _COORDINATE_RECORD_CACHE.get("source_signature") == source_signature
+        and isinstance(cached_ips, set)
+        and ips.issubset(cached_ips)
+    ):
+        cached_lookup_rows = _COORDINATE_RECORD_CACHE.get("lookup_rows_by_ip", {})
+        cached_cache_rows = _COORDINATE_RECORD_CACHE.get("cache_rows_by_ip", {})
+        assert isinstance(cached_lookup_rows, dict)
+        assert isinstance(cached_cache_rows, dict)
+        return {
+            "signature": signature,
+            "source_signature": source_signature,
+            "ips": ips,
+            "lookup_rows_by_ip": {ip: cached_lookup_rows[ip] for ip in ips if ip in cached_lookup_rows},
+            "cache_rows_by_ip": {ip: cached_cache_rows[ip] for ip in ips if ip in cached_cache_rows},
+        }
+
+    lookup_rows_by_ip, lookup_row_count, ok_count, error_count = scan_coordinate_lookup_csv(
+        coordinate_lookup_csv_path(),
+        ips,
+    )
+    missing_ips = {ip for ip in ips if ip not in lookup_rows_by_ip}
+    cache_rows_by_ip = load_coordinate_cache_rows_for_ips(missing_ips)
+
+    _COORDINATE_RECORD_CACHE.update(
+        {
+            "signature": signature,
+            "source_signature": source_signature,
+            "ips": set(ips),
+            "lookup_rows_by_ip": lookup_rows_by_ip,
+            "cache_rows_by_ip": cache_rows_by_ip,
+        }
+    )
+    _COORDINATE_CACHE.update(
+        {
+            "signature": coordinate_source_signature(),
+            "source_files": coordinate_source_files_payload(coordinate_source_paths()),
+            "lookup_row_count": lookup_row_count,
+            "lookup_error_count": error_count,
+            "lookup_ok_count": ok_count,
+        }
+    )
+    return _COORDINATE_RECORD_CACHE
 
 
 def build_hierarchy(headers: list[str]) -> list[str]:
@@ -820,7 +1000,15 @@ def build_view(filters: dict[str, str], geo_filter: dict[str, object] | None = N
     geo_rows = apply_geo_filter(rows, resolved_geo_filter)
     matching_rows = [row for row in geo_rows if row_matches(row, valid_filters)]
     map_points, map_point_count, mapped_ip_count = build_map_points(rows)
-    refined_map_points, refined_map_point_count, refined_mapped_ip_count = build_map_points(matching_rows)
+    if resolved_geo_filter:
+        refined_map_points, refined_map_point_count, refined_mapped_ip_count = build_map_points(
+            matching_rows,
+            include_records=True,
+        )
+    else:
+        refined_map_points = []
+        refined_map_point_count = 0
+        refined_mapped_ip_count = 0
     coordinate_dataset = get_coordinate_dataset()
 
     return {
@@ -1023,7 +1211,11 @@ def write_mapped_ips_export(filters: dict[str, str], geo_filter: dict[str, objec
     resolved_geo_filter = resolve_geo_filter(rows, geo_filter)
     geo_rows = apply_geo_filter(rows, resolved_geo_filter)
     matching_rows = [row for row in geo_rows if row_matches(row, valid_filters)]
-    map_points, _point_count, _mapped_ip_count = build_map_points(matching_rows, limit=None)
+    map_points, _point_count, _mapped_ip_count = build_map_points(
+        matching_rows,
+        limit=None,
+        include_records=True,
+    )
 
     QUICK_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
@@ -1216,11 +1408,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Serve the cybersecurity runbook visualizer.")
     parser.add_argument("--bind", default="127.0.0.1", help="Host or IP address to bind to.")
     parser.add_argument("--port", type=int, default=8010, help="Port to listen on.")
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=RUNBOOK_OUTPUTS_DIR,
+        help="Runbook output directory containing csv/, jsonl/, and optional coords/ subdirectories.",
+    )
     return parser
 
 
 def main() -> None:
     args = build_parser().parse_args()
+    configure_runbook_outputs(args.output_dir)
     handler = partial(VisualizerHandler, directory=str(VISUALIZER_DIR))
     server = ThreadingHTTPServer((args.bind, args.port), handler)
 

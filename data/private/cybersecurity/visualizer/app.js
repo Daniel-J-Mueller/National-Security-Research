@@ -163,6 +163,7 @@ async function loadAll() {
   setStatus("Loading runbook shard metadata...");
   try {
     state.manifest = await fetchJson(API_MANIFEST);
+    renderMetrics();
     await loadView();
   } catch (error) {
     setStatus(`Could not load visualizer data: ${error.message}`);
@@ -423,6 +424,7 @@ function renderRefinedMap() {
 
   state.refinedMapBounds = bounds;
   elements.refinedMapSummary.textContent = buildExpandedMapSummary(point, serverDots);
+  renderMapDetail(point);
   zoomMapToBounds(state.refinedMap, state.refinedMapBounds);
 }
 
@@ -460,6 +462,9 @@ function selectedExpandedPoint() {
   }
   const view = state.view || {};
   const candidates = [];
+  if (Array.isArray(view.refined_map_points)) {
+    candidates.push(...view.refined_map_points);
+  }
   if (state.selectedMapPoint) {
     candidates.push(state.selectedMapPoint);
   }
