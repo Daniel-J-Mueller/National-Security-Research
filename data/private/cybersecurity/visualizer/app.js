@@ -3,6 +3,7 @@ const API_MANIFEST = "/api/manifest";
 const API_EXPORT = "/api/export";
 const API_OPTIONS = "/api/options";
 const API_ROWS = "/api/rows";
+const API_MAP_CHUNKS = "/api/map-chunks";
 const ANY_VALUE = "__RUNBOOK_ANY__";
 const MAP_HEIGHT_STORAGE_KEY = "runbook-flow-visualizer-map-height";
 const REFINED_MAP_HEIGHT_STORAGE_KEY = "runbook-flow-visualizer-refined-map-height";
@@ -27,6 +28,10 @@ const state = {
   selectedMapPoint: null,
   currentMapBounds: [],
   refinedMapBounds: [],
+  mapChunkRequestId: 0,
+  mapChunkLoadTimer: null,
+  mapChunkInitialized: false,
+  mapChunkPayload: null,
   mapResizeStartY: 0,
   mapResizeStartHeight: 0,
   mapResizeElement: null,
@@ -177,10 +182,9 @@ async function loadView() {
   try {
     state.view = await fetchJson(url);
     state.filters = { ...state.view.filters };
-    state.geoSelection = normalizeGeoSelection(state.view.geo_filter, state.geoSelection);
     state.selectedMapKey = state.geoSelection ? state.geoSelection.key : "";
     render();
-    setStatus("Ready.");
+    setStatus(buildReadyStatus());
   } catch (error) {
     setStatus(`Could not update view: ${error.message}`);
   }
@@ -209,9 +213,35 @@ function renderMetrics() {
   const manifest = state.manifest || {};
   elements.sourceFormat.textContent = uppercase(view.source_format || manifest.source_format || "-");
   elements.shardCount.textContent = numberFormatter.format((view.shards || manifest.shards || []).length);
-  elements.totalRows.textContent = numberFormatter.format(view.total_rows || manifest.total_rows || 0);
-  elements.matchingRows.textContent = numberFormatter.format(view.matching_count || 0);
+  elements.totalRows.textContent = numberFormatter.format(view.known_ip_count || manifest.known_ip_count || 0);
+  elements.matchingRows.textContent = numberFormatter.format(view.matching_known_ip_count || 0);
   elements.outputDir.textContent = manifest.output_dir || "-";
+}
+
+function buildReadyStatus() {
+  const progress = state.manifest?.pipeline_progress || {};
+  if (!progress.status) {
+    return "Ready.";
+  }
+  if (progress.status !== "ok") {
+    return `Ready. Pipeline progress state is ${progress.status}.`;
+  }
+  const phase = displayValue(progress.phase || "unknown");
+  const targetsDone = Number(progress.processed_targets || 0);
+  const targetsTotal = Number(progress.selected_targets || 0);
+  if (targetsTotal) {
+    const targetPercent = Number(progress.target_percent || 0).toFixed(2);
+    const skippedRanges = Number(progress.skipped_redundant_ranges || 0);
+    const skippedText = skippedRanges ? ` ${numberFormatter.format(skippedRanges)} redundant ranges skipped.` : "";
+    return `Ready. Pipeline ${phase}: ${numberFormatter.format(targetsDone)}/${numberFormatter.format(targetsTotal)} expanded IP targets (${targetPercent}%).${skippedText}`;
+  }
+  const rangesDone = numberFormatter.format(progress.processed_ranges || 0);
+  const rangesTotal = numberFormatter.format(progress.selected_ranges || 0);
+  const addressesDone = numberFormatter.format(progress.processed_addresses || 0);
+  const addressesTotal = numberFormatter.format(progress.selected_addresses || 0);
+  const rangePercent = Number(progress.range_percent || 0).toFixed(2);
+  const addressPercent = Number(progress.address_percent || 0).toFixed(2);
+  return `Ready. Pipeline ${phase}: ${rangesDone}/${rangesTotal} range targets (${rangePercent}%), ${addressesDone}/${addressesTotal} addresses covered (${addressPercent}%).`;
 }
 
 function renderMapControls() {
@@ -228,6 +258,14 @@ function buildMaps() {
 
   state.map = createMap(elements.map).setView([39.5, -98.35], 1);
   state.markerLayer = L.layerGroup().addTo(state.map);
+  state.map.on(
+    "moveend zoomend",
+    debounce(() => {
+      if ((state.view && state.view.map_chunked) || (state.manifest && state.manifest.map_chunked)) {
+        scheduleMapChunkLoad();
+      }
+    }, 120),
+  );
 
   state.refinedMap = createMap(elements.refinedMap).setView([39.5, -98.35], 1);
   state.refinedMarkerLayer = L.layerGroup().addTo(state.refinedMap);
@@ -357,6 +395,11 @@ function renderTopMap() {
   const points = Array.isArray(view.map_points) ? view.map_points : [];
   const totalPoints = view.map_point_count || points.length;
 
+  if (view.map_chunked || state.manifest?.map_chunked) {
+    renderChunkedTopMap(view, totalPoints);
+    return;
+  }
+
   if (!state.map || !state.markerLayer) {
     elements.mapSummary.textContent = `${numberFormatter.format(totalPoints)} mapped IPs.`;
     return;
@@ -395,6 +438,93 @@ function renderTopMap() {
   state.selectedMapPoint = selectedPoint;
   renderMapDetail(selectedPoint);
   zoomMapToBounds(state.map, state.currentMapBounds);
+}
+
+function renderChunkedTopMap(view, totalPoints) {
+  if (!state.map || !state.markerLayer) {
+    elements.mapSummary.textContent = `${numberFormatter.format(totalPoints)} map cells.`;
+    return;
+  }
+
+  elements.mapSummary.textContent = buildMapSummary(view, totalPoints);
+  if (!state.mapChunkInitialized) {
+    state.mapChunkInitialized = true;
+    state.markerLayer.clearLayers();
+    state.map.setView([20, 0], 2);
+    state.currentMapBounds = [];
+    state.selectedMapPoint = null;
+    renderMapDetail(null);
+  }
+  scheduleMapChunkLoad(0);
+}
+
+function scheduleMapChunkLoad(delay = 120) {
+  if (!state.map || !state.markerLayer) {
+    return;
+  }
+  if (state.mapChunkLoadTimer) {
+    clearTimeout(state.mapChunkLoadTimer);
+  }
+  state.mapChunkLoadTimer = setTimeout(() => {
+    state.mapChunkLoadTimer = null;
+    void loadMapChunks();
+  }, delay);
+}
+
+async function loadMapChunks() {
+  if (!state.map || !state.markerLayer) {
+    return;
+  }
+  const bounds = state.map.getBounds();
+  const params = new URLSearchParams();
+  params.set("zoom", String(state.map.getZoom()));
+  params.set("north", String(bounds.getNorth()));
+  params.set("south", String(bounds.getSouth()));
+  params.set("east", String(bounds.getEast()));
+  params.set("west", String(bounds.getWest()));
+
+  const requestId = state.mapChunkRequestId + 1;
+  state.mapChunkRequestId = requestId;
+  try {
+    const payload = await fetchJson(`${API_MAP_CHUNKS}?${params.toString()}`);
+    if (requestId !== state.mapChunkRequestId) {
+      return;
+    }
+    state.mapChunkPayload = payload;
+    renderMapChunkPayload(payload);
+  } catch (error) {
+    if (requestId === state.mapChunkRequestId) {
+      elements.mapSummary.textContent = `Could not load map chunks: ${error.message}`;
+    }
+  }
+}
+
+function renderMapChunkPayload(payload) {
+  const points = Array.isArray(payload.points) ? payload.points : [];
+  const validPoints = validMapPoints(points);
+  state.markerLayer.clearLayers();
+
+  const bounds = [];
+  let selectedPoint = null;
+  validPoints.forEach((point) => {
+    const selected = Boolean(state.geoSelection && state.geoSelection.key === point.key);
+    const marker = buildPointMarker(point, selected ? "selected" : "top");
+    marker.bindPopup(buildMapPopup(point), { maxWidth: 340 });
+    marker.on("click", () => {
+      selectMapRegion(point);
+      marker.openPopup();
+    });
+    marker.addTo(state.markerLayer);
+    bounds.push([point.latNumber, point.longNumber]);
+    if (selected) {
+      selectedPoint = point;
+    }
+  });
+
+  state.currentMapBounds = bounds;
+  state.selectedMapPoint = selectedPoint || state.selectedMapPoint;
+  renderMapDetail(selectedPoint || state.selectedMapPoint || null);
+  elements.mapSummary.textContent = buildChunkedMapSummary(payload, validPoints.length);
 }
 
 function renderRefinedMap() {
@@ -522,6 +652,16 @@ function buildMapSummary(view, totalPoints) {
   return `${pointText} map points, ${mappedIps} mapped IPs. Lookups: ${ok} ok, ${errors} not mapped.${geoText}`;
 }
 
+function buildChunkedMapSummary(payload, visiblePoints) {
+  const visible = numberFormatter.format(visiblePoints);
+  const total = numberFormatter.format(payload.total_points || 0);
+  const mappedIps = numberFormatter.format(payload.mapped_ip_count || 0);
+  const chunks = numberFormatter.format(payload.loaded_chunks || 0);
+  const level = payload.level ? ` at ${payload.level}` : "";
+  const geoText = state.geoSelection ? ` Region filter: ${state.geoSelection.label || state.geoSelection.key}.` : "";
+  return `${visible}/${total} visible map cells${level}, ${mappedIps} mapped IPs represented, ${chunks} chunks loaded.${geoText}`;
+}
+
 function buildRefinedMapSummary(view, totalPoints) {
   const mappedIps = numberFormatter.format(view.refined_mapped_ip_count || 0);
   if (!totalPoints) {
@@ -534,6 +674,9 @@ function buildExpandedMapSummary(point, dots) {
   const ipCount = dots.length || Number(point.ip_count || 0);
   if (!ipCount) {
     return "Selected coordinate has no cached server records.";
+  }
+  if (!dots.length) {
+    return `${numberFormatter.format(ipCount)} servers represented by this map cell. Zoom in for finer coordinate chunks.`;
   }
   const pingValues = dots.map((dot) => dot.pingMs).filter((value) => Number.isFinite(value));
   if (!pingValues.length) {
@@ -563,6 +706,8 @@ function selectMapRegion(point) {
     key: point.key,
     label: locationLabel(point) || point.key,
     ips,
+    bbox: point.bbox || null,
+    level: point.level || "",
   };
   state.selectedMapKey = point.key;
   state.selectedMapPoint = point;
@@ -721,9 +866,10 @@ function renderColumn(column, index) {
   title.textContent = labelFor(field);
   const detail = document.createElement("p");
   const selectedText = hasSelectedValue ? `, selected ${displayValue(selectedValue)}` : "";
-  detail.textContent = `${numberFormatter.format(column.unsearched_total_options || column.total_options || 0)} values from ${numberFormatter.format(
-    column.matched_rows || 0,
-  )} rows${selectedText}`;
+  const ipText = numberFormatter.format(column.matched_ip_count || 0);
+  const rowText = numberFormatter.format(column.matched_rows || 0);
+  const valueText = numberFormatter.format(column.unsearched_total_options || column.total_options || 0);
+  detail.textContent = `${ipText} known IPs represented (${rowText} rows, ${valueText} values)${selectedText}`;
   header.append(title, detail);
 
   const selectWrap = document.createElement("div");
@@ -777,6 +923,8 @@ function renderColumn(column, index) {
     search: state.columnSearches[field] || "",
     offset: 0,
     total: 0,
+    matchedIpCount: Number(column.matched_ip_count || 0),
+    matchedRows: Number(column.matched_rows || 0),
     hasMore: false,
     loading: false,
   };
@@ -801,6 +949,8 @@ function applyColumnPayload(page, payload, reset) {
   const options = Array.isArray(payload.options) ? payload.options : [];
   page.offset = Number(payload.offset || 0);
   page.total = Number(payload.total_options || 0);
+  page.matchedIpCount = Number(payload.matched_ip_count || page.matchedIpCount || 0);
+  page.matchedRows = Number(payload.matched_rows || page.matchedRows || 0);
   page.hasMore = Boolean(payload.has_more);
   appendColumnOptions(page, options);
   page.offset += options.length;
@@ -827,7 +977,10 @@ function appendColumnOptions(page, options) {
 
     const count = document.createElement("span");
     count.className = "option-count";
-    count.textContent = numberFormatter.format(option.count);
+    const ipCount = Number(option.ip_count || option.count || 0);
+    const rowCount = Number(option.row_count || option.count || 0);
+    count.textContent = numberFormatter.format(ipCount);
+    count.title = `${numberFormatter.format(ipCount)} IPs, ${numberFormatter.format(rowCount)} rows`;
 
     button.append(value, count);
     page.list.appendChild(button);
@@ -851,11 +1004,15 @@ function renderColumnFooter(page) {
   if (page.loading) {
     status.textContent = "Loading more values...";
   } else if (!page.total) {
-    status.textContent = "No values to show.";
+    status.textContent = `${numberFormatter.format(page.matchedIpCount || 0)} known IPs represented. No values to show.`;
   } else if (page.hasMore) {
-    status.textContent = `Showing ${numberFormatter.format(page.offset)} of ${numberFormatter.format(page.total)} values. Scroll for more.`;
+    status.textContent = `${numberFormatter.format(page.matchedIpCount || 0)} known IPs represented (${numberFormatter.format(
+      page.matchedRows || 0,
+    )} rows). Showing ${numberFormatter.format(page.offset)} of ${numberFormatter.format(page.total)} values. Scroll for more.`;
   } else {
-    status.textContent = `Showing all ${numberFormatter.format(page.total)} values.`;
+    status.textContent = `${numberFormatter.format(page.matchedIpCount || 0)} known IPs represented (${numberFormatter.format(
+      page.matchedRows || 0,
+    )} rows). Showing all ${numberFormatter.format(page.total)} values.`;
   }
   page.footer.appendChild(status);
 }
@@ -1074,7 +1231,7 @@ async function exportColumn(field) {
     const payload = await fetchJson(API_EXPORT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ field, filters: state.filters, geo_filter: geoFilterPayload() }),
+      body: JSON.stringify({ field, filters: state.filters, geo_filter: {} }),
     });
     setStatus(`Wrote ${numberFormatter.format(payload.rows_written)} rows to ${payload.path}.`);
   } catch (error) {
@@ -1088,7 +1245,7 @@ async function exportRows() {
     const payload = await fetchJson(API_EXPORT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "rows", filters: state.filters, geo_filter: geoFilterPayload() }),
+      body: JSON.stringify({ type: "rows", filters: state.filters, geo_filter: {} }),
     });
     setStatus(`Wrote ${numberFormatter.format(payload.rows_written)} rows to ${payload.path}.`);
   } catch (error) {
@@ -1102,7 +1259,7 @@ async function exportMappedIps() {
     const payload = await fetchJson(API_EXPORT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "mapped-ips", filters: state.filters, geo_filter: geoFilterPayload() }),
+      body: JSON.stringify({ type: "mapped-ips", filters: state.filters, geo_filter: {} }),
     });
     setStatus(`Wrote ${numberFormatter.format(payload.rows_written)} mapped IP rows to ${payload.path}.`);
   } catch (error) {
@@ -1113,7 +1270,7 @@ async function exportMappedIps() {
 function viewParams() {
   const params = new URLSearchParams();
   params.set("filters", JSON.stringify(state.filters));
-  params.set("geo_filter", JSON.stringify(geoFilterPayload()));
+  params.set("geo_filter", "{}");
   return params;
 }
 
@@ -1122,11 +1279,18 @@ function geoFilterPayload() {
     return {};
   }
   const ips = Array.isArray(state.geoSelection.ips) ? state.geoSelection.ips : [];
-  return {
+  const payload = {
     key: state.geoSelection.key || "",
     label: state.geoSelection.label || "",
     ips: state.geoSelection.key && ips.length > 200 ? [] : ips,
   };
+  if (state.geoSelection.bbox) {
+    payload.bbox = state.geoSelection.bbox;
+  }
+  if (state.geoSelection.level) {
+    payload.level = state.geoSelection.level;
+  }
+  return payload;
 }
 
 function normalizeGeoSelection(payload, previous) {
@@ -1136,10 +1300,12 @@ function normalizeGeoSelection(payload, previous) {
   const ips = Array.isArray(payload.ips) ? payload.ips.map(String).filter(Boolean) : [];
   const key = String(payload.key || previous?.key || "");
   const label = String(payload.label || previous?.label || key);
-  if (!key && !ips.length) {
+  const bbox = payload.bbox && typeof payload.bbox === "object" ? payload.bbox : previous?.bbox || null;
+  const level = String(payload.level || previous?.level || "");
+  if (!key && !ips.length && !bbox) {
     return null;
   }
-  return { key, label, ips };
+  return { key, label, ips, bbox, level };
 }
 
 function setListMessage(list, message) {

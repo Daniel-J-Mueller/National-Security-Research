@@ -39,6 +39,8 @@ COORDINATE_LOOKUPS_CSV_ALIASES = (
 COORDINATE_CACHE_DIR = RUNBOOK_OUTPUTS_DIR / "coords" / "cache"
 COORDINATE_CACHE_SHARD_GLOB = "ip-coordinate-cache-*.json"
 LEGACY_COORDINATE_CACHE_JSON = RUNBOOK_OUTPUTS_DIR / "ip-coordinate-cache.json"
+MAP_CHUNKS_DIR = RUNBOOK_OUTPUTS_DIR / "map-chunks"
+MAP_CHUNK_MANIFEST_JSON = MAP_CHUNKS_DIR / "manifest.json"
 
 PREFERRED_HIERARCHY = [
     "protocol",
@@ -59,6 +61,7 @@ PREFERRED_HIERARCHY = [
 OPTION_PAGE_SIZE = 120
 ROW_PAGE_SIZE = 250
 MAP_POINT_LIMIT = 10000
+MAP_CHUNK_RESPONSE_POINT_LIMIT = 500
 
 _DATA_CACHE: dict[str, object] = {
     "signature": None,
@@ -82,6 +85,11 @@ _COORDINATE_RECORD_CACHE: dict[str, object] = {
     "ips": set(),
     "lookup_rows_by_ip": {},
     "cache_rows_by_ip": {},
+}
+
+_MAP_CHUNK_MANIFEST_CACHE: dict[str, object] = {
+    "signature": None,
+    "manifest": {},
 }
 
 
@@ -113,6 +121,12 @@ def reset_caches() -> None:
             "cache_rows_by_ip": {},
         }
     )
+    _MAP_CHUNK_MANIFEST_CACHE.update(
+        {
+            "signature": None,
+            "manifest": {},
+        }
+    )
 
 
 def configure_runbook_outputs(output_dir: Path) -> None:
@@ -125,6 +139,8 @@ def configure_runbook_outputs(output_dir: Path) -> None:
     global COORDINATE_LOOKUPS_CSV_ALIASES
     global COORDINATE_CACHE_DIR
     global LEGACY_COORDINATE_CACHE_JSON
+    global MAP_CHUNKS_DIR
+    global MAP_CHUNK_MANIFEST_JSON
 
     RUNBOOK_OUTPUTS_DIR = output_dir.resolve()
     CSV_DIR = RUNBOOK_OUTPUTS_DIR / "csv"
@@ -139,6 +155,8 @@ def configure_runbook_outputs(output_dir: Path) -> None:
     )
     COORDINATE_CACHE_DIR = RUNBOOK_OUTPUTS_DIR / "coords" / "cache"
     LEGACY_COORDINATE_CACHE_JSON = RUNBOOK_OUTPUTS_DIR / "ip-coordinate-cache.json"
+    MAP_CHUNKS_DIR = RUNBOOK_OUTPUTS_DIR / "map-chunks"
+    MAP_CHUNK_MANIFEST_JSON = MAP_CHUNKS_DIR / "manifest.json"
     reset_caches()
 
 
@@ -150,6 +168,290 @@ def source_files() -> tuple[str, list[Path]]:
 
     jsonl_files = sorted(JSONL_DIR.glob("*.jsonl")) if JSONL_DIR.exists() else []
     return "jsonl", jsonl_files
+
+
+def pipeline_state_path() -> Path:
+    return RUNBOOK_OUTPUTS_DIR / "state" / "pipeline-state.json"
+
+
+def pipeline_progress() -> dict[str, object]:
+    path = pipeline_state_path()
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"state_path": str(path.relative_to(ROOT)), "status": "unreadable"}
+    if not isinstance(payload, dict):
+        return {"state_path": str(path.relative_to(ROOT)), "status": "invalid"}
+
+    selected_ranges = int(payload.get("selected_ranges") or 0)
+    processed_ranges = int(payload.get("processed_ranges") or 0)
+    selected_addresses = int(payload.get("selected_addresses") or 0)
+    processed_addresses = int(payload.get("processed_addresses") or 0)
+    selected_targets = int(payload.get("selected_targets") or selected_addresses or 0)
+    processed_targets = int(payload.get("processed_targets") or processed_addresses or 0)
+    range_percent = (processed_ranges / selected_ranges * 100) if selected_ranges else 0.0
+    address_percent = (processed_addresses / selected_addresses * 100) if selected_addresses else 0.0
+    target_percent = (processed_targets / selected_targets * 100) if selected_targets else 0.0
+    current_chunk = payload.get("current_chunk")
+    current_chunk_number = ""
+    if isinstance(current_chunk, dict):
+        current_chunk_number = str(current_chunk.get("chunk_number") or "")
+
+    return {
+        "state_path": str(path.relative_to(ROOT)),
+        "status": "ok",
+        "phase": payload.get("phase", ""),
+        "pipeline_kind": payload.get("pipeline_kind", ""),
+        "chunks_completed": payload.get("chunks_completed", 0),
+        "current_chunk": current_chunk_number,
+        "processed_ranges": processed_ranges,
+        "selected_ranges": selected_ranges,
+        "range_percent": round(range_percent, 2),
+        "processed_addresses": processed_addresses,
+        "selected_addresses": selected_addresses,
+        "address_percent": round(address_percent, 2),
+        "processed_targets": processed_targets,
+        "selected_targets": selected_targets,
+        "target_percent": round(target_percent, 2),
+        "skipped_redundant_ranges": payload.get("skipped_redundant_ranges", 0),
+        "skipped_redundant_addresses": payload.get("skipped_redundant_addresses", 0),
+        "updated_at": payload.get("updated_at", ""),
+    }
+
+
+def map_chunk_manifest() -> dict[str, object]:
+    path = MAP_CHUNK_MANIFEST_JSON
+    if not path.exists():
+        return {}
+
+    signature = file_signature([path])
+    if _MAP_CHUNK_MANIFEST_CACHE["signature"] == signature:
+        manifest = _MAP_CHUNK_MANIFEST_CACHE["manifest"]
+        return manifest if isinstance(manifest, dict) else {}
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+
+    _MAP_CHUNK_MANIFEST_CACHE.update({"signature": signature, "manifest": payload})
+    return payload
+
+
+def organized_map_available() -> bool:
+    manifest = map_chunk_manifest()
+    return bool(manifest.get("levels"))
+
+
+def map_level_items(manifest: dict[str, object]) -> list[dict[str, object]]:
+    levels = manifest.get("levels", {})
+    if not isinstance(levels, dict):
+        return []
+    items = [value for value in levels.values() if isinstance(value, dict)]
+    return sorted(items, key=lambda item: float(item.get("cell_degrees") or 999.0), reverse=True)
+
+
+def organized_map_counts(manifest: dict[str, object]) -> tuple[int, int]:
+    levels = map_level_items(manifest)
+    finest = levels[-1] if levels else {}
+    return int(finest.get("point_count") or 0), int(manifest.get("mapped_ip_count") or 0)
+
+
+def parse_float_query(value: object, default: float) -> float:
+    try:
+        parsed = float(normalize_value(value))
+    except ValueError:
+        return default
+    return parsed
+
+
+def normalized_bounds(
+    north: object = 90.0,
+    south: object = -90.0,
+    east: object = 180.0,
+    west: object = -180.0,
+) -> dict[str, float]:
+    north_value = min(90.0, max(-90.0, parse_float_query(north, 90.0)))
+    south_value = min(90.0, max(-90.0, parse_float_query(south, -90.0)))
+    east_value = min(180.0, max(-180.0, parse_float_query(east, 180.0)))
+    west_value = min(180.0, max(-180.0, parse_float_query(west, -180.0)))
+    if south_value > north_value:
+        south_value, north_value = north_value, south_value
+    if west_value > east_value:
+        west_value, east_value = east_value, west_value
+    return {
+        "north": north_value,
+        "south": south_value,
+        "east": east_value,
+        "west": west_value,
+    }
+
+
+def bbox_from_payload(payload: object) -> dict[str, float]:
+    if not isinstance(payload, dict):
+        return {}
+    raw_bbox = payload.get("bbox", payload)
+    if not isinstance(raw_bbox, dict):
+        return {}
+    bounds = normalized_bounds(
+        raw_bbox.get("north", 90.0),
+        raw_bbox.get("south", -90.0),
+        raw_bbox.get("east", 180.0),
+        raw_bbox.get("west", -180.0),
+    )
+    if bounds == {"north": 90.0, "south": -90.0, "east": 180.0, "west": -180.0}:
+        return {}
+    return bounds
+
+
+def bbox_intersects(a: dict[str, float], b: dict[str, float]) -> bool:
+    return not (
+        a["east"] < b["west"]
+        or a["west"] > b["east"]
+        or a["north"] < b["south"]
+        or a["south"] > b["north"]
+    )
+
+
+def bbox_contains_coordinates(bounds: dict[str, float], latitude: float, longitude: float) -> bool:
+    return (
+        bounds["south"] <= latitude <= bounds["north"]
+        and bounds["west"] <= longitude <= bounds["east"]
+    )
+
+
+def chunk_bbox(chunk: dict[str, object]) -> dict[str, float]:
+    bbox = chunk.get("bbox", {})
+    return bbox_from_payload(bbox) or normalized_bounds()
+
+
+def level_for_zoom(levels: list[dict[str, object]], zoom: float) -> dict[str, object]:
+    if not levels:
+        return {}
+    selected = levels[0]
+    for level in levels:
+        min_zoom = float(level.get("min_zoom") or 0)
+        max_zoom = float(level.get("max_zoom") or 0)
+        if min_zoom <= zoom <= max_zoom:
+            return level
+        if zoom >= min_zoom:
+            selected = level
+    return selected
+
+
+def candidate_chunks(level: dict[str, object], bounds: dict[str, float]) -> list[dict[str, object]]:
+    chunks = level.get("chunks", [])
+    if not isinstance(chunks, list):
+        return []
+    return [
+        chunk
+        for chunk in chunks
+        if isinstance(chunk, dict) and bbox_intersects(chunk_bbox(chunk), bounds)
+    ]
+
+
+def choose_chunk_level(
+    levels: list[dict[str, object]],
+    zoom: float,
+    bounds: dict[str, float],
+) -> tuple[dict[str, object], list[dict[str, object]], int]:
+    if not levels:
+        return {}, [], 0
+    best_level = levels[0]
+    best_chunks = candidate_chunks(best_level, bounds)
+    best_estimate = sum(int(chunk.get("point_count") or 0) for chunk in best_chunks)
+    for level in reversed(levels):
+        chunks = candidate_chunks(level, bounds)
+        estimate = sum(int(chunk.get("point_count") or 0) for chunk in chunks)
+        if estimate <= MAP_CHUNK_RESPONSE_POINT_LIMIT:
+            return level, chunks, estimate
+        if estimate < best_estimate:
+            best_level = level
+            best_chunks = chunks
+            best_estimate = estimate
+    return best_level, best_chunks, best_estimate
+
+
+def safe_chunk_path(relative_path: object) -> Path | None:
+    text = normalize_value(relative_path).strip()
+    if not text:
+        return None
+    candidate = RUNBOOK_OUTPUTS_DIR / Path(text)
+    try:
+        resolved = candidate.resolve()
+        root = RUNBOOK_OUTPUTS_DIR.resolve()
+        if resolved != root and root not in resolved.parents:
+            return None
+    except OSError:
+        return None
+    return candidate
+
+
+def build_map_chunks_payload(zoom: float, bounds: dict[str, float]) -> dict[str, object]:
+    manifest = map_chunk_manifest()
+    levels = map_level_items(manifest)
+    if not levels:
+        dataset = get_dataset()
+        rows = dataset["rows"]  # type: ignore[assignment]
+        assert isinstance(rows, list)
+        points, point_count, mapped_ip_count = build_map_points(rows)
+        return {
+            "ok": True,
+            "chunked": False,
+            "level": "",
+            "zoom": zoom,
+            "bounds": bounds,
+            "points": points,
+            "loaded_chunks": 0,
+            "candidate_points": point_count,
+            "total_points": point_count,
+            "mapped_ip_count": mapped_ip_count,
+            "map_point_limit": MAP_POINT_LIMIT,
+        }
+
+    level, chunks, estimate = choose_chunk_level(levels, zoom, bounds)
+    level_id = normalize_value(level.get("id"))
+    points: list[dict[str, object]] = []
+    loaded_chunks = 0
+    for chunk in chunks:
+        path = safe_chunk_path(chunk.get("path"))
+        if path is None or not path.exists():
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        chunk_points = payload.get("points", [])
+        if not isinstance(chunk_points, list):
+            continue
+        for point in chunk_points:
+            if not isinstance(point, dict):
+                continue
+            point_bounds = bbox_from_payload(point.get("bbox", {})) or bounds
+            if bbox_intersects(point_bounds, bounds):
+                points.append(point)
+        loaded_chunks += 1
+
+    total_points = int(level.get("point_count") or len(points))
+    return {
+        "ok": True,
+        "chunked": True,
+        "level": level_id,
+        "zoom": zoom,
+        "bounds": bounds,
+        "points": points,
+        "loaded_chunks": loaded_chunks,
+        "candidate_points": estimate,
+        "total_points": total_points,
+        "mapped_ip_count": int(manifest.get("mapped_ip_count") or 0),
+        "map_point_limit": MAP_CHUNK_RESPONSE_POINT_LIMIT,
+    }
 
 
 def file_signature(paths: list[Path]) -> tuple[tuple[str, int, int], ...]:
@@ -837,14 +1139,21 @@ def parse_geo_filter(raw_value: object) -> dict[str, object]:
 
     key = normalize_value(payload.get("key")).strip()
     label = normalize_value(payload.get("label")).strip()
-    if not key and not ips:
+    bbox = bbox_from_payload(payload.get("bbox", {}))
+    level = normalize_value(payload.get("level")).strip()
+    if not key and not ips and not bbox:
         return {}
 
-    return {
+    result: dict[str, object] = {
         "key": key,
         "label": label,
         "ips": ips,
     }
+    if bbox:
+        result["bbox"] = bbox
+    if level:
+        result["level"] = level
+    return result
 
 
 def parse_positive_int(value: object, default: int, maximum: int) -> int:
@@ -866,6 +1175,10 @@ def row_matches_text(row: dict[str, str], headers: list[str], search: str) -> bo
     return any(needle in normalize_value(row.get(field, "")).casefold() for field in headers)
 
 
+def known_ips(rows: list[dict[str, str]]) -> set[str]:
+    return {ip for row in rows if (ip := row_ip(row))}
+
+
 def prefix_filters(field: str, hierarchy: list[str], filters: dict[str, str]) -> dict[str, str]:
     if field not in hierarchy:
         return dict(filters)
@@ -885,6 +1198,23 @@ def resolve_geo_filter(rows: list[dict[str, str]], geo_filter: dict[str, object]
     ips = [as_ip(value) for value in geo_filter.get("ips", []) if as_ip(value)]
     key = normalize_value(geo_filter.get("key")).strip()
     label = normalize_value(geo_filter.get("label")).strip()
+    bbox = bbox_from_payload(geo_filter.get("bbox", {}))
+    level = normalize_value(geo_filter.get("level")).strip()
+
+    if bbox:
+        unique_ips: list[str] = []
+        for ip in ips:
+            if ip and ip not in unique_ips:
+                unique_ips.append(ip)
+        result: dict[str, object] = {
+            "key": key,
+            "label": label or key,
+            "ips": unique_ips,
+            "bbox": bbox,
+        }
+        if level:
+            result["level"] = level
+        return result
 
     if not ips and key:
         map_points, _point_count, _mapped_ip_count = build_map_points(rows, limit=None)
@@ -921,12 +1251,40 @@ def resolve_geo_filter(rows: list[dict[str, str]], geo_filter: dict[str, object]
     }
 
 
+def ips_within_bbox(rows: list[dict[str, str]], bounds: dict[str, float]) -> set[str]:
+    row_ips = {row_ip(row) for row in rows if row_ip(row)}
+    if not row_ips:
+        return set()
+    coordinate_records = get_coordinate_records_for_ips(row_ips)
+    lookup_rows_by_ip = coordinate_records["lookup_rows_by_ip"]  # type: ignore[assignment]
+    cache_rows_by_ip = coordinate_records["cache_rows_by_ip"]  # type: ignore[assignment]
+    assert isinstance(lookup_rows_by_ip, dict)
+    assert isinstance(cache_rows_by_ip, dict)
+
+    allowed: set[str] = set()
+    for ip in row_ips:
+        row = lookup_rows_by_ip.get(ip) or cache_rows_by_ip.get(ip) or {}
+        if not isinstance(row, dict):
+            continue
+        coordinates = row_coordinates({str(key): normalize_value(value) for key, value in row.items()})
+        if coordinates is None:
+            continue
+        latitude, longitude, _lat_text, _long_text = coordinates
+        if bbox_contains_coordinates(bounds, latitude, longitude):
+            allowed.add(ip)
+    return allowed
+
+
 def apply_geo_filter(rows: list[dict[str, str]], geo_filter: dict[str, object]) -> list[dict[str, str]]:
     if not geo_filter:
         return rows
     ips = {as_ip(value) for value in geo_filter.get("ips", []) if as_ip(value)}
+    bbox = bbox_from_payload(geo_filter.get("bbox", {}))
+    if bbox:
+        bbox_ips = ips_within_bbox(rows, bbox)
+        ips = ips.intersection(bbox_ips) if ips else bbox_ips
     if not ips:
-        return rows
+        return []
     return [row for row in rows if row_ip(row) in ips]
 
 
@@ -949,15 +1307,23 @@ def build_field_options(
     search: str = "",
 ) -> dict[str, object]:
     active_filters = prefix_filters(field, hierarchy, filters)
-    counter: Counter[str] = Counter()
+    row_counter: Counter[str] = Counter()
+    ip_counter: dict[str, set[str]] = {}
     matched_rows = 0
+    matched_ips: set[str] = set()
 
     for row in rows:
         if row_matches(row, active_filters):
             matched_rows += 1
-            counter[row.get(field, "")] += 1
+            ip = row_ip(row)
+            if ip:
+                matched_ips.add(ip)
+            value = row.get(field, "")
+            row_counter[value] += 1
+            if ip:
+                ip_counter.setdefault(value, set()).add(ip)
 
-    items = sorted(counter.items(), key=option_sort_key)
+    items = sorted(row_counter.items(), key=option_sort_key)
     if search.strip():
         needle = search.strip().casefold()
         items = [
@@ -976,14 +1342,23 @@ def build_field_options(
         "field": field,
         "active_filters": active_filters,
         "matched_rows": matched_rows,
+        "matched_ip_count": len(matched_ips),
         "total_options": total_options,
-        "unsearched_total_options": len(counter),
+        "unsearched_total_options": len(row_counter),
         "offset": offset,
         "limit": limit,
         "has_more": truncated,
         "search": search,
         "truncated": truncated,
-        "options": [{"value": value, "count": count} for value, count in items],
+        "options": [
+            {
+                "value": value,
+                "count": len(ip_counter.get(value, set())) or row_count,
+                "ip_count": len(ip_counter.get(value, set())),
+                "row_count": row_count,
+            }
+            for value, row_count in items
+        ],
     }
 
 
@@ -997,10 +1372,19 @@ def build_view(filters: dict[str, str], geo_filter: dict[str, object] | None = N
     hierarchy = build_hierarchy(headers)
     valid_filters = {field: value for field, value in filters.items() if field in headers}
     resolved_geo_filter = resolve_geo_filter(rows, geo_filter or {})
-    geo_rows = apply_geo_filter(rows, resolved_geo_filter)
+    geo_rows = rows
     matching_rows = [row for row in geo_rows if row_matches(row, valid_filters)]
-    map_points, map_point_count, mapped_ip_count = build_map_points(rows)
-    if resolved_geo_filter:
+    known_ip_count = len(known_ips(rows))
+    matching_known_ip_count = len(known_ips(matching_rows))
+    chunk_manifest = map_chunk_manifest()
+    if organized_map_available():
+        map_points = []
+        map_point_count, mapped_ip_count = organized_map_counts(chunk_manifest)
+        map_chunked = True
+    else:
+        map_points, map_point_count, mapped_ip_count = build_map_points(rows)
+        map_chunked = False
+    if resolved_geo_filter and not map_chunked:
         refined_map_points, refined_map_point_count, refined_mapped_ip_count = build_map_points(
             matching_rows,
             include_records=True,
@@ -1020,6 +1404,8 @@ def build_view(filters: dict[str, str], geo_filter: dict[str, object] | None = N
         "geo_filter": resolved_geo_filter,
         "total_rows": len(rows),
         "matching_count": len(matching_rows),
+        "known_ip_count": known_ip_count,
+        "matching_known_ip_count": matching_known_ip_count,
         "row_page_size": ROW_PAGE_SIZE,
         "rows": matching_rows[:ROW_PAGE_SIZE],
         "rows_has_more": len(matching_rows) > ROW_PAGE_SIZE,
@@ -1027,6 +1413,7 @@ def build_view(filters: dict[str, str], geo_filter: dict[str, object] | None = N
         "map_point_count": map_point_count,
         "mapped_ip_count": mapped_ip_count,
         "map_point_limit": MAP_POINT_LIMIT,
+        "map_chunked": map_chunked,
         "refined_map_points": refined_map_points,
         "refined_map_point_count": refined_map_point_count,
         "refined_mapped_ip_count": refined_mapped_ip_count,
@@ -1061,7 +1448,7 @@ def build_options_page(
 
     valid_filters = {filter_field: value for filter_field, value in filters.items() if filter_field in headers}
     resolved_geo_filter = resolve_geo_filter(rows, geo_filter)
-    geo_rows = apply_geo_filter(rows, resolved_geo_filter)
+    geo_rows = rows
     result = build_field_options(geo_rows, field, valid_filters, hierarchy, limit, offset, search)
     result["geo_filter"] = resolved_geo_filter
     return result
@@ -1082,7 +1469,7 @@ def build_rows_page(
 
     valid_filters = {field: value for field, value in filters.items() if field in headers}
     resolved_geo_filter = resolve_geo_filter(rows, geo_filter)
-    geo_rows = apply_geo_filter(rows, resolved_geo_filter)
+    geo_rows = rows
     matching_rows = [row for row in geo_rows if row_matches(row, valid_filters)]
     searched_rows = [row for row in matching_rows if row_matches_text(row, headers, search)]
     total_rows = len(searched_rows)
@@ -1098,6 +1485,7 @@ def build_rows_page(
         "offset": offset,
         "limit": limit,
         "matching_count": len(matching_rows),
+        "matching_known_ip_count": len(known_ips(matching_rows)),
         "total_rows": total_rows,
         "rows": page_rows,
         "has_more": offset + len(page_rows) < total_rows,
@@ -1123,7 +1511,7 @@ def write_column_export(field: str, filters: dict[str, str], geo_filter: dict[st
     QUICK_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     resolved_geo_filter = resolve_geo_filter(rows, geo_filter)
-    geo_rows = apply_geo_filter(rows, resolved_geo_filter)
+    geo_rows = rows
     valid_filters = {filter_field: value for filter_field, value in filters.items() if filter_field in headers}
     column = build_field_options(geo_rows, field, valid_filters, hierarchy, limit=None)
     timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
@@ -1180,7 +1568,7 @@ def write_rows_export(filters: dict[str, str], geo_filter: dict[str, object]) ->
 
     valid_filters = {field: value for field, value in filters.items() if field in headers}
     resolved_geo_filter = resolve_geo_filter(rows, geo_filter)
-    geo_rows = apply_geo_filter(rows, resolved_geo_filter)
+    geo_rows = rows
     matching_rows = [row for row in geo_rows if row_matches(row, valid_filters)]
     QUICK_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -1209,7 +1597,7 @@ def write_mapped_ips_export(filters: dict[str, str], geo_filter: dict[str, objec
 
     valid_filters = {field: value for field, value in filters.items() if field in headers}
     resolved_geo_filter = resolve_geo_filter(rows, geo_filter)
-    geo_rows = apply_geo_filter(rows, resolved_geo_filter)
+    geo_rows = rows
     matching_rows = [row for row in geo_rows if row_matches(row, valid_filters)]
     map_points, _point_count, _mapped_ip_count = build_map_points(
         matching_rows,
@@ -1310,6 +1698,20 @@ class VisualizerHandler(SimpleHTTPRequestHandler):
             geo_filter = parse_geo_filter(query.get("geo_filter", [""])[0])
             self.respond_json(build_view(filters, geo_filter))
             return
+        if parsed.path == "/api/map-chunks":
+            query = parse_qs(parsed.query)
+            try:
+                zoom = parse_float_query(query.get("zoom", ["2"])[0], 2.0)
+                bounds = normalized_bounds(
+                    query.get("north", ["90"])[0],
+                    query.get("south", ["-90"])[0],
+                    query.get("east", ["180"])[0],
+                    query.get("west", ["-180"])[0],
+                )
+                self.respond_json(build_map_chunks_payload(zoom, bounds))
+            except Exception as exc:  # noqa: BLE001 - surfaced to the local UI.
+                self.respond_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+            return
         if parsed.path == "/api/options":
             query = parse_qs(parsed.query)
             try:
@@ -1318,7 +1720,7 @@ class VisualizerHandler(SimpleHTTPRequestHandler):
                 field = normalize_value(query.get("field", [""])[0])
                 search = normalize_value(query.get("search", [""])[0])
                 offset = parse_positive_int(query.get("offset", ["0"])[0], 0, 1_000_000)
-                limit = parse_positive_int(query.get("limit", [str(OPTION_PAGE_SIZE)])[0], OPTION_PAGE_SIZE, 1000)
+                limit = parse_positive_int(query.get("limit", [str(OPTION_PAGE_SIZE)])[0], OPTION_PAGE_SIZE, 100_000)
                 self.respond_json(build_options_page(field, filters, geo_filter, search, offset, limit))
             except Exception as exc:  # noqa: BLE001 - surfaced to the local UI.
                 self.respond_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
@@ -1330,7 +1732,7 @@ class VisualizerHandler(SimpleHTTPRequestHandler):
                 geo_filter = parse_geo_filter(query.get("geo_filter", [""])[0])
                 search = normalize_value(query.get("search", [""])[0])
                 offset = parse_positive_int(query.get("offset", ["0"])[0], 0, 1_000_000)
-                limit = parse_positive_int(query.get("limit", [str(ROW_PAGE_SIZE)])[0], ROW_PAGE_SIZE, 1000)
+                limit = parse_positive_int(query.get("limit", [str(ROW_PAGE_SIZE)])[0], ROW_PAGE_SIZE, 100_000)
                 self.respond_json(build_rows_page(filters, geo_filter, search, offset, limit))
             except Exception as exc:  # noqa: BLE001 - surfaced to the local UI.
                 self.respond_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
@@ -1375,7 +1777,13 @@ class VisualizerHandler(SimpleHTTPRequestHandler):
         rows = dataset["rows"]  # type: ignore[assignment]
         assert isinstance(headers, list)
         assert isinstance(rows, list)
-        _map_points, map_point_count, mapped_ip_count = build_map_points(rows)
+        chunk_manifest = map_chunk_manifest()
+        if organized_map_available():
+            map_point_count, mapped_ip_count = organized_map_counts(chunk_manifest)
+            map_chunked = True
+        else:
+            _map_points, map_point_count, mapped_ip_count = build_map_points(rows)
+            map_chunked = False
         coordinate_dataset = get_coordinate_dataset()
         return {
             "source_format": dataset["source_format"],
@@ -1383,13 +1791,17 @@ class VisualizerHandler(SimpleHTTPRequestHandler):
             "headers": headers,
             "hierarchy": build_hierarchy(headers),
             "total_rows": len(rows),
+            "known_ip_count": len(known_ips(rows)),
             "map_point_count": map_point_count,
             "mapped_ip_count": mapped_ip_count,
             "map_point_limit": MAP_POINT_LIMIT,
+            "map_chunked": map_chunked,
+            "map_chunk_response_point_limit": MAP_CHUNK_RESPONSE_POINT_LIMIT,
             "coordinate_lookup_count": coordinate_dataset["lookup_row_count"],
             "coordinate_lookup_ok_count": coordinate_dataset["lookup_ok_count"],
             "coordinate_lookup_error_count": coordinate_dataset["lookup_error_count"],
             "coordinate_sources": coordinate_dataset["source_files"],
+            "pipeline_progress": pipeline_progress(),
             "output_dir": str(QUICK_OUTPUT_DIR.relative_to(ROOT)),
             "csv_dir": str(CSV_DIR.relative_to(ROOT)),
             "jsonl_dir": str(JSONL_DIR.relative_to(ROOT)),
