@@ -1,0 +1,36 @@
+{
+  "185.11.124.0": {
+    "asn": "AS19551 Incapsula Inc",
+    "city": "Mexico City",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Mexico",
+    "error": "",
+    "ip": "185.11.124.0",
+    "lat": "19.4326",
+    "long": "-99.1332",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "Thales Imperva EU4",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Mexico City",
+    "target_labels": "chunk-3-range-10888-185.11.124.0-185.11.124.255"
+  },
+  "198.143.61.0": {
+    "asn": "AS19551 Incapsula Inc",
+    "city": "Chicago",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "198.143.61.0",
+    "lat": "41.8781",
+    "long": "-87.6298",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Incapsula Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Illinois",
+    "target_labels": "chunk-3-range-15150-198.143.61.0-198.144.119.255"
+  }
+}

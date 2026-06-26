@@ -1,0 +1,36 @@
+{
+  "107.154.120.0": {
+    "asn": "AS19551 Incapsula Inc",
+    "city": "London",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United Kingdom",
+    "error": "",
+    "ip": "107.154.120.0",
+    "lat": "51.5072",
+    "long": "-0.127586",
+    "looked_up_at": "2026-06-26T16:20:46+00:00",
+    "org": "Incapsula Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "England",
+    "target_labels": "chunk-3-range-01421-107.154.120.0-107.154.120.255"
+  },
+  "158.222.112.0": {
+    "asn": "AS19084 ColoUp",
+    "city": "Buffalo",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "158.222.112.0",
+    "lat": "42.8864",
+    "long": "-78.8781",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "ColoUp",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "New York",
+    "target_labels": "chunk-3-range-06638-158.222.112.0-158.222.255.255"
+  }
+}

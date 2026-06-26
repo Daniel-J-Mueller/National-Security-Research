@@ -14,7 +14,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Illinois",
-    "target_labels": "nirsoft-us-range-02399-130.197.0.0-130.197.255.255"
+    "target_labels": "02399-130.197.0.0-130.197.255.255"
   },
   "130.41.0.0": {
     "asn": "AS394089 Google LLC",
@@ -31,7 +31,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Tamil Nadu",
-    "target_labels": "nirsoft-us-range-02315-130.41.0.0-130.41.255.255"
+    "target_labels": "02315-130.41.0.0-130.41.255.255"
   },
   "131.12.0.0": {
     "asn": "AS56 United States Department of Defense (DoD)",
@@ -48,7 +48,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Alabama",
-    "target_labels": "nirsoft-us-range-02433-131.12.0.0-131.12.255.255"
+    "target_labels": "02433-131.12.0.0-131.12.255.255"
   },
   "131.252.0.0": {
     "asn": "AS6366 Portland State University",
@@ -65,7 +65,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Oregon",
-    "target_labels": "nirsoft-us-range-02591-131.252.0.0-131.252.255.255"
+    "target_labels": "02591-131.252.0.0-131.252.255.255"
   },
   "132.201.0.0": {
     "asn": "",
@@ -82,7 +82,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Indiana",
-    "target_labels": "nirsoft-us-range-02708-132.201.0.0-132.201.255.255"
+    "target_labels": "02708-132.201.0.0-132.201.255.255"
   },
   "132.4.0.0": {
     "asn": "AS56 United States Department of Defense (DoD)",
@@ -99,7 +99,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Alabama",
-    "target_labels": "nirsoft-us-range-02596-132.4.0.0-132.4.255.255"
+    "target_labels": "02596-132.4.0.0-132.4.255.255"
   },
   "135.128.0.0": {
     "asn": "",
@@ -116,7 +116,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Georgia",
-    "target_labels": "nirsoft-us-range-02943-135.128.0.0-135.128.255.255"
+    "target_labels": "02943-135.128.0.0-135.128.255.255"
   },
   "137.110.0.0": {
     "asn": "AS7377 University of California, San Diego",
@@ -133,7 +133,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "California",
-    "target_labels": "nirsoft-us-range-03164-137.110.0.0-137.110.255.255"
+    "target_labels": "03164-137.110.0.0-137.110.255.255"
   },
   "138.92.0.0": {
     "asn": "AS11482 Canisius College",
@@ -150,7 +150,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "New York",
-    "target_labels": "nirsoft-us-range-03301-138.92.0.0-138.92.255.255"
+    "target_labels": "03301-138.92.0.0-138.92.255.255"
   },
   "141.174.0.0": {
     "asn": "",
@@ -167,7 +167,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "California",
-    "target_labels": "nirsoft-us-range-03680-141.174.0.0-141.174.255.255"
+    "target_labels": "03680-141.174.0.0-141.174.255.255"
   },
   "146.139.0.0": {
     "asn": "AS683 Argonne National Laboratory",
@@ -184,7 +184,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Illinois",
-    "target_labels": "nirsoft-us-range-04104-146.139.0.0-146.139.255.255"
+    "target_labels": "04104-146.139.0.0-146.139.255.255"
   },
   "147.254.0.0": {
     "asn": "AS749 United States Department of Defense (DoD)",
@@ -201,7 +201,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Ohio",
-    "target_labels": "nirsoft-us-range-04287-147.254.0.0-147.254.255.255"
+    "target_labels": "04287-147.254.0.0-147.254.255.255"
   },
   "153.9.0.0": {
     "asn": "AS13548 College of Charleston",
@@ -218,7 +218,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "South Carolina",
-    "target_labels": "nirsoft-us-range-04798-153.9.0.0-153.9.255.255"
+    "target_labels": "04798-153.9.0.0-153.9.255.255"
   },
   "156.132.0.0": {
     "asn": "",
@@ -235,7 +235,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "District of Columbia",
-    "target_labels": "nirsoft-us-range-05162-156.132.0.0-156.132.255.255"
+    "target_labels": "05162-156.132.0.0-156.132.255.255"
   },
   "156.37.0.0": {
     "asn": "",
@@ -252,7 +252,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Oregon",
-    "target_labels": "nirsoft-us-range-05095-156.37.0.0-156.37.255.255"
+    "target_labels": "05095-156.37.0.0-156.37.255.255"
   },
   "160.137.0.0": {
     "asn": "AS721 United States Department of Defense (DoD)",
@@ -269,7 +269,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Ohio",
-    "target_labels": "nirsoft-us-range-05592-160.137.0.0-160.137.255.255"
+    "target_labels": "05592-160.137.0.0-160.137.255.255"
   },
   "165.135.0.0": {
     "asn": "",
@@ -286,7 +286,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "District of Columbia",
-    "target_labels": "nirsoft-us-range-06092-165.135.0.0-165.135.255.255"
+    "target_labels": "06092-165.135.0.0-165.135.255.255"
   },
   "167.238.0.0": {
     "asn": "AS36092 Centene Corporation",
@@ -303,7 +303,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Missouri",
-    "target_labels": "nirsoft-us-range-06385-167.238.0.0-167.238.255.255"
+    "target_labels": "06385-167.238.0.0-167.238.255.255"
   },
   "170.195.0.0": {
     "asn": "AS17052 Target Corporation",
@@ -320,7 +320,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Minnesota",
-    "target_labels": "nirsoft-us-range-06723-170.195.0.0-170.195.255.255"
+    "target_labels": "06723-170.195.0.0-170.195.255.255"
   },
   "198.220.0.0": {
     "asn": "AS721 United States Department of Defense (DoD)",
@@ -337,7 +337,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Alabama",
-    "target_labels": "nirsoft-us-range-07032-198.220.0.0-198.220.255.255"
+    "target_labels": "07032-198.220.0.0-198.220.255.255"
   },
   "206.135.0.0": {
     "asn": "AS28458 IENTC S DE RL DE CV",
@@ -354,7 +354,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Guanajuato",
-    "target_labels": "nirsoft-us-range-07323-206.135.0.0-206.135.255.255"
+    "target_labels": "07323-206.135.0.0-206.135.255.255"
   },
   "57.178.0.0": {
     "asn": "",
@@ -371,6 +371,6 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "District of Columbia",
-    "target_labels": "nirsoft-us-range-01064-57.178.0.0-57.179.255.255"
+    "target_labels": "01064-57.178.0.0-57.179.255.255"
   }
 }

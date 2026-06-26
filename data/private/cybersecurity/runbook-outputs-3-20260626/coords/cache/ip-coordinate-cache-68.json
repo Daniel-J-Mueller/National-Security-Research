@@ -1,0 +1,36 @@
+{
+  "13.32.108.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "New York",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "13.32.108.0",
+    "lat": "40.7126",
+    "long": "-74.0066",
+    "looked_up_at": "2026-06-26T16:20:46+00:00",
+    "org": "AWS CloudFront (GLOBAL)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "New York",
+    "target_labels": "chunk-3-range-02330-13.32.108.0-13.32.109.255"
+  },
+  "205.150.255.0": {
+    "asn": "AS701 Verizon Business",
+    "city": "Albany",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "205.150.255.0",
+    "lat": "42.6526",
+    "long": "-73.7562",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Verizon Business",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "New York",
+    "target_labels": "chunk-3-range-17427-205.150.255.0-205.151.0.255"
+  }
+}

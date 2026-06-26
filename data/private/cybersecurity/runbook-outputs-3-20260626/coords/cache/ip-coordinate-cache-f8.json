@@ -1,0 +1,53 @@
+{
+  "107.154.100.0": {
+    "asn": "AS19551 Incapsula Inc",
+    "city": "Chiyoda City",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Japan",
+    "error": "",
+    "ip": "107.154.100.0",
+    "lat": "35.694",
+    "long": "139.754",
+    "looked_up_at": "2026-06-26T16:20:46+00:00",
+    "org": "Incapsula Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Tokyo",
+    "target_labels": "chunk-3-range-01420-107.154.100.0-107.154.111.255"
+  },
+  "161.0.68.0": {
+    "asn": "AS263821 Soluciones Favorables",
+    "city": "Secaucus",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "161.0.68.0",
+    "lat": "40.8492",
+    "long": "-73.9735",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "IT Corp",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "New Jersey",
+    "target_labels": "chunk-3-range-07274-161.0.68.0-161.0.71.255"
+  },
+  "178.212.76.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "Chiyoda City",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Japan",
+    "error": "",
+    "ip": "178.212.76.0",
+    "lat": "35.694",
+    "long": "139.754",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "xTom GmbH",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Tokyo",
+    "target_labels": "chunk-3-range-10356-178.212.76.0-178.212.77.255"
+  }
+}

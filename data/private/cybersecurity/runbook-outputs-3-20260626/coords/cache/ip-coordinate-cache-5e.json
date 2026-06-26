@@ -1,0 +1,19 @@
+{
+  "169.46.135.0": {
+    "asn": "AS36351 IBM Cloud",
+    "city": "Dallas",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "169.46.135.0",
+    "lat": "32.9363",
+    "long": "-96.8231",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "SoftLayer Technologies, Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Texas",
+    "target_labels": "chunk-3-range-08693-169.46.135.0-169.46.136.255"
+  }
+}

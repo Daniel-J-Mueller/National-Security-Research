@@ -1,0 +1,53 @@
+{
+  "151.101.248.0": {
+    "asn": "AS54113 Fastly, Inc.",
+    "city": "S\u00e3o Paulo",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Brazil",
+    "error": "",
+    "ip": "151.101.248.0",
+    "lat": "-23.5475",
+    "long": "-46.6361",
+    "looked_up_at": "2026-06-26T16:20:47+00:00",
+    "org": "Fastly, Inc.",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "S\u00e3o Paulo",
+    "target_labels": "chunk-3-range-05190-151.101.248.0-151.101.251.255"
+  },
+  "54.192.128.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "Miami",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "54.192.128.0",
+    "lat": "25.7617",
+    "long": "-80.1918",
+    "looked_up_at": "2026-06-26T16:20:52+00:00",
+    "org": "AWS CloudFront (GLOBAL)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Florida",
+    "target_labels": "chunk-3-range-26332-54.192.128.0-54.192.131.255"
+  },
+  "93.115.102.0": {
+    "asn": "AS209242 Cloudflare London, LLC",
+    "city": "Levallois-Perret",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "France",
+    "error": "",
+    "ip": "93.115.102.0",
+    "lat": "48.9007",
+    "long": "2.28493",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "Doctolib-Inetnum",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "\u00cele-de-France",
+    "target_labels": "chunk-3-range-32163-93.115.102.0-93.115.103.255"
+  }
+}

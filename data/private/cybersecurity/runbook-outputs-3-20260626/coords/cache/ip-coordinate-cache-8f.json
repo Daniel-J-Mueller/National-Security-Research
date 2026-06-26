@@ -1,0 +1,36 @@
+{
+  "107.154.249.0": {
+    "asn": "AS19551 Incapsula Inc",
+    "city": "New York",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "107.154.249.0",
+    "lat": "40.7128",
+    "long": "-74.006",
+    "looked_up_at": "2026-06-26T16:20:46+00:00",
+    "org": "Incapsula Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "New York",
+    "target_labels": "chunk-3-range-01443-107.154.249.0-107.155.3.255"
+  },
+  "137.118.0.0": {
+    "asn": "AS14618 Amazon.com, Inc.",
+    "city": "Raleigh",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "137.118.0.0",
+    "lat": "35.7987",
+    "long": "-78.7283",
+    "looked_up_at": "2026-06-26T16:20:47+00:00",
+    "org": "NeoNova Network Services, LLC",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "North Carolina",
+    "target_labels": "chunk-3-range-03072-137.118.0.0-137.119.255.255"
+  }
+}

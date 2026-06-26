@@ -1,0 +1,53 @@
+{
+  "20.157.147.0": {
+    "asn": "AS8069 Microsoft Corporation",
+    "city": "Boydton",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "20.157.147.0",
+    "lat": "36.677696",
+    "long": "-78.37471",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Microsoft Azure Cloud - Storage (eastus)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Virginia",
+    "target_labels": "chunk-3-range-16324-20.157.147.0-20.157.147.255"
+  },
+  "23.211.141.0": {
+    "asn": "AS20940 Akamai International B.V.",
+    "city": "Auckland",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "New Zealand",
+    "error": "",
+    "ip": "23.211.141.0",
+    "lat": "-36.8509",
+    "long": "174.764",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "Akamai Technologies, Inc.",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Auckland",
+    "target_labels": "chunk-3-range-21895-23.211.141.0-23.211.141.255"
+  },
+  "35.220.0.0": {
+    "asn": "AS396982 Google LLC",
+    "city": "North Charleston",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "35.220.0.0",
+    "lat": "32.8771",
+    "long": "-80.013",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "Google Cloud (us-east1)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "South Carolina",
+    "target_labels": "chunk-3-range-23258-35.220.0.0-35.220.15.255"
+  }
+}

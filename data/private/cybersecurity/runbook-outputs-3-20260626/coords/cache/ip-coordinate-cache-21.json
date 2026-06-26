@@ -1,0 +1,36 @@
+{
+  "23.229.77.0": {
+    "asn": "AS55286 B2 Net Solutions Inc.",
+    "city": "Montreal",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Canada",
+    "error": "",
+    "ip": "23.229.77.0",
+    "lat": "45.4666",
+    "long": "-73.5414",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "ServerMania Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Quebec",
+    "target_labels": "chunk-3-range-22084-23.229.77.0-23.230.41.255"
+  },
+  "85.254.7.0": {
+    "asn": "AS210906 UAB \"Bite Lietuva\"",
+    "city": "Los Angeles",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "85.254.7.0",
+    "lat": "34.0544",
+    "long": "-118.244",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "Bite code",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "California",
+    "target_labels": "chunk-3-range-31467-85.254.7.0-85.254.15.255"
+  }
+}

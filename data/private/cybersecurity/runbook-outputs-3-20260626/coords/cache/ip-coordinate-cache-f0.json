@@ -1,0 +1,36 @@
+{
+  "51.5.22.0": {
+    "asn": "AS8075 Microsoft Corporation",
+    "city": "Singapore",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Singapore",
+    "error": "",
+    "ip": "51.5.22.0",
+    "lat": "1.283",
+    "long": "103.833",
+    "looked_up_at": "2026-06-26T16:20:52+00:00",
+    "org": "Microsoft Azure Cloud (southeastasia)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Central Singapore",
+    "target_labels": "chunk-3-range-25901-51.5.22.0-51.5.26.255"
+  },
+  "94.50.17.0": {
+    "asn": "AS12389 PJSC Rostelecom",
+    "city": "Chelyabinsk",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Russia",
+    "error": "",
+    "ip": "94.50.17.0",
+    "lat": "55.1553",
+    "long": "61.4313",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "Dynamic distribution IPs for broadband services",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Chelyabinsk Oblast",
+    "target_labels": "chunk-3-range-32337-94.50.17.0-94.50.17.255"
+  }
+}

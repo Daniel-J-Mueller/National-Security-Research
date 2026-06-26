@@ -1,0 +1,36 @@
+{
+  "16.12.42.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "Kuala Lumpur",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Malaysia",
+    "error": "",
+    "ip": "16.12.42.0",
+    "lat": "3.1408",
+    "long": "101.6852",
+    "looked_up_at": "2026-06-26T16:20:47+00:00",
+    "org": "Amazon.com, Inc.",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Kuala Lumpur",
+    "target_labels": "chunk-3-range-07022-16.12.42.0-16.12.47.255"
+  },
+  "83.147.255.0": {
+    "asn": "AS203273 NetCrafters OU",
+    "city": "Frankfurt am Main",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Germany",
+    "error": "",
+    "ip": "83.147.255.0",
+    "lat": "50.1169",
+    "long": "8.6837",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "NetCrafters OU",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Hesse",
+    "target_labels": "chunk-3-range-31285-83.147.255.0-83.147.255.255"
+  }
+}

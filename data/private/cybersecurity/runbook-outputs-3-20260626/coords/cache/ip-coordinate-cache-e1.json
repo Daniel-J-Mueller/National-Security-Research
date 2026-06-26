@@ -1,0 +1,36 @@
+{
+  "192.5.255.0": {
+    "asn": "AS62973 Catawba Valley Medical Center",
+    "city": "Hickory",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "192.5.255.0",
+    "lat": "35.7138",
+    "long": "-81.2675",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "Catawba Valley Medical Center",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "North Carolina",
+    "target_labels": "chunk-3-range-13537-192.5.255.0-192.5.255.255"
+  },
+  "91.197.200.0": {
+    "asn": "AS9009 M247 Europe SRL",
+    "city": "Frankfurt am Main",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Germany",
+    "error": "",
+    "ip": "91.197.200.0",
+    "lat": "50.1109",
+    "long": "8.68213",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "M247 LTD",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Hesse",
+    "target_labels": "chunk-3-range-31908-91.197.200.0-91.197.200.255"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "1.1.1.0": {
+    "asn": "AS13335 Cloudflare, Inc.",
+    "city": "South Brisbane",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Australia",
+    "error": "",
+    "ip": "1.1.1.0",
+    "lat": "-27.4766",
+    "long": "153.0166",
+    "looked_up_at": "2026-06-26T16:20:46+00:00",
+    "org": "APNIC and Cloudflare DNS Resolver project",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Queensland",
+    "target_labels": "chunk-3-range-00002-1.1.1.0-1.1.1.255"
+  },
+  "178.157.71.0": {
+    "asn": "AS9009 M247 Europe SRL",
+    "city": "Frankfurt am Main",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Germany",
+    "error": "",
+    "ip": "178.157.71.0",
+    "lat": "50.1109",
+    "long": "8.68213",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "IT Network Key",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Hesse",
+    "target_labels": "chunk-3-range-10329-178.157.71.0-178.157.71.255"
+  }
+}

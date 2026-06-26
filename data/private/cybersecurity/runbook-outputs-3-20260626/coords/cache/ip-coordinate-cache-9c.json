@@ -1,0 +1,53 @@
+{
+  "169.46.214.0": {
+    "asn": "AS36351 IBM Cloud",
+    "city": "Dallas",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "169.46.214.0",
+    "lat": "32.9363",
+    "long": "-96.8231",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "SoftLayer Technologies, Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Texas",
+    "target_labels": "chunk-3-range-08709-169.46.214.0-169.46.220.255"
+  },
+  "20.157.57.0": {
+    "asn": "AS8069 Microsoft Corporation",
+    "city": "San Francisco",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "20.157.57.0",
+    "lat": "37.783",
+    "long": "-122.417",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Microsoft Azure Cloud - Storage (westus)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "California",
+    "target_labels": "chunk-3-range-16349-20.157.57.0-20.157.59.255"
+  },
+  "204.246.188.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "Atlanta",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "204.246.188.0",
+    "lat": "33.7488",
+    "long": "-84.3877",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "AWS CloudFront (GLOBAL)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Georgia",
+    "target_labels": "chunk-3-range-17205-204.246.188.0-204.249.99.255"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "15.220.196.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "Ashburn",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "15.220.196.0",
+    "lat": "39.0438",
+    "long": "-77.4874",
+    "looked_up_at": "2026-06-26T16:20:47+00:00",
+    "org": "AWS EC2 (us-east-1)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Virginia",
+    "target_labels": "chunk-3-range-05036-15.220.196.0-15.220.215.255"
+  },
+  "199.232.166.0": {
+    "asn": "AS54113 Fastly, Inc.",
+    "city": "Bangkok",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Thailand",
+    "error": "",
+    "ip": "199.232.166.0",
+    "lat": "13.7551",
+    "long": "100.5057",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Fastly, Inc.",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Bangkok",
+    "target_labels": "chunk-3-range-15894-199.232.166.0-199.232.171.255"
+  },
+  "51.5.53.0": {
+    "asn": "AS8075 Microsoft Corporation",
+    "city": "Zurich",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Switzerland",
+    "error": "",
+    "ip": "51.5.53.0",
+    "lat": "47.37204",
+    "long": "8.54094",
+    "looked_up_at": "2026-06-26T16:20:52+00:00",
+    "org": "Microsoft Azure Cloud (switzerlandnorth)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Zurich",
+    "target_labels": "chunk-3-range-25903-51.5.53.0-51.5.54.255"
+  }
+}

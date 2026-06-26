@@ -1,0 +1,53 @@
+{
+  "154.59.108.0": {
+    "asn": "AS174 Cogent Communications, LLC",
+    "city": "Halfweg",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "The Netherlands",
+    "error": "",
+    "ip": "154.59.108.0",
+    "lat": "52.5245",
+    "long": "4.922",
+    "looked_up_at": "2026-06-26T16:20:47+00:00",
+    "org": "Tiger Roar Technology Pte Ltd",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "North Holland",
+    "target_labels": "chunk-3-range-05893-154.59.108.0-154.59.111.255"
+  },
+  "185.92.175.0": {
+    "asn": "AS9009 M247 Europe SRL",
+    "city": "Frankfurt am Main",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Germany",
+    "error": "",
+    "ip": "185.92.175.0",
+    "lat": "50.1109",
+    "long": "8.68213",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "M247 LTD",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Hesse",
+    "target_labels": "chunk-3-range-11792-185.92.175.0-185.92.175.255"
+  },
+  "45.60.121.0": {
+    "asn": "AS19551 Incapsula Inc",
+    "city": "New York",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "45.60.121.0",
+    "lat": "40.7128",
+    "long": "-74.006",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "Incapsula Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "New York",
+    "target_labels": "chunk-3-range-25041-45.60.121.0-45.60.122.255"
+  }
+}

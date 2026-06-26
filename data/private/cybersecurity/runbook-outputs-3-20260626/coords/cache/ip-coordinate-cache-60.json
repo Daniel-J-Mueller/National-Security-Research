@@ -1,0 +1,53 @@
+{
+  "20.157.43.0": {
+    "asn": "AS8069 Microsoft Corporation",
+    "city": "San Antonio",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "20.157.43.0",
+    "lat": "29.4167",
+    "long": "-98.5",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Microsoft Azure Cloud - Storage (southcentralus)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Texas",
+    "target_labels": "chunk-3-range-16346-20.157.43.0-20.157.43.255"
+  },
+  "23.138.208.0": {
+    "asn": "AS26695 Bogle Networks LLC",
+    "city": "Woodinville",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "23.138.208.0",
+    "lat": "47.7678",
+    "long": "-122.1187",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Bogle Networks LLC",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Washington",
+    "target_labels": "chunk-3-range-20953-23.138.208.0-23.138.208.255"
+  },
+  "23.209.44.0": {
+    "asn": "AS20940 Akamai International B.V.",
+    "city": "Bengaluru",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "India",
+    "error": "",
+    "ip": "23.209.44.0",
+    "lat": "12.9716",
+    "long": "77.5946",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "Akamai Technologies, Inc.",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Karnataka",
+    "target_labels": "chunk-3-range-21872-23.209.44.0-23.209.44.255"
+  }
+}

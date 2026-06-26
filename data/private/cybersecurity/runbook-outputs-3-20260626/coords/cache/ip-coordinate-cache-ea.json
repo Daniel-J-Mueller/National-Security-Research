@@ -1,0 +1,53 @@
+{
+  "169.46.202.0": {
+    "asn": "AS36351 IBM Cloud",
+    "city": "Dallas",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "169.46.202.0",
+    "lat": "32.9363",
+    "long": "-96.8231",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "SoftLayer Technologies, Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Texas",
+    "target_labels": "chunk-3-range-08706-169.46.202.0-169.46.203.255"
+  },
+  "185.199.108.0": {
+    "asn": "AS54113 Fastly, Inc.",
+    "city": "San Francisco",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "185.199.108.0",
+    "lat": "37.7823",
+    "long": "-122.391",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "GitHub, Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "California",
+    "target_labels": "chunk-3-range-11280-185.199.108.0-185.199.111.255"
+  },
+  "40.123.160.0": {
+    "asn": "AS8075 Microsoft Corporation",
+    "city": "Quincy",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "40.123.160.0",
+    "lat": "47.233",
+    "long": "-119.852",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "Microsoft Azure Cloud (westus2)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Washington",
+    "target_labels": "chunk-3-range-23911-40.123.160.0-40.123.172.255"
+  }
+}

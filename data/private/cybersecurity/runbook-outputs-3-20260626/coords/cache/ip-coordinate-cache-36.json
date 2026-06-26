@@ -1,0 +1,36 @@
+{
+  "104.238.46.0": {
+    "asn": "AS51809 BRSK Limited",
+    "city": "City of London",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United Kingdom",
+    "error": "",
+    "ip": "104.238.46.0",
+    "lat": "51.5164",
+    "long": "-0.093",
+    "looked_up_at": "2026-06-26T16:20:46+00:00",
+    "org": "HostRoyale LLC",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "England",
+    "target_labels": "chunk-3-range-00984-104.238.46.0-104.238.50.255"
+  },
+  "185.234.214.0": {
+    "asn": "AS44421 Yifu Yu",
+    "city": "Amsterdam",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "The Netherlands",
+    "error": "",
+    "ip": "185.234.214.0",
+    "lat": "52.3676",
+    "long": "4.90414",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "Eve ANYCAST",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "North Holland",
+    "target_labels": "chunk-3-range-11494-185.234.214.0-185.234.215.255"
+  }
+}

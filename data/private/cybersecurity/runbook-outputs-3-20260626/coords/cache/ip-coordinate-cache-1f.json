@@ -1,0 +1,36 @@
+{
+  "13.33.64.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "New York",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "13.33.64.0",
+    "lat": "40.7126",
+    "long": "-74.0066",
+    "looked_up_at": "2026-06-26T16:20:47+00:00",
+    "org": "AWS CloudFront (GLOBAL)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "New York",
+    "target_labels": "chunk-3-range-02368-13.33.64.0-13.33.75.255"
+  },
+  "169.45.245.0": {
+    "asn": "AS36351 IBM Cloud",
+    "city": "Ashburn",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "169.45.245.0",
+    "lat": "39.018",
+    "long": "-77.539",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "SoftLayer Technologies, Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Virginia",
+    "target_labels": "chunk-3-range-08667-169.45.245.0-169.45.245.255"
+  }
+}

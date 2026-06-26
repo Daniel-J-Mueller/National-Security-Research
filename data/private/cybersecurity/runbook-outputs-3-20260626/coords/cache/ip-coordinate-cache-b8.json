@@ -1,0 +1,36 @@
+{
+  "185.242.242.0": {
+    "asn": "AS9009 M247 Europe SRL",
+    "city": "Frankfurt am Main",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Germany",
+    "error": "",
+    "ip": "185.242.242.0",
+    "lat": "50.1109",
+    "long": "8.68213",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "M247 LTD",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Hesse",
+    "target_labels": "chunk-3-range-11543-185.242.242.0-185.242.242.255"
+  },
+  "37.60.225.0": {
+    "asn": "AS51167 Contabo GmbH",
+    "city": "Lauterbourg",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "France",
+    "error": "",
+    "ip": "37.60.225.0",
+    "lat": "48.9742",
+    "long": "8.1851",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "Contabo GmbH",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Grand Est",
+    "target_labels": "chunk-3-range-23387-37.60.225.0-37.60.225.255"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "146.19.86.0": {
+    "asn": "AS397423 Tier.Net Technologies LLC",
+    "city": "Miami",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "146.19.86.0",
+    "lat": "25.7701",
+    "long": "-80.1928",
+    "looked_up_at": "2026-06-26T16:20:47+00:00",
+    "org": "MB \"Teorita\"",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Florida",
+    "target_labels": "chunk-3-range-04155-146.19.86.0-146.19.86.255"
+  },
+  "192.230.105.0": {
+    "asn": "AS19551 Incapsula Inc",
+    "city": "Ashburn",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "192.230.105.0",
+    "lat": "39.0438",
+    "long": "-77.4874",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "Incapsula Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Virginia",
+    "target_labels": "chunk-3-range-13180-192.230.105.0-192.230.105.255"
+  },
+  "193.36.179.0": {
+    "asn": "AS5650 Frontier Communications of America, Inc.",
+    "city": "Ashburn",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "193.36.179.0",
+    "lat": "39.0438",
+    "long": "-77.4874",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "IP Node s.r.o",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Virginia",
+    "target_labels": "chunk-3-range-14282-193.36.179.0-193.36.179.255"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "188.42.152.0": {
+    "asn": "AS7979 Servers.com, Inc.",
+    "city": "Washington",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "188.42.152.0",
+    "lat": "38.8917",
+    "long": "-77.0286",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "Servers COM Was1",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "District of Columbia",
+    "target_labels": "chunk-3-range-11927-188.42.152.0-188.42.159.255"
+  },
+  "23.236.232.0": {
+    "asn": "AS55286 B2 Net Solutions Inc.",
+    "city": "Buffalo",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "23.236.232.0",
+    "lat": "42.8943",
+    "long": "-78.8736",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "ServerMania Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "New York",
+    "target_labels": "chunk-3-range-22123-23.236.232.0-23.236.233.255"
+  }
+}

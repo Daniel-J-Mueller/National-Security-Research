@@ -1,0 +1,53 @@
+{
+  "20.45.0.0": {
+    "asn": "AS8075 Microsoft Corporation",
+    "city": "San Antonio",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "20.45.0.0",
+    "lat": "29.4167",
+    "long": "-98.5",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Microsoft Azure Cloud (southcentralus)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Texas",
+    "target_labels": "chunk-3-range-16443-20.45.0.0-20.45.63.255"
+  },
+  "23.140.200.0": {
+    "asn": "AS400742 Bro's Broadband LLC",
+    "city": "Hobbs",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "23.140.200.0",
+    "lat": "32.7267",
+    "long": "-103.1287",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Bro's Broadband LLC",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "New Mexico",
+    "target_labels": "chunk-3-range-21005-23.140.200.0-23.140.200.255"
+  },
+  "77.104.182.0": {
+    "asn": "AS13037 Zen Internet Ltd",
+    "city": "Rochdale",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United Kingdom",
+    "error": "",
+    "ip": "77.104.182.0",
+    "lat": "53.6139",
+    "long": "-2.18998",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "Zen Internet Ltd",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "England",
+    "target_labels": "chunk-3-range-30830-77.104.182.0-77.104.182.255"
+  }
+}

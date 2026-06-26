@@ -1,0 +1,53 @@
+{
+  "108.158.136.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "S\u00e3o Paulo",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Brazil",
+    "error": "",
+    "ip": "108.158.136.0",
+    "lat": "-23.5558",
+    "long": "-46.6396",
+    "looked_up_at": "2026-06-26T16:20:46+00:00",
+    "org": "AWS CloudFront (GLOBAL)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "S\u00e3o Paulo",
+    "target_labels": "chunk-3-range-01572-108.158.136.0-108.158.136.255"
+  },
+  "40.120.128.0": {
+    "asn": "AS8075 Microsoft Corporation",
+    "city": "Johor Bahru",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Malaysia",
+    "error": "",
+    "ip": "40.120.128.0",
+    "lat": "1.4926",
+    "long": "103.7413",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "Microsoft Corporation",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Johor",
+    "target_labels": "chunk-3-range-23907-40.120.128.0-40.123.127.255"
+  },
+  "51.5.13.0": {
+    "asn": "AS8075 Microsoft Corporation",
+    "city": "S\u00e3o Paulo",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Brazil",
+    "error": "",
+    "ip": "51.5.13.0",
+    "lat": "-23.55",
+    "long": "-46.633",
+    "looked_up_at": "2026-06-26T16:20:52+00:00",
+    "org": "Microsoft Azure Cloud (brazilsouth)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Sao Paulo",
+    "target_labels": "chunk-3-range-25900-51.5.13.0-51.5.20.255"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "151.101.220.0": {
+    "asn": "AS54113 Fastly, Inc.",
+    "city": "Santiago",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Chile",
+    "error": "",
+    "ip": "151.101.220.0",
+    "lat": "-33.4521",
+    "long": "-70.6536",
+    "looked_up_at": "2026-06-26T16:20:47+00:00",
+    "org": "Fastly, Inc.",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Santiago Metropolitan",
+    "target_labels": "chunk-3-range-05187-151.101.220.0-151.101.223.255"
+  },
+  "169.45.71.0": {
+    "asn": "AS36351 IBM Cloud",
+    "city": "Baton Rouge",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "169.45.71.0",
+    "lat": "30.427",
+    "long": "-91.0348",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "SoftLayer Technologies, Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Louisiana",
+    "target_labels": "chunk-3-range-08678-169.45.71.0-169.45.71.255"
+  }
+}

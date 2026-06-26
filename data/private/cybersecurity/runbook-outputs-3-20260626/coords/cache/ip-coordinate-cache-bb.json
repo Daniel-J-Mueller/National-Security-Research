@@ -1,0 +1,53 @@
+{
+  "13.32.242.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "New York",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "13.32.242.0",
+    "lat": "40.7126",
+    "long": "-74.0066",
+    "looked_up_at": "2026-06-26T16:20:46+00:00",
+    "org": "AWS CloudFront (GLOBAL)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "New York",
+    "target_labels": "chunk-3-range-02341-13.32.242.0-13.32.248.255"
+  },
+  "147.53.121.0": {
+    "asn": "AS20001 Charter Communications Inc",
+    "city": "Dallas",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "147.53.121.0",
+    "lat": "32.7767",
+    "long": "-96.797",
+    "looked_up_at": "2026-06-26T16:20:47+00:00",
+    "org": "Emeigh Investments LLC",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Texas",
+    "target_labels": "chunk-3-range-04451-147.53.121.0-147.53.126.255"
+  },
+  "157.52.126.0": {
+    "asn": "AS54113 Fastly, Inc.",
+    "city": "Riyadh",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Saudi Arabia",
+    "error": "",
+    "ip": "157.52.126.0",
+    "lat": "24.6869",
+    "long": "46.7224",
+    "looked_up_at": "2026-06-26T16:20:47+00:00",
+    "org": "Fastly, Inc.",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Riyadh Region",
+    "target_labels": "chunk-3-range-06421-157.52.126.0-157.52.219.255"
+  }
+}

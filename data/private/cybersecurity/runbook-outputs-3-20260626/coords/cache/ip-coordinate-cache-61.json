@@ -1,0 +1,53 @@
+{
+  "169.45.76.0": {
+    "asn": "AS36351 IBM Cloud",
+    "city": "Baton Rouge",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "169.45.76.0",
+    "lat": "30.427",
+    "long": "-91.0348",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "SoftLayer Technologies, Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Louisiana",
+    "target_labels": "chunk-3-range-08679-169.45.76.0-169.45.76.255"
+  },
+  "23.140.152.0": {
+    "asn": "AS400414 ROAMR Communications Inc.",
+    "city": "Naples",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "23.140.152.0",
+    "lat": "26.3304",
+    "long": "-81.5871",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Streamline",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Florida",
+    "target_labels": "chunk-3-range-20999-23.140.152.0-23.140.152.255"
+  },
+  "93.123.39.0": {
+    "asn": "AS213702 QWINS LTD",
+    "city": "Tallinn",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Estonia",
+    "error": "",
+    "ip": "93.123.39.0",
+    "lat": "59.4381",
+    "long": "24.7369",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "Qwins LTD",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Harjumaa",
+    "target_labels": "chunk-3-range-32186-93.123.39.0-93.123.39.255"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "154.37.195.0": {
+    "asn": "AS174 Cogent Communications, LLC",
+    "city": "V\u00e9lizy-Villacoublay",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "France",
+    "error": "",
+    "ip": "154.37.195.0",
+    "lat": "48.7855",
+    "long": "2.1964",
+    "looked_up_at": "2026-06-26T16:20:47+00:00",
+    "org": "Tiger Roar Technology Pte Ltd",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "\u00cele-de-France",
+    "target_labels": "chunk-3-range-05752-154.37.195.0-154.37.199.255"
+  },
+  "157.240.81.0": {
+    "asn": "AS32934 Facebook, Inc.",
+    "city": "Hyderabad",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "India",
+    "error": "",
+    "ip": "157.240.81.0",
+    "lat": "17.4065",
+    "long": "78.4772",
+    "looked_up_at": "2026-06-26T16:20:47+00:00",
+    "org": "Facebook, Inc.",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Telangana",
+    "target_labels": "chunk-3-range-06395-157.240.81.0-157.240.81.255"
+  }
+}

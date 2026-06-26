@@ -1,0 +1,53 @@
+{
+  "175.29.78.0": {
+    "asn": "AS174 Cogent Communications, LLC",
+    "city": "Scottsdale",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "175.29.78.0",
+    "lat": "33.5111",
+    "long": "-111.9075",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "Cogent Communications",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Arizona",
+    "target_labels": "chunk-3-range-10219-175.29.78.0-175.29.78.255"
+  },
+  "206.232.26.0": {
+    "asn": "AS9009 M247 Europe SRL",
+    "city": "Paris",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "France",
+    "error": "",
+    "ip": "206.232.26.0",
+    "lat": "48.8575",
+    "long": "2.35138",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Wifiber IKE",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "\u00cele-de-France",
+    "target_labels": "chunk-3-range-18027-206.232.26.0-206.232.35.255"
+  },
+  "31.193.191.0": {
+    "asn": "AS5650 Frontier Communications of America, Inc.",
+    "city": "Kyiv",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Ukraine",
+    "error": "",
+    "ip": "31.193.191.0",
+    "lat": "50.4504",
+    "long": "30.5245",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "Virtual Telecom LLC",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Kyiv City",
+    "target_labels": "chunk-3-range-22942-31.193.191.0-31.193.191.255"
+  }
+}

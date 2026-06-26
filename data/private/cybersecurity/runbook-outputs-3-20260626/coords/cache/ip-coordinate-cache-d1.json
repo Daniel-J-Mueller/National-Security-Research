@@ -1,0 +1,53 @@
+{
+  "23.106.240.0": {
+    "asn": "AS136988 LEASEWEB AUSTRALIA PTY LIMITED",
+    "city": "Sydney",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Australia",
+    "error": "",
+    "ip": "23.106.240.0",
+    "lat": "-33.8229",
+    "long": "151.1886",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Leaseweb Australia PTY Limited",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "New South Wales",
+    "target_labels": "chunk-3-range-20652-23.106.240.0-23.106.243.255"
+  },
+  "45.60.81.0": {
+    "asn": "AS19551 Incapsula Inc",
+    "city": "Frankfurt am Main",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Germany",
+    "error": "",
+    "ip": "45.60.81.0",
+    "lat": "50.1109",
+    "long": "8.68213",
+    "looked_up_at": "2026-06-26T16:20:52+00:00",
+    "org": "Incapsula Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Hesse",
+    "target_labels": "chunk-3-range-25078-45.60.81.0-45.60.84.255"
+  },
+  "51.5.63.0": {
+    "asn": "AS8075 Microsoft Corporation",
+    "city": "Auckland",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "New Zealand",
+    "error": "",
+    "ip": "51.5.63.0",
+    "lat": "-36.88421",
+    "long": "174.77042",
+    "looked_up_at": "2026-06-26T16:20:52+00:00",
+    "org": "Microsoft Azure Cloud (newzealandnorth)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Auckland",
+    "target_labels": "chunk-3-range-25905-51.5.63.0-51.5.63.255"
+  }
+}

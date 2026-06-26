@@ -1,0 +1,36 @@
+{
+  "3.128.0.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "Dublin",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "3.128.0.0",
+    "lat": "40.0992",
+    "long": "-83.1141",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "AWS EC2 (us-east-2)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Ohio",
+    "target_labels": "chunk-3-range-22889-3.128.0.0-3.247.255.255"
+  },
+  "52.85.124.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "Seoul",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "South Korea",
+    "error": "",
+    "ip": "52.85.124.0",
+    "lat": "37.561",
+    "long": "126.995",
+    "looked_up_at": "2026-06-26T16:20:52+00:00",
+    "org": "AWS CloudFront (GLOBAL)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Seoul",
+    "target_labels": "chunk-3-range-26222-52.85.124.0-52.85.139.255"
+  }
+}

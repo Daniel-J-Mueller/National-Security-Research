@@ -1,0 +1,53 @@
+{
+  "13.226.9.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "Quer\u00e9taro City",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Mexico",
+    "error": "",
+    "ip": "13.226.9.0",
+    "lat": "20.5888",
+    "long": "-100.39",
+    "looked_up_at": "2026-06-26T16:20:47+00:00",
+    "org": "AWS CloudFront (GLOBAL)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Quer\u00e9taro",
+    "target_labels": "chunk-3-range-02301-13.226.9.0-13.226.56.255"
+  },
+  "143.255.43.0": {
+    "asn": "AS265517 SMARTNETT CARRIER SA DE CV",
+    "city": "Coacalco",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Mexico",
+    "error": "",
+    "ip": "143.255.43.0",
+    "lat": "18.0715",
+    "long": "-98.6676",
+    "looked_up_at": "2026-06-26T16:20:47+00:00",
+    "org": "Smartnett Carrier SA De CV",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Puebla",
+    "target_labels": "chunk-3-range-03798-143.255.43.0-143.255.43.255"
+  },
+  "92.240.217.0": {
+    "asn": "AS209372 WS Telecom Inc",
+    "city": "New York",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "92.240.217.0",
+    "lat": "40.7126",
+    "long": "-74.0066",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "RU Permtelecom",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "New York",
+    "target_labels": "chunk-3-range-32121-92.240.217.0-92.240.217.255"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "169.46.181.0": {
+    "asn": "AS36351 IBM Cloud",
+    "city": "Dallas",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "169.46.181.0",
+    "lat": "32.9363",
+    "long": "-96.8231",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "SoftLayer Technologies, Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Texas",
+    "target_labels": "chunk-3-range-08701-169.46.181.0-169.46.181.255"
+  },
+  "45.60.135.0": {
+    "asn": "AS19551 Incapsula Inc",
+    "city": "San Mateo",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "45.60.135.0",
+    "lat": "37.5413",
+    "long": "-122.299",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "Incapsula Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "California",
+    "target_labels": "chunk-3-range-25044-45.60.135.0-45.60.138.255"
+  },
+  "45.60.205.0": {
+    "asn": "AS19551 Incapsula Inc",
+    "city": "San Mateo",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "45.60.205.0",
+    "lat": "37.5413",
+    "long": "-122.299",
+    "looked_up_at": "2026-06-26T16:20:52+00:00",
+    "org": "Incapsula Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "California",
+    "target_labels": "chunk-3-range-25055-45.60.205.0-45.60.206.255"
+  }
+}

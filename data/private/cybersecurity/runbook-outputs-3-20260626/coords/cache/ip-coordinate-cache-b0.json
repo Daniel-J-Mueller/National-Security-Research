@@ -1,0 +1,19 @@
+{
+  "216.26.224.0": {
+    "asn": "AS200373 3xK Tech GmbH",
+    "city": "Ashburn",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "216.26.224.0",
+    "lat": "39.0469",
+    "long": "-77.4903",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "3xK Tech GmbH",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Virginia",
+    "target_labels": "chunk-3-range-20305-216.26.224.0-216.31.63.255"
+  }
+}

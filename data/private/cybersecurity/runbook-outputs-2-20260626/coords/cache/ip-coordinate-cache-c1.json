@@ -14,7 +14,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "California",
-    "target_labels": "nirsoft-us-range-01896-107.32.0.0-107.63.255.255"
+    "target_labels": "01896-107.32.0.0-107.63.255.255"
   },
   "129.196.0.0": {
     "asn": "AS16435 Fluke Electronics",
@@ -31,7 +31,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Washington",
-    "target_labels": "nirsoft-us-range-02252-129.196.0.0-129.196.255.255"
+    "target_labels": "02252-129.196.0.0-129.196.255.255"
   },
   "131.54.0.0": {
     "asn": "AS721 United States Department of Defense (DoD)",
@@ -48,7 +48,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Alabama",
-    "target_labels": "nirsoft-us-range-02475-131.54.0.0-131.54.255.255"
+    "target_labels": "02475-131.54.0.0-131.54.255.255"
   },
   "131.96.0.0": {
     "asn": "AS10631 Georgia State University",
@@ -65,7 +65,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Georgia",
-    "target_labels": "nirsoft-us-range-02516-131.96.0.0-131.96.255.255"
+    "target_labels": "02516-131.96.0.0-131.96.255.255"
   },
   "134.123.0.0": {
     "asn": "",
@@ -82,7 +82,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "District of Columbia",
-    "target_labels": "nirsoft-us-range-02790-134.123.0.0-134.123.255.255"
+    "target_labels": "02790-134.123.0.0-134.123.255.255"
   },
   "137.45.0.0": {
     "asn": "AS13783 Radford University",
@@ -99,7 +99,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Virginia",
-    "target_labels": "nirsoft-us-range-03132-137.45.0.0-137.45.255.255"
+    "target_labels": "03132-137.45.0.0-137.45.255.255"
   },
   "140.152.0.0": {
     "asn": "AS721 United States Department of Defense (DoD)",
@@ -116,7 +116,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Ohio",
-    "target_labels": "nirsoft-us-range-03573-140.152.0.0-140.152.255.255"
+    "target_labels": "03573-140.152.0.0-140.152.255.255"
   },
   "140.185.0.0": {
     "asn": "AS27064 United States Department of Defense (DoD)",
@@ -133,7 +133,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Ohio",
-    "target_labels": "nirsoft-us-range-03596-140.185.0.0-140.185.255.255"
+    "target_labels": "03596-140.185.0.0-140.185.255.255"
   },
   "148.188.0.0": {
     "asn": "AS15404 COLT Technology Services Group Limited",
@@ -150,7 +150,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Hesse",
-    "target_labels": "nirsoft-us-range-04385-148.188.0.0-148.188.255.255"
+    "target_labels": "04385-148.188.0.0-148.188.255.255"
   },
   "149.71.0.0": {
     "asn": "AS210619 Monkey Tree Hosting Limited",
@@ -167,7 +167,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "England",
-    "target_labels": "nirsoft-us-range-04452-149.71.0.0-149.71.255.255"
+    "target_labels": "04452-149.71.0.0-149.71.255.255"
   },
   "15.136.0.0": {
     "asn": "AS16509 Amazon.com, Inc.",
@@ -184,7 +184,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "England",
-    "target_labels": "nirsoft-us-range-00095-15.136.0.0-15.137.255.255"
+    "target_labels": "00095-15.136.0.0-15.137.255.255"
   },
   "150.135.0.0": {
     "asn": "AS1706 The University of Arizona",
@@ -201,7 +201,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Arizona",
-    "target_labels": "nirsoft-us-range-04552-150.135.0.0-150.135.255.255"
+    "target_labels": "04552-150.135.0.0-150.135.255.255"
   },
   "158.243.0.0": {
     "asn": "AS637 United States Department of Defense (DoD)",
@@ -218,7 +218,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Virginia",
-    "target_labels": "nirsoft-us-range-05391-158.243.0.0-158.243.255.255"
+    "target_labels": "05391-158.243.0.0-158.243.255.255"
   },
   "159.83.0.0": {
     "asn": "AS11188 LOS ANGELES COUNTY - INTERNAL SERVICESDIVISION",
@@ -235,7 +235,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "California",
-    "target_labels": "nirsoft-us-range-05443-159.83.0.0-159.83.255.255"
+    "target_labels": "05443-159.83.0.0-159.83.255.255"
   },
   "163.192.0.0": {
     "asn": "AS31898 Oracle Corporation",
@@ -252,7 +252,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "California",
-    "target_labels": "nirsoft-us-range-05901-163.192.0.0-163.192.255.255"
+    "target_labels": "05901-163.192.0.0-163.192.255.255"
   },
   "165.201.0.0": {
     "asn": "AS3446 State of Kansas",
@@ -269,7 +269,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Kansas",
-    "target_labels": "nirsoft-us-range-06134-165.201.0.0-165.201.255.255"
+    "target_labels": "06134-165.201.0.0-165.201.255.255"
   },
   "166.18.0.0": {
     "asn": "",
@@ -286,7 +286,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Colorado",
-    "target_labels": "nirsoft-us-range-06174-166.18.0.0-166.18.255.255"
+    "target_labels": "06174-166.18.0.0-166.18.255.255"
   },
   "167.148.0.0": {
     "asn": "AS216030 GoodLeaf Hosting & Development LLC",
@@ -303,7 +303,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Illinois",
-    "target_labels": "nirsoft-us-range-06325-167.148.0.0-167.148.255.255"
+    "target_labels": "06325-167.148.0.0-167.148.255.255"
   },
   "167.159.0.0": {
     "asn": "AS16988 International Paper Company",
@@ -320,7 +320,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Tennessee",
-    "target_labels": "nirsoft-us-range-06335-167.159.0.0-167.159.255.255"
+    "target_labels": "06335-167.159.0.0-167.159.255.255"
   },
   "195.247.0.0": {
     "asn": "AS16509 Amazon.com, Inc.",
@@ -337,7 +337,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "England",
-    "target_labels": "nirsoft-us-range-06962-195.247.0.0-195.247.255.255"
+    "target_labels": "06962-195.247.0.0-195.247.255.255"
   },
   "24.205.0.0": {
     "asn": "AS20115 Charter Communications LLC",
@@ -354,7 +354,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "California",
-    "target_labels": "nirsoft-us-range-00414-24.205.0.0-24.205.255.255"
+    "target_labels": "00414-24.205.0.0-24.205.255.255"
   },
   "24.60.0.0": {
     "asn": "AS7922 Comcast Cable Communications, LLC",
@@ -371,7 +371,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Massachusetts",
-    "target_labels": "nirsoft-us-range-00369-24.60.0.0-24.63.255.255"
+    "target_labels": "00369-24.60.0.0-24.63.255.255"
   },
   "40.211.0.0": {
     "asn": "",
@@ -388,7 +388,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Indiana",
-    "target_labels": "nirsoft-us-range-00529-40.211.0.0-40.211.255.255"
+    "target_labels": "00529-40.211.0.0-40.211.255.255"
   },
   "56.168.0.0": {
     "asn": "AS16509 Amazon.com, Inc.",
@@ -405,7 +405,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Washington",
-    "target_labels": "nirsoft-us-range-00980-56.168.0.0-56.168.255.255"
+    "target_labels": "00980-56.168.0.0-56.168.255.255"
   },
   "62.230.0.0": {
     "asn": "AS16509 Amazon.com, Inc.",
@@ -422,7 +422,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Bavaria",
-    "target_labels": "nirsoft-us-range-01074-62.230.0.0-62.230.255.255"
+    "target_labels": "01074-62.230.0.0-62.230.255.255"
   },
   "65.51.0.0": {
     "asn": "AS54004 Cablevision Lightpath LLC",
@@ -439,7 +439,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "New York",
-    "target_labels": "nirsoft-us-range-01171-65.51.0.0-65.51.255.255"
+    "target_labels": "01171-65.51.0.0-65.51.255.255"
   },
   "66.0.0.0": {
     "asn": "AS7029 Windstream Communications LLC",
@@ -456,7 +456,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Georgia",
-    "target_labels": "nirsoft-us-range-01201-66.0.0.0-66.0.255.255"
+    "target_labels": "01201-66.0.0.0-66.0.255.255"
   },
   "67.148.0.0": {
     "asn": "AS209 CenturyLink Communications, LLC",
@@ -473,7 +473,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Utah",
-    "target_labels": "nirsoft-us-range-01308-67.148.0.0-67.148.255.255"
+    "target_labels": "01308-67.148.0.0-67.148.255.255"
   },
   "67.44.0.0": {
     "asn": "AS63062 Hughes Network Systems, LLC",
@@ -490,7 +490,7 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Virginia",
-    "target_labels": "nirsoft-us-range-01285-67.44.0.0-67.47.255.255"
+    "target_labels": "01285-67.44.0.0-67.47.255.255"
   },
   "70.252.0.0": {
     "asn": "AS7018 AT&T Enterprises, LLC",
@@ -507,6 +507,6 @@
     "ping_rtt_ms": "",
     "ping_status": "skipped",
     "region": "Texas",
-    "target_labels": "nirsoft-us-range-01474-70.252.0.0-70.255.255.255"
+    "target_labels": "01474-70.252.0.0-70.255.255.255"
   }
 }

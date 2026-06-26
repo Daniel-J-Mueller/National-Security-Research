@@ -1,0 +1,53 @@
+{
+  "129.159.32.0": {
+    "asn": "AS31898 Oracle Corporation",
+    "city": "San Jose",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "129.159.32.0",
+    "lat": "37.2329",
+    "long": "-121.7875",
+    "looked_up_at": "2026-06-26T16:20:46+00:00",
+    "org": "Oracle Cloud Infrastructure (us-sanjose-1)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "California",
+    "target_labels": "chunk-3-range-02080-129.159.32.0-129.159.47.255"
+  },
+  "35.244.128.0": {
+    "asn": "AS396982 Google LLC",
+    "city": "Kansas City",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "35.244.128.0",
+    "lat": "39.0997",
+    "long": "-94.5785",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "Google Cloud",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Missouri",
+    "target_labels": "chunk-3-range-23282-35.244.128.0-35.245.255.255"
+  },
+  "45.223.39.0": {
+    "asn": "AS19551 Incapsula Inc",
+    "city": "San Mateo",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "45.223.39.0",
+    "lat": "37.5413",
+    "long": "-122.299",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "Incapsula Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "California",
+    "target_labels": "chunk-3-range-24867-45.223.39.0-45.223.41.255"
+  }
+}

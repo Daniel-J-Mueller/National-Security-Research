@@ -1,0 +1,19 @@
+{
+  "172.121.16.0": {
+    "asn": "AS9009 M247 Europe SRL",
+    "city": "Frankfurt",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Germany",
+    "error": "",
+    "ip": "172.121.16.0",
+    "lat": "50.1109",
+    "long": "8.6821",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "Ipxo LLC",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Hesse",
+    "target_labels": "chunk-3-range-09624-172.121.16.0-172.121.21.255"
+  }
+}

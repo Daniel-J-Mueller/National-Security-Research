@@ -1,0 +1,19 @@
+{
+  "166.88.70.0": {
+    "asn": "AS10753 Level 3 Parent, LLC",
+    "city": "Hong Kong",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Hong Kong",
+    "error": "",
+    "ip": "166.88.70.0",
+    "lat": "22.3193",
+    "long": "114.169",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "Ace Data Centers, Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Kowloon",
+    "target_labels": "chunk-3-range-08246-166.88.70.0-166.88.73.255"
+  }
+}

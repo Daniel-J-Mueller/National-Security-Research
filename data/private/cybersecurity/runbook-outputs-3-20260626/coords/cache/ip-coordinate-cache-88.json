@@ -1,0 +1,19 @@
+{
+  "37.60.251.0": {
+    "asn": "AS51167 Contabo GmbH",
+    "city": "Lauterbourg",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "France",
+    "error": "",
+    "ip": "37.60.251.0",
+    "lat": "48.9742",
+    "long": "8.1851",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "SiteGround",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Grand Est",
+    "target_labels": "chunk-3-range-23394-37.60.251.0-37.60.255.255"
+  }
+}

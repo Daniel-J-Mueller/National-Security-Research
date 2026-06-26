@@ -1,0 +1,53 @@
+{
+  "18.64.210.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "Frankfurt am Main",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Germany",
+    "error": "",
+    "ip": "18.64.210.0",
+    "lat": "50.1109",
+    "long": "8.68213",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "AWS CloudFront (GLOBAL)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Hesse",
+    "target_labels": "chunk-3-range-10447-18.64.210.0-18.65.16.255"
+  },
+  "52.84.189.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "San Jose",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "52.84.189.0",
+    "lat": "37.3387",
+    "long": "-121.885",
+    "looked_up_at": "2026-06-26T16:20:52+00:00",
+    "org": "AWS CloudFront (GLOBAL)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "California",
+    "target_labels": "chunk-3-range-26215-52.84.189.0-52.84.189.255"
+  },
+  "86.104.227.0": {
+    "asn": "AS9009 M247 Europe SRL",
+    "city": "Brussels",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Belgium",
+    "error": "",
+    "ip": "86.104.227.0",
+    "lat": "50.8476",
+    "long": "4.35717",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "Goodman Fiber",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Brussels Capital",
+    "target_labels": "chunk-3-range-31487-86.104.227.0-86.104.227.255"
+  }
+}

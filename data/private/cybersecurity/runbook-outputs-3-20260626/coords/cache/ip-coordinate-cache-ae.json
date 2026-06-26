@@ -1,0 +1,53 @@
+{
+  "185.254.64.0": {
+    "asn": "AS202572 Jacek Kowalski trading as SI.pl",
+    "city": "Wadowice",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Poland",
+    "error": "",
+    "ip": "185.254.64.0",
+    "lat": "49.8775",
+    "long": "19.495",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "SI.pl",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Lesser Poland",
+    "target_labels": "chunk-3-range-11620-185.254.64.0-185.254.67.255"
+  },
+  "31.11.40.0": {
+    "asn": "AS41114 Orne THD SPL",
+    "city": "Val de Briey",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "France",
+    "error": "",
+    "ip": "31.11.40.0",
+    "lat": "49.2498",
+    "long": "5.9343",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "Orne THD SPL",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Grand Est",
+    "target_labels": "chunk-3-range-22911-31.11.40.0-31.11.47.255"
+  },
+  "67.43.46.0": {
+    "asn": "AS19437 SECURED SERVERS LLC",
+    "city": "Ashburn",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "67.43.46.0",
+    "lat": "39.0438",
+    "long": "-77.4874",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "Ipxo LLC",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Virginia",
+    "target_labels": "chunk-3-range-30014-67.43.46.0-67.43.127.255"
+  }
+}

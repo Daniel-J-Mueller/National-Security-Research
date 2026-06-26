@@ -1,0 +1,36 @@
+{
+  "194.26.149.0": {
+    "asn": "AS9009 M247 Europe SRL",
+    "city": "Brussels",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Belgium",
+    "error": "",
+    "ip": "194.26.149.0",
+    "lat": "50.8477",
+    "long": "4.3572",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "Panera communications",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Brussels Capital",
+    "target_labels": "chunk-3-range-14521-194.26.149.0-194.26.149.255"
+  },
+  "23.140.24.0": {
+    "asn": "AS398099 Bay View Funding",
+    "city": "San Jose",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "23.140.24.0",
+    "lat": "37.342",
+    "long": "-121.9049",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Bay View Funding",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "California",
+    "target_labels": "chunk-3-range-21009-23.140.24.0-23.140.24.255"
+  }
+}

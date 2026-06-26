@@ -1,0 +1,36 @@
+{
+  "107.154.143.0": {
+    "asn": "AS19551 Incapsula Inc",
+    "city": "Los Angeles",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "107.154.143.0",
+    "lat": "34.0549",
+    "long": "-118.243",
+    "looked_up_at": "2026-06-26T16:20:46+00:00",
+    "org": "Incapsula Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "California",
+    "target_labels": "chunk-3-range-01428-107.154.143.0-107.154.147.255"
+  },
+  "67.226.219.0": {
+    "asn": "AS64267 Sprious LLC",
+    "city": "Los Angeles",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "67.226.219.0",
+    "lat": "34.0549",
+    "long": "-118.243",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "Blazing SEO, LLC",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "California",
+    "target_labels": "chunk-3-range-29984-67.226.219.0-67.226.223.255"
+  }
+}

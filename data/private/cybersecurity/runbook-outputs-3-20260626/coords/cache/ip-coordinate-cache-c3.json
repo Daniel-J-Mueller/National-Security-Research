@@ -1,0 +1,53 @@
+{
+  "193.84.183.0": {
+    "asn": "AS203061 UAB code200",
+    "city": "Algiers",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Algeria",
+    "error": "",
+    "ip": "193.84.183.0",
+    "lat": "36.7405",
+    "long": "3.1159",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "UAB code200",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Algiers",
+    "target_labels": "chunk-3-range-14372-193.84.183.0-193.84.183.255"
+  },
+  "34.160.0.0": {
+    "asn": "AS396982 Google LLC",
+    "city": "Kansas City",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "34.160.0.0",
+    "lat": "39.0997",
+    "long": "-94.5785",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "Google Cloud",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Missouri",
+    "target_labels": "chunk-3-range-23191-34.160.0.0-34.162.255.255"
+  },
+  "87.120.46.0": {
+    "asn": "AS210218 Open Fiber S.P.A.",
+    "city": "Ciaculli",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Italy",
+    "error": "",
+    "ip": "87.120.46.0",
+    "lat": "38.0753",
+    "long": "13.4072",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "Open Fiber S.P.A",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Sicily",
+    "target_labels": "chunk-3-range-31544-87.120.46.0-87.120.47.255"
+  }
+}

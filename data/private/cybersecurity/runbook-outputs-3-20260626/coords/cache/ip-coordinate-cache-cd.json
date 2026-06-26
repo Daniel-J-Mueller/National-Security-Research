@@ -1,0 +1,36 @@
+{
+  "134.202.144.0": {
+    "asn": "AS7029 Windstream Communications LLC",
+    "city": "New York",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "134.202.144.0",
+    "lat": "40.7685",
+    "long": "-73.9822",
+    "looked_up_at": "2026-06-26T16:20:47+00:00",
+    "org": "Gauss Research Laboratory, Inc.",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "New York",
+    "target_labels": "chunk-3-range-02845-134.202.144.0-134.202.223.255"
+  },
+  "154.16.85.0": {
+    "asn": "AS201341 trafficforce, UAB",
+    "city": "Cape Town",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "South Africa",
+    "error": "",
+    "ip": "154.16.85.0",
+    "lat": "-33.9258",
+    "long": "18.4259",
+    "looked_up_at": "2026-06-26T16:20:47+00:00",
+    "org": "Digital Energy Technologies Limited",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Western Cape",
+    "target_labels": "chunk-3-range-05455-154.16.85.0-154.16.85.255"
+  }
+}

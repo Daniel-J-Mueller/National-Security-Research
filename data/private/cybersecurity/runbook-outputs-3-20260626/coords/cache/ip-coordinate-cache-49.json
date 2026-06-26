@@ -1,0 +1,53 @@
+{
+  "181.215.219.0": {
+    "asn": "AS54252 Sprious LLC",
+    "city": "Bogot\u00e1",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Colombia",
+    "error": "",
+    "ip": "181.215.219.0",
+    "lat": "4.71099",
+    "long": "-74.0721",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "Ipxo",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Bogota D.C.",
+    "target_labels": "chunk-3-range-10549-181.215.219.0-181.215.221.255"
+  },
+  "185.181.121.0": {
+    "asn": "AS42366 TerraTransit AG",
+    "city": "Frankfurt am Main",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Germany",
+    "error": "",
+    "ip": "185.181.121.0",
+    "lat": "50.1169",
+    "long": "8.6837",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "TerraTransit AG",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Hesse",
+    "target_labels": "chunk-3-range-11199-185.181.121.0-185.181.121.255"
+  },
+  "93.190.245.0": {
+    "asn": "AS19318 Interserver, Inc",
+    "city": "Pikesville",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "93.190.245.0",
+    "lat": "39.3745",
+    "long": "-76.7452",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "RAPIDSEEDBOX",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Maryland",
+    "target_labels": "chunk-3-range-32218-93.190.245.0-93.190.247.255"
+  }
+}

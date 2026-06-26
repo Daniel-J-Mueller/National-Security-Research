@@ -1,0 +1,53 @@
+{
+  "103.49.154.0": {
+    "asn": "AS9009 M247 Europe SRL",
+    "city": "New York",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "103.49.154.0",
+    "lat": "40.7128",
+    "long": "-74.006",
+    "looked_up_at": "2026-06-26T16:20:46+00:00",
+    "org": "US NY internet dollar",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "New York",
+    "target_labels": "chunk-3-range-00308-103.49.154.0-103.49.155.255"
+  },
+  "18.161.106.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "Seattle",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "18.161.106.0",
+    "lat": "47.6109",
+    "long": "-122.3303",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "AWS CloudFront (GLOBAL)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Washington",
+    "target_labels": "chunk-3-range-10416-18.161.106.0-18.161.108.255"
+  },
+  "20.9.0.0": {
+    "asn": "AS8075 Microsoft Corporation",
+    "city": "Des Moines",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "20.9.0.0",
+    "lat": "41.5908",
+    "long": "-93.6208",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Microsoft Azure Cloud (centralus)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Iowa",
+    "target_labels": "chunk-3-range-16508-20.9.0.0-20.10.255.255"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "169.45.219.0": {
+    "asn": "AS36351 IBM Cloud",
+    "city": "Ashburn",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "169.45.219.0",
+    "lat": "39.018",
+    "long": "-77.539",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "SoftLayer Technologies, Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Virginia",
+    "target_labels": "chunk-3-range-08660-169.45.219.0-169.45.219.255"
+  },
+  "20.157.142.0": {
+    "asn": "AS8069 Microsoft Corporation",
+    "city": "Des Moines",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "20.157.142.0",
+    "lat": "41.5908",
+    "long": "-93.6208",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Microsoft Azure Cloud - Storage (centralus)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Iowa",
+    "target_labels": "chunk-3-range-16322-20.157.142.0-20.157.143.255"
+  }
+}

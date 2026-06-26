@@ -1,0 +1,19 @@
+{
+  "76.76.0.0": {
+    "asn": "AS205157 Daniel Cid",
+    "city": "Temecula",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "76.76.0.0",
+    "lat": "33.5331",
+    "long": "-117.151",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "CleanBrowsing, Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "California",
+    "target_labels": "chunk-3-range-30804-76.76.0.0-76.76.1.255"
+  }
+}

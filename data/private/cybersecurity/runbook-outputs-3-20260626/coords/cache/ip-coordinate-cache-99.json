@@ -1,0 +1,53 @@
+{
+  "108.139.236.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "Frankfurt am Main",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Germany",
+    "error": "",
+    "ip": "108.139.236.0",
+    "lat": "50.1109",
+    "long": "8.68213",
+    "looked_up_at": "2026-06-26T16:20:46+00:00",
+    "org": "AWS CloudFront (GLOBAL)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Hesse",
+    "target_labels": "chunk-3-range-01563-108.139.236.0-108.139.236.255"
+  },
+  "185.243.199.0": {
+    "asn": "AS9009 M247 Europe SRL",
+    "city": "Frankfurt am Main",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Germany",
+    "error": "",
+    "ip": "185.243.199.0",
+    "lat": "50.1109",
+    "long": "8.68213",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "M247 LTD",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Hesse",
+    "target_labels": "chunk-3-range-11549-185.243.199.0-185.243.199.255"
+  },
+  "52.123.255.0": {
+    "asn": "AS8075 Microsoft Corporation",
+    "city": "Toronto",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Canada",
+    "error": "",
+    "ip": "52.123.255.0",
+    "lat": "43.6532",
+    "long": "-79.3831",
+    "looked_up_at": "2026-06-26T16:20:52+00:00",
+    "org": "Microsoft Corporation",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Ontario",
+    "target_labels": "chunk-3-range-26041-52.123.255.0-52.124.7.255"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "176.126.223.0": {
+    "asn": "AS50810 Mobin Net Communication Company (Private Joint Stock)",
+    "city": "Tehran",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Iran",
+    "error": "",
+    "ip": "176.126.223.0",
+    "lat": "35.7093",
+    "long": "51.4256",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "Mobin Net Communication Company (Private Joint Stock)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Tehran",
+    "target_labels": "chunk-3-range-10279-176.126.223.0-176.126.223.255"
+  }
+}

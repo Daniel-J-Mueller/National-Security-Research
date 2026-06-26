@@ -1,0 +1,19 @@
+{
+  "185.181.114.0": {
+    "asn": "AS42366 TerraTransit AG",
+    "city": "Frankfurt am Main",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Germany",
+    "error": "",
+    "ip": "185.181.114.0",
+    "lat": "50.1169",
+    "long": "8.6837",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "TerraTransit AG",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Hesse",
+    "target_labels": "chunk-3-range-11198-185.181.114.0-185.181.114.255"
+  }
+}

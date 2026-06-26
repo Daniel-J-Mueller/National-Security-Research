@@ -1,0 +1,53 @@
+{
+  "172.121.3.0": {
+    "asn": "AS397630 Blazing SEO, LLC",
+    "city": "New York",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "172.121.3.0",
+    "lat": "40.7126",
+    "long": "-74.0066",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "Blazing SEO, LLC",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "New York",
+    "target_labels": "chunk-3-range-09629-172.121.3.0-172.121.7.255"
+  },
+  "37.60.243.0": {
+    "asn": "AS51167 Contabo GmbH",
+    "city": "Lauterbourg",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "France",
+    "error": "",
+    "ip": "37.60.243.0",
+    "lat": "48.9742",
+    "long": "8.1851",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "SiteGround",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Grand Est",
+    "target_labels": "chunk-3-range-23392-37.60.243.0-37.60.244.255"
+  },
+  "92.51.40.0": {
+    "asn": "AS7029 Windstream Communications LLC",
+    "city": "Washington",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "92.51.40.0",
+    "lat": "38.9072",
+    "long": "-77.0369",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "RU Permtelecom",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "District of Columbia",
+    "target_labels": "chunk-3-range-32146-92.51.40.0-92.51.47.255"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "5.161.205.0": {
+    "asn": "AS213230 Hetzner Online GmbH",
+    "city": "Ashburn",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "5.161.205.0",
+    "lat": "39.0469",
+    "long": "-77.4903",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "Hetzner Online GmbH",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Virginia",
+    "target_labels": "chunk-3-range-25629-5.161.205.0-5.161.205.255"
+  },
+  "87.120.84.0": {
+    "asn": "AS215439 PLAY2GO INTERNATIONAL LIMITED",
+    "city": "Frankfurt am Main",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Germany",
+    "error": "",
+    "ip": "87.120.84.0",
+    "lat": "50.1169",
+    "long": "8.6837",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "Play2go International Limited",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Hesse",
+    "target_labels": "chunk-3-range-31549-87.120.84.0-87.120.84.255"
+  },
+  "91.107.124.0": {
+    "asn": "AS29182 JSC IOT",
+    "city": "Novoivanovskoye",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Russia",
+    "error": "",
+    "ip": "91.107.124.0",
+    "lat": "55.6934",
+    "long": "37.3432",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "JSCIOT",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Moscow Oblast",
+    "target_labels": "chunk-3-range-31862-91.107.124.0-91.107.125.255"
+  }
+}

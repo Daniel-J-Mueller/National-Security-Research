@@ -1,0 +1,53 @@
+{
+  "20.157.207.0": {
+    "asn": "AS8075 Microsoft Corporation",
+    "city": "Doha",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Qatar",
+    "error": "",
+    "ip": "20.157.207.0",
+    "lat": "25.29453",
+    "long": "51.51939",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Microsoft Azure Cloud (qatarcentral)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Baladiyat ad Dawhah",
+    "target_labels": "chunk-3-range-16335-20.157.207.0-20.157.207.255"
+  },
+  "45.40.107.0": {
+    "asn": "AS5650 Frontier Communications of America, Inc.",
+    "city": "Newark",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "45.40.107.0",
+    "lat": "39.6837",
+    "long": "-75.7497",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "Frontier Communications of America, Inc.",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Delaware",
+    "target_labels": "chunk-3-range-24951-45.40.107.0-45.40.111.255"
+  },
+  "89.40.181.0": {
+    "asn": "AS9009 M247 Europe SRL",
+    "city": "Bucharest",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Romania",
+    "error": "",
+    "ip": "89.40.181.0",
+    "lat": "44.4268",
+    "long": "26.1025",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "M247 Europe SRL",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Bucharest",
+    "target_labels": "chunk-3-range-31811-89.40.181.0-89.40.181.255"
+  }
+}

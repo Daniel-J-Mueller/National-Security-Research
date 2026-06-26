@@ -1,0 +1,53 @@
+{
+  "188.119.168.0": {
+    "asn": "AS9009 M247 Europe SRL",
+    "city": "Frankfurt am Main",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Germany",
+    "error": "",
+    "ip": "188.119.168.0",
+    "lat": "50.1109",
+    "long": "8.68213",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "Digital Virtualisation Solutions Los Angeles",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Hesse",
+    "target_labels": "chunk-3-range-11846-188.119.168.0-188.119.175.255"
+  },
+  "193.105.95.0": {
+    "asn": "AS63018 Dedicated.com",
+    "city": "Seattle",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "193.105.95.0",
+    "lat": "47.4902",
+    "long": "-122.3004",
+    "looked_up_at": "2026-06-26T16:20:49+00:00",
+    "org": "Spartan Host Ltd",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Washington",
+    "target_labels": "chunk-3-range-14025-193.105.95.0-193.105.95.255"
+  },
+  "45.60.125.0": {
+    "asn": "AS19551 Incapsula Inc",
+    "city": "Frankfurt am Main",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Germany",
+    "error": "",
+    "ip": "45.60.125.0",
+    "lat": "50.1109",
+    "long": "8.68213",
+    "looked_up_at": "2026-06-26T16:20:51+00:00",
+    "org": "Incapsula Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Hesse",
+    "target_labels": "chunk-3-range-25042-45.60.125.0-45.60.128.255"
+  }
+}

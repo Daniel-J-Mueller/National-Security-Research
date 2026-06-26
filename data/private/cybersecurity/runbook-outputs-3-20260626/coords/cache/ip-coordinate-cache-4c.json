@@ -1,0 +1,53 @@
+{
+  "13.32.178.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "New York",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "13.32.178.0",
+    "lat": "40.7126",
+    "long": "-74.0066",
+    "looked_up_at": "2026-06-26T16:20:46+00:00",
+    "org": "AWS CloudFront (GLOBAL)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "New York",
+    "target_labels": "chunk-3-range-02338-13.32.178.0-13.32.215.255"
+  },
+  "62.72.45.0": {
+    "asn": "AS141995 Contabo Asia Private Limited",
+    "city": "Singapore",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "Singapore",
+    "error": "",
+    "ip": "62.72.45.0",
+    "lat": "1.35208",
+    "long": "103.82",
+    "looked_up_at": "2026-06-26T16:20:52+00:00",
+    "org": "Contabo GmbH",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "North West",
+    "target_labels": "chunk-3-range-28698-62.72.45.0-62.72.51.255"
+  },
+  "88.216.185.0": {
+    "asn": "AS1239 Sprint",
+    "city": "Boston",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "88.216.185.0",
+    "lat": "42.3548",
+    "long": "-71.0661",
+    "looked_up_at": "2026-06-26T16:20:53+00:00",
+    "org": "Sprint",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Massachusetts",
+    "target_labels": "chunk-3-range-31608-88.216.185.0-88.216.185.255"
+  }
+}

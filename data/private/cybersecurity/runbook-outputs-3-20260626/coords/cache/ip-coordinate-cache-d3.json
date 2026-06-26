@@ -1,0 +1,53 @@
+{
+  "169.46.2.0": {
+    "asn": "AS36351 IBM Cloud",
+    "city": "Irving",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "169.46.2.0",
+    "lat": "32.926",
+    "long": "-96.9666",
+    "looked_up_at": "2026-06-26T16:20:48+00:00",
+    "org": "SoftLayer Technologies, Inc",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Texas",
+    "target_labels": "chunk-3-range-08705-169.46.2.0-169.46.2.255"
+  },
+  "20.57.0.0": {
+    "asn": "AS8075 Microsoft Corporation",
+    "city": "Boydton",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "20.57.0.0",
+    "lat": "36.677696",
+    "long": "-78.37471",
+    "looked_up_at": "2026-06-26T16:20:50+00:00",
+    "org": "Microsoft Azure Cloud (eastus2)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Virginia",
+    "target_labels": "chunk-3-range-16468-20.57.0.0-20.57.255.255"
+  },
+  "54.230.208.0": {
+    "asn": "AS16509 Amazon.com, Inc.",
+    "city": "Tampa",
+    "coordinate_provider": "ip-api",
+    "coordinate_status": "ok",
+    "country": "United States",
+    "error": "",
+    "ip": "54.230.208.0",
+    "lat": "27.9517",
+    "long": "-82.4588",
+    "looked_up_at": "2026-06-26T16:20:52+00:00",
+    "org": "AWS CloudFront (GLOBAL)",
+    "ping_rtt_ms": "",
+    "ping_status": "skipped",
+    "region": "Florida",
+    "target_labels": "chunk-3-range-26360-54.230.208.0-54.230.211.255"
+  }
+}
