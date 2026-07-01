@@ -41,6 +41,7 @@ COORDINATE_CACHE_SHARD_GLOB = "ip-coordinate-cache-*.json"
 LEGACY_COORDINATE_CACHE_JSON = RUNBOOK_OUTPUTS_DIR / "ip-coordinate-cache.json"
 MAP_CHUNKS_DIR = RUNBOOK_OUTPUTS_DIR / "map-chunks"
 MAP_CHUNK_MANIFEST_JSON = MAP_CHUNKS_DIR / "manifest.json"
+WORK_DIR = RUNBOOK_OUTPUTS_DIR / "_work"
 
 PREFERRED_HIERARCHY = [
     "protocol",
@@ -141,6 +142,7 @@ def configure_runbook_outputs(output_dir: Path) -> None:
     global LEGACY_COORDINATE_CACHE_JSON
     global MAP_CHUNKS_DIR
     global MAP_CHUNK_MANIFEST_JSON
+    global WORK_DIR
 
     RUNBOOK_OUTPUTS_DIR = output_dir.resolve()
     CSV_DIR = RUNBOOK_OUTPUTS_DIR / "csv"
@@ -157,6 +159,7 @@ def configure_runbook_outputs(output_dir: Path) -> None:
     LEGACY_COORDINATE_CACHE_JSON = RUNBOOK_OUTPUTS_DIR / "ip-coordinate-cache.json"
     MAP_CHUNKS_DIR = RUNBOOK_OUTPUTS_DIR / "map-chunks"
     MAP_CHUNK_MANIFEST_JSON = MAP_CHUNKS_DIR / "manifest.json"
+    WORK_DIR = RUNBOOK_OUTPUTS_DIR / "_work"
     reset_caches()
 
 
@@ -172,6 +175,54 @@ def source_files() -> tuple[str, list[Path]]:
 
 def pipeline_state_path() -> Path:
     return RUNBOOK_OUTPUTS_DIR / "state" / "pipeline-state.json"
+
+
+def count_target_rows(path: Path) -> int:
+    if not path.exists():
+        return 0
+    try:
+        with path.open("r", encoding="utf-8-sig", newline="") as handle:
+            return max(0, sum(1 for _line in handle) - 1)
+    except OSError:
+        return 0
+
+
+def active_work_chunk(chunks_completed: int) -> dict[str, object]:
+    if not WORK_DIR.exists():
+        return {}
+    candidates: list[tuple[int, Path]] = []
+    for path in WORK_DIR.iterdir():
+        if not path.is_dir():
+            continue
+        match = re.fullmatch(r"chunk-(\d+)", path.name)
+        if not match:
+            continue
+        chunk_number = int(match.group(1))
+        if chunk_number > chunks_completed:
+            candidates.append((chunk_number, path))
+    if not candidates:
+        return {}
+
+    chunk_number, chunk_dir = sorted(candidates)[-1]
+    run_data_path = chunk_dir / "run-data.info"
+    target_path = chunk_dir / "targets.csv"
+    completed_targets = 0
+    updated_at = ""
+    if run_data_path.exists():
+        try:
+            payload = json.loads(run_data_path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                completed_targets = int(payload.get("next_index") or 0)
+                updated_at = normalize_value(payload.get("updated_at"))
+        except (OSError, ValueError, json.JSONDecodeError):
+            completed_targets = 0
+    return {
+        "chunk_number": chunk_number,
+        "completed_targets": completed_targets,
+        "target_count": count_target_rows(target_path),
+        "updated_at": updated_at,
+        "work_dir": str(chunk_dir.relative_to(ROOT)),
+    }
 
 
 def pipeline_progress() -> dict[str, object]:
@@ -198,6 +249,9 @@ def pipeline_progress() -> dict[str, object]:
     current_chunk_number = ""
     if isinstance(current_chunk, dict):
         current_chunk_number = str(current_chunk.get("chunk_number") or "")
+    active_chunk = active_work_chunk(int(payload.get("chunks_completed") or 0))
+    if active_chunk and not current_chunk_number:
+        current_chunk_number = str(active_chunk.get("chunk_number") or "")
 
     return {
         "state_path": str(path.relative_to(ROOT)),
@@ -206,6 +260,7 @@ def pipeline_progress() -> dict[str, object]:
         "pipeline_kind": payload.get("pipeline_kind", ""),
         "chunks_completed": payload.get("chunks_completed", 0),
         "current_chunk": current_chunk_number,
+        "active_chunk": active_chunk,
         "processed_ranges": processed_ranges,
         "selected_ranges": selected_ranges,
         "range_percent": round(range_percent, 2),
@@ -451,6 +506,30 @@ def build_map_chunks_payload(zoom: float, bounds: dict[str, float]) -> dict[str,
         "total_points": total_points,
         "mapped_ip_count": int(manifest.get("mapped_ip_count") or 0),
         "map_point_limit": MAP_CHUNK_RESPONSE_POINT_LIMIT,
+    }
+
+
+def build_map_selection_payload(relative_path: object) -> dict[str, object]:
+    path = safe_chunk_path(relative_path)
+    if path is None:
+        raise ValueError("Invalid map selection path.")
+    if not path.exists():
+        raise FileNotFoundError(f"Map selection records not found: {relative_path}")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Map selection records are invalid JSON: {relative_path}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("Map selection records must be a JSON object.")
+    records = payload.get("records", [])
+    if not isinstance(records, list):
+        records = []
+    return {
+        "ok": True,
+        "key": normalize_value(payload.get("key", "")),
+        "level": normalize_value(payload.get("level", "")),
+        "record_count": int(payload.get("record_count") or len(records)),
+        "records": [record for record in records if isinstance(record, dict)],
     }
 
 
@@ -1372,7 +1451,7 @@ def build_view(filters: dict[str, str], geo_filter: dict[str, object] | None = N
     hierarchy = build_hierarchy(headers)
     valid_filters = {field: value for field, value in filters.items() if field in headers}
     resolved_geo_filter = resolve_geo_filter(rows, geo_filter or {})
-    geo_rows = rows
+    geo_rows = apply_geo_filter(rows, resolved_geo_filter)
     matching_rows = [row for row in geo_rows if row_matches(row, valid_filters)]
     known_ip_count = len(known_ips(rows))
     matching_known_ip_count = len(known_ips(matching_rows))
@@ -1448,7 +1527,7 @@ def build_options_page(
 
     valid_filters = {filter_field: value for filter_field, value in filters.items() if filter_field in headers}
     resolved_geo_filter = resolve_geo_filter(rows, geo_filter)
-    geo_rows = rows
+    geo_rows = apply_geo_filter(rows, resolved_geo_filter)
     result = build_field_options(geo_rows, field, valid_filters, hierarchy, limit, offset, search)
     result["geo_filter"] = resolved_geo_filter
     return result
@@ -1469,7 +1548,7 @@ def build_rows_page(
 
     valid_filters = {field: value for field, value in filters.items() if field in headers}
     resolved_geo_filter = resolve_geo_filter(rows, geo_filter)
-    geo_rows = rows
+    geo_rows = apply_geo_filter(rows, resolved_geo_filter)
     matching_rows = [row for row in geo_rows if row_matches(row, valid_filters)]
     searched_rows = [row for row in matching_rows if row_matches_text(row, headers, search)]
     total_rows = len(searched_rows)
@@ -1511,7 +1590,7 @@ def write_column_export(field: str, filters: dict[str, str], geo_filter: dict[st
     QUICK_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     resolved_geo_filter = resolve_geo_filter(rows, geo_filter)
-    geo_rows = rows
+    geo_rows = apply_geo_filter(rows, resolved_geo_filter)
     valid_filters = {filter_field: value for filter_field, value in filters.items() if filter_field in headers}
     column = build_field_options(geo_rows, field, valid_filters, hierarchy, limit=None)
     timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
@@ -1568,7 +1647,7 @@ def write_rows_export(filters: dict[str, str], geo_filter: dict[str, object]) ->
 
     valid_filters = {field: value for field, value in filters.items() if field in headers}
     resolved_geo_filter = resolve_geo_filter(rows, geo_filter)
-    geo_rows = rows
+    geo_rows = apply_geo_filter(rows, resolved_geo_filter)
     matching_rows = [row for row in geo_rows if row_matches(row, valid_filters)]
     QUICK_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -1597,7 +1676,7 @@ def write_mapped_ips_export(filters: dict[str, str], geo_filter: dict[str, objec
 
     valid_filters = {field: value for field, value in filters.items() if field in headers}
     resolved_geo_filter = resolve_geo_filter(rows, geo_filter)
-    geo_rows = rows
+    geo_rows = apply_geo_filter(rows, resolved_geo_filter)
     matching_rows = [row for row in geo_rows if row_matches(row, valid_filters)]
     map_points, _point_count, _mapped_ip_count = build_map_points(
         matching_rows,
@@ -1712,6 +1791,13 @@ class VisualizerHandler(SimpleHTTPRequestHandler):
             except Exception as exc:  # noqa: BLE001 - surfaced to the local UI.
                 self.respond_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
             return
+        if parsed.path == "/api/map-selection":
+            query = parse_qs(parsed.query)
+            try:
+                self.respond_json(build_map_selection_payload(query.get("path", [""])[0]))
+            except Exception as exc:  # noqa: BLE001 - surfaced to the local UI.
+                self.respond_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+            return
         if parsed.path == "/api/options":
             query = parse_qs(parsed.query)
             try:
@@ -1741,6 +1827,14 @@ class VisualizerHandler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path == "/api/refresh":
+            try:
+                reset_caches()
+                self.respond_json({"ok": True, "manifest": self.manifest_payload()})
+            except Exception as exc:  # noqa: BLE001 - surfaced to the local UI.
+                self.respond_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+            return
+
         if parsed.path != "/api/export":
             self.send_error(HTTPStatus.NOT_FOUND)
             return

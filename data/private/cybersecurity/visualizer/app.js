@@ -4,6 +4,8 @@ const API_EXPORT = "/api/export";
 const API_OPTIONS = "/api/options";
 const API_ROWS = "/api/rows";
 const API_MAP_CHUNKS = "/api/map-chunks";
+const API_MAP_SELECTION = "/api/map-selection";
+const API_REFRESH = "/api/refresh";
 const ANY_VALUE = "__RUNBOOK_ANY__";
 const MAP_HEIGHT_STORAGE_KEY = "runbook-flow-visualizer-map-height";
 const REFINED_MAP_HEIGHT_STORAGE_KEY = "runbook-flow-visualizer-refined-map-height";
@@ -29,6 +31,7 @@ const state = {
   currentMapBounds: [],
   refinedMapBounds: [],
   mapChunkRequestId: 0,
+  mapSelectionRequestId: 0,
   mapChunkLoadTimer: null,
   mapChunkInitialized: false,
   mapChunkPayload: null,
@@ -98,7 +101,7 @@ function bindEvents() {
   });
 
   elements.refreshButton.addEventListener("click", () => {
-    void loadAll();
+    void loadAll({ force: true });
   });
 
   elements.exportRowsButton.addEventListener("click", () => {
@@ -164,10 +167,23 @@ function bindEvents() {
   }
 }
 
-async function loadAll() {
-  setStatus("Loading runbook shard metadata...");
+async function loadAll(options = {}) {
+  const force = Boolean(options.force);
+  setStatus(force ? "Refreshing runbook shard metadata..." : "Loading runbook shard metadata...");
   try {
-    state.manifest = await fetchJson(API_MANIFEST);
+    if (force) {
+      state.mapChunkRequestId += 1;
+      state.mapSelectionRequestId += 1;
+      state.mapChunkPayload = null;
+      if (state.mapChunkLoadTimer) {
+        clearTimeout(state.mapChunkLoadTimer);
+        state.mapChunkLoadTimer = null;
+      }
+      const refreshPayload = await fetchJson(API_REFRESH, { method: "POST" });
+      state.manifest = refreshPayload.manifest || (await fetchJson(API_MANIFEST));
+    } else {
+      state.manifest = await fetchJson(API_MANIFEST);
+    }
     renderMetrics();
     await loadView();
   } catch (error) {
@@ -182,6 +198,7 @@ async function loadView() {
   try {
     state.view = await fetchJson(url);
     state.filters = { ...state.view.filters };
+    state.geoSelection = normalizeGeoSelection(state.view.geo_filter, state.geoSelection);
     state.selectedMapKey = state.geoSelection ? state.geoSelection.key : "";
     render();
     setStatus(buildReadyStatus());
@@ -191,8 +208,24 @@ async function loadView() {
 }
 
 async function fetchJson(url, options = {}) {
-  const response = await fetch(url, options);
-  const payload = await response.json();
+  const method = String(options.method || "GET").toUpperCase();
+  const requestUrl = method === "GET" ? cacheBustedUrl(url) : url;
+  const response = await fetch(requestUrl, { cache: "no-store", ...options });
+  const contentType = response.headers.get("content-type") || "";
+  const text = await response.text();
+  let payload;
+  if (contentType.includes("application/json")) {
+    try {
+      payload = JSON.parse(text);
+    } catch (error) {
+      throw new Error(`Visualizer API returned invalid JSON from ${requestUrl}: ${error.message}`);
+    }
+  } else {
+    const hint = text.trim().startsWith("<!DOCTYPE")
+      ? " The page is probably opened from a static server or an old port; use the Cyber Visualizer runner URL."
+      : "";
+    throw new Error(`Visualizer API returned ${contentType || "non-JSON"} from ${requestUrl}.${hint}`);
+  }
   if (!response.ok || payload.ok === false) {
     throw new Error(payload.error || response.statusText);
   }
@@ -229,11 +262,24 @@ function buildReadyStatus() {
   const phase = displayValue(progress.phase || "unknown");
   const targetsDone = Number(progress.processed_targets || 0);
   const targetsTotal = Number(progress.selected_targets || 0);
+  const activeChunk = progress.active_chunk && typeof progress.active_chunk === "object" ? progress.active_chunk : null;
+  const activeChunkNumber = Number(activeChunk?.chunk_number || progress.current_chunk || 0);
+  const activeChunkDone = Number(activeChunk?.completed_targets || 0);
+  const activeChunkTotal = Number(activeChunk?.target_count || 0);
+  const activeChunkText = activeChunkNumber
+    ? ` chunk ${numberFormatter.format(activeChunkNumber)}${
+        activeChunkTotal
+          ? ` (${numberFormatter.format(activeChunkDone)}/${numberFormatter.format(activeChunkTotal)} current targets)`
+          : ""
+      }:`
+    : ":";
   if (targetsTotal) {
     const targetPercent = Number(progress.target_percent || 0).toFixed(2);
     const skippedRanges = Number(progress.skipped_redundant_ranges || 0);
     const skippedText = skippedRanges ? ` ${numberFormatter.format(skippedRanges)} redundant ranges skipped.` : "";
-    return `Ready. Pipeline ${phase}: ${numberFormatter.format(targetsDone)}/${numberFormatter.format(targetsTotal)} expanded IP targets (${targetPercent}%).${skippedText}`;
+    return `Ready. Pipeline ${phase}${activeChunkText} ${numberFormatter.format(targetsDone)}/${numberFormatter.format(
+      targetsTotal,
+    )} expanded IP targets (${targetPercent}%).${skippedText}`;
   }
   const rangesDone = numberFormatter.format(progress.processed_ranges || 0);
   const rangesTotal = numberFormatter.format(progress.selected_ranges || 0);
@@ -508,6 +554,13 @@ function renderMapChunkPayload(payload) {
   let selectedPoint = null;
   validPoints.forEach((point) => {
     const selected = Boolean(state.geoSelection && state.geoSelection.key === point.key);
+    if (selected && state.selectedMapPoint && Array.isArray(state.selectedMapPoint.cache_records)) {
+      point = {
+        ...point,
+        cache_records: state.selectedMapPoint.cache_records,
+        record_count: state.selectedMapPoint.record_count || point.record_count,
+      };
+    }
     const marker = buildPointMarker(point, selected ? "selected" : "top");
     marker.bindPopup(buildMapPopup(point), { maxWidth: 340 });
     marker.on("click", () => {
@@ -525,6 +578,48 @@ function renderMapChunkPayload(payload) {
   state.selectedMapPoint = selectedPoint || state.selectedMapPoint;
   renderMapDetail(selectedPoint || state.selectedMapPoint || null);
   elements.mapSummary.textContent = buildChunkedMapSummary(payload, validPoints.length);
+}
+
+async function loadSelectedMapRecords(point) {
+  if (!point || !point.records_path) {
+    return;
+  }
+  if (Array.isArray(point.cache_records) && point.cache_records.length) {
+    renderMapDetail(point);
+    renderRefinedMap();
+    return;
+  }
+
+  const requestId = state.mapSelectionRequestId + 1;
+  state.mapSelectionRequestId = requestId;
+  const params = new URLSearchParams();
+  params.set("path", point.records_path);
+  try {
+    const payload = await fetchJson(`${API_MAP_SELECTION}?${params.toString()}`);
+    if (requestId !== state.mapSelectionRequestId || !state.geoSelection || state.geoSelection.key !== point.key) {
+      return;
+    }
+    const records = Array.isArray(payload.records) ? payload.records : [];
+    const merged = {
+      ...point,
+      cache_records: records,
+      record_count: Number(payload.record_count || records.length || point.record_count || 0),
+    };
+    state.selectedMapPoint = merged;
+    renderMapDetail(merged);
+    renderRefinedMap();
+    scheduleMapChunkLoad(0);
+  } catch (error) {
+    if (requestId === state.mapSelectionRequestId && state.geoSelection && state.geoSelection.key === point.key) {
+      const failed = {
+        ...point,
+        selection_error: error.message,
+      };
+      state.selectedMapPoint = failed;
+      renderMapDetail(failed);
+      renderRefinedMap();
+    }
+  }
 }
 
 function renderRefinedMap() {
@@ -648,7 +743,7 @@ function buildMapSummary(view, totalPoints) {
   const pointText = numberFormatter.format(totalPoints);
   const ok = numberFormatter.format(view.coordinate_lookup_ok_count || 0);
   const errors = numberFormatter.format(view.coordinate_lookup_error_count || 0);
-  const geoText = state.geoSelection ? ` Region filter: ${state.geoSelection.label || state.geoSelection.key}.` : "";
+  const geoText = state.geoSelection ? ` Selected: ${state.geoSelection.label || state.geoSelection.key}.` : "";
   return `${pointText} map points, ${mappedIps} mapped IPs. Lookups: ${ok} ok, ${errors} not mapped.${geoText}`;
 }
 
@@ -658,7 +753,7 @@ function buildChunkedMapSummary(payload, visiblePoints) {
   const mappedIps = numberFormatter.format(payload.mapped_ip_count || 0);
   const chunks = numberFormatter.format(payload.loaded_chunks || 0);
   const level = payload.level ? ` at ${payload.level}` : "";
-  const geoText = state.geoSelection ? ` Region filter: ${state.geoSelection.label || state.geoSelection.key}.` : "";
+  const geoText = state.geoSelection ? ` Selected: ${state.geoSelection.label || state.geoSelection.key}.` : "";
   return `${visible}/${total} visible map cells${level}, ${mappedIps} mapped IPs represented, ${chunks} chunks loaded.${geoText}`;
 }
 
@@ -676,6 +771,12 @@ function buildExpandedMapSummary(point, dots) {
     return "Selected coordinate has no cached server records.";
   }
   if (!dots.length) {
+    if (point.selection_error) {
+      return `Could not load selected server records: ${point.selection_error}`;
+    }
+    if (point.records_path) {
+      return `${numberFormatter.format(ipCount)} servers represented by this map cell. Loading selected IP records...`;
+    }
     return `${numberFormatter.format(ipCount)} servers represented by this map cell. Zoom in for finer coordinate chunks.`;
   }
   const pingValues = dots.map((dot) => dot.pingMs).filter((value) => Number.isFinite(value));
@@ -717,6 +818,7 @@ function selectMapRegion(point) {
   renderMapControls();
   renderMapDetail(point);
   renderRefinedMap();
+  void loadSelectedMapRecords(point);
   void loadView();
 }
 
@@ -728,6 +830,9 @@ function clearMapSelection() {
   state.resultSearch = "";
   elements.resultsSearch.value = "";
   renderMapControls();
+  renderMapDetail(null);
+  renderRefinedMap();
+  scheduleMapChunkLoad(0);
   void loadView();
 }
 
@@ -755,6 +860,8 @@ function buildExpandedServerPopup(dot, point) {
   const rows = [
     ["IP", record.ip],
     ["Location", locationLabel(point)],
+    ["Long", record.long],
+    ["Lat", record.lat],
     ["Ping", Number.isFinite(dot.pingMs) ? formatMs(dot.pingMs) : record.ping_status],
     ["Offset", `${dot.distanceKm.toFixed(1)} km`],
     ["Provider", record.coordinate_provider],
@@ -777,7 +884,7 @@ function renderMapDetail(point) {
   if (!point) {
     const empty = document.createElement("p");
     empty.className = "empty-state";
-    empty.textContent = "Select a map point to refine the flow wizard by coordinate.";
+    empty.textContent = "Select a map point to inspect its IPs and coordinates.";
     elements.mapDetail.appendChild(empty);
     return;
   }
@@ -797,7 +904,7 @@ function renderMapDetail(point) {
   table.className = "map-detail-table";
   const thead = document.createElement("thead");
   const headRow = document.createElement("tr");
-  ["IP", "Provider", "Ping", "Org", "ASN", "Looked Up"].forEach((label) => {
+  ["IP", "Long", "Lat", "Provider", "Ping", "Org", "ASN", "Looked Up"].forEach((label) => {
     const th = document.createElement("th");
     th.textContent = label;
     headRow.appendChild(th);
@@ -806,10 +913,25 @@ function renderMapDetail(point) {
 
   const tbody = document.createElement("tbody");
   const records = Array.isArray(point.cache_records) ? point.cache_records : [];
+  if (!records.length) {
+    const row = document.createElement("tr");
+    const td = document.createElement("td");
+    td.className = "empty-state";
+    td.colSpan = 8;
+    td.textContent = point.selection_error
+      ? `Could not load selected IP records: ${point.selection_error}`
+      : point.records_path
+        ? "Loading selected IP records..."
+        : "No selected IP records were attached to this map point.";
+    row.appendChild(td);
+    tbody.appendChild(row);
+  }
   records.forEach((record) => {
     const row = document.createElement("tr");
     [
       record.ip,
+      record.long,
+      record.lat,
       record.coordinate_provider,
       record.ping_status,
       record.org,
@@ -1231,7 +1353,7 @@ async function exportColumn(field) {
     const payload = await fetchJson(API_EXPORT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ field, filters: state.filters, geo_filter: {} }),
+      body: JSON.stringify({ field, filters: state.filters, geo_filter: geoFilterPayload() }),
     });
     setStatus(`Wrote ${numberFormatter.format(payload.rows_written)} rows to ${payload.path}.`);
   } catch (error) {
@@ -1245,7 +1367,7 @@ async function exportRows() {
     const payload = await fetchJson(API_EXPORT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "rows", filters: state.filters, geo_filter: {} }),
+      body: JSON.stringify({ type: "rows", filters: state.filters, geo_filter: geoFilterPayload() }),
     });
     setStatus(`Wrote ${numberFormatter.format(payload.rows_written)} rows to ${payload.path}.`);
   } catch (error) {
@@ -1259,7 +1381,7 @@ async function exportMappedIps() {
     const payload = await fetchJson(API_EXPORT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "mapped-ips", filters: state.filters, geo_filter: {} }),
+      body: JSON.stringify({ type: "mapped-ips", filters: state.filters, geo_filter: geoFilterPayload() }),
     });
     setStatus(`Wrote ${numberFormatter.format(payload.rows_written)} mapped IP rows to ${payload.path}.`);
   } catch (error) {
@@ -1270,8 +1392,14 @@ async function exportMappedIps() {
 function viewParams() {
   const params = new URLSearchParams();
   params.set("filters", JSON.stringify(state.filters));
-  params.set("geo_filter", "{}");
+  params.set("geo_filter", JSON.stringify(geoFilterPayload()));
   return params;
+}
+
+function cacheBustedUrl(url) {
+  const parsed = new URL(url, window.location.origin);
+  parsed.searchParams.set("_", String(Date.now()));
+  return `${parsed.pathname}${parsed.search}`;
 }
 
 function geoFilterPayload() {

@@ -397,6 +397,30 @@ def add_to_point(point: dict[str, Any], ip: str, coord: dict[str, str], summary:
     for field in ("city", "region", "country", "org", "asn", "coordinate_provider", "coordinate_status"):
         if not point.get(field):
             point[field] = coord.get(field, "")
+    point["_records"].append(
+        {
+            "ip": ip,
+            "target_labels": "; ".join(summary.get("target_labels", [])) or coord.get("target_labels", ""),
+            "ping_status": coord.get("ping_status", ""),
+            "ping_rtt_ms": coord.get("ping_rtt_ms", ""),
+            "long": coord.get("long", ""),
+            "lat": coord.get("lat", ""),
+            "coordinate_status": coord.get("coordinate_status", ""),
+            "coordinate_provider": coord.get("coordinate_provider", ""),
+            "city": coord.get("city", ""),
+            "region": coord.get("region", ""),
+            "country": coord.get("country", ""),
+            "org": coord.get("org", ""),
+            "asn": coord.get("asn", ""),
+            "error": coord.get("error", ""),
+            "looked_up_at": coord.get("looked_up_at", ""),
+            "runbook_row_count": summary.get("row_count", 0),
+            "open_service_count": summary.get("open_service_count", 0),
+            "ports": summary.get("ports", []),
+            "services": summary.get("services", []),
+            "scan_statuses": summary.get("scan_statuses", []),
+        }
+    )
 
 
 def finalize_point(point: dict[str, Any]) -> dict[str, Any]:
@@ -426,6 +450,32 @@ def finalize_point(point: dict[str, Any]) -> dict[str, Any]:
     point["lat_text"] = f"{latitude:.6f}"
     point["long_text"] = f"{longitude:.6f}"
     return point
+
+
+def write_point_records(level_id: str, point: dict[str, Any]) -> None:
+    records = point.pop("_records", [])
+    if not isinstance(records, list):
+        records = []
+    records.sort(key=lambda item: str(item.get("ip", "")) if isinstance(item, dict) else "")
+    record_id = hashlib.sha256(str(point.get("key", "")).encode("utf-8")).hexdigest()[:16]
+    relative_path = Path("map-chunks") / level_id / "records" / f"{record_id}.json"
+    output_path = GROUP_OUTPUT_DIR / relative_path
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(
+            {
+                "key": point.get("key", ""),
+                "level": level_id,
+                "record_count": len(records),
+                "records": records,
+            },
+            separators=(",", ":"),
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    point["records_path"] = relative_path.as_posix()
+    point["record_count"] = len(records)
 
 
 def build_map_chunks(
@@ -507,6 +557,7 @@ def build_map_chunks(
                     "_long_sum": 0.0,
                     "_bucket_id": bucket_id,
                     "_bucket_count": bucket_count,
+                    "_records": [],
                 },
             )
             add_to_point(point, ip, coord, summary)
@@ -517,6 +568,8 @@ def build_map_chunks(
         point_count = 0
         for (tile_lat, tile_lon), points_by_key in sorted(tiles.items()):
             points = [finalize_point(point) for point in points_by_key.values()]
+            for point in points:
+                write_point_records(level_id, point)
             points.sort(key=lambda point: (point.get("country", ""), point.get("region", ""), point["key"]))
             tile_bbox = bbox_for_index(tile_lat, tile_lon, tile_degrees)
             ip_count = sum(int(point.get("ip_count") or 0) for point in points)
