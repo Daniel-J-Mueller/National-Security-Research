@@ -54,7 +54,7 @@ def main() -> None:
     server = ThreadingHTTPServer((args.bind, port), handler)
     url = f"http://{args.bind}:{port}/"
 
-    print(f"Cyber Visualizer: {url}", flush=True)
+    print(f"Dock-1: {url}", flush=True)
     print(f"Reading CSV shards from: {visualizer_server.CSV_DIR}", flush=True)
     print(f"Writing quick exports to: {visualizer_server.QUICK_OUTPUT_DIR}", flush=True)
     print("Press Ctrl+C to stop.", flush=True)

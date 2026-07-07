@@ -3,49 +3,30 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Cyber Visualizer</title>
+    <title>Dock-1</title>
+    <link rel="icon" href="data:," />
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       crossorigin=""
     />
-    <link rel="stylesheet" href="./styles.css?v=20260628-refresh-geo" />
+    <link rel="stylesheet" href="./styles.css?v=20260707-progress-paging" />
   </head>
   <body>
+    <div id="load-progress" class="load-progress" aria-hidden="true">
+      <span id="load-progress-bar" class="load-progress-bar"></span>
+    </div>
     <main class="app-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Private runbook workflow</p>
-          <h1>Cyber Visualizer</h1>
+          <p class="eyebrow">Interconnect Singularity</p>
+          <h1>Dock-1</h1>
         </div>
         <div class="status-block">
           <p id="status" class="status">Loading shards...</p>
           <button id="refresh-button" class="button secondary" type="button">Refresh</button>
         </div>
       </header>
-
-      <section class="metrics" aria-label="Runbook summary">
-        <div class="metric">
-          <span class="metric-label">Source</span>
-          <strong id="source-format">-</strong>
-        </div>
-        <div class="metric">
-          <span class="metric-label">Shards</span>
-          <strong id="shard-count">-</strong>
-        </div>
-        <div class="metric">
-          <span class="metric-label">Known IPs</span>
-          <strong id="total-rows">-</strong>
-        </div>
-        <div class="metric">
-          <span class="metric-label">Matching IPs</span>
-          <strong id="matching-rows">-</strong>
-        </div>
-        <div class="metric wide">
-          <span class="metric-label">Quick output</span>
-          <strong id="output-dir">-</strong>
-        </div>
-      </section>
 
       <div class="map-grid">
         <section class="map-shell" aria-labelledby="map-title">
@@ -56,6 +37,10 @@
             </div>
             <div class="map-header-actions">
               <p id="map-summary" class="note">No coordinates loaded.</p>
+              <label class="zoom-slider-label">
+                <span>Zoom</span>
+                <input id="map-zoom-slider" class="zoom-slider" type="range" min="1" max="19" step="0.05" />
+              </label>
               <button id="clear-map-filter-button" class="button secondary small" type="button" disabled>
                 Clear map filter
               </button>
@@ -72,6 +57,29 @@
           ></button>
         </section>
 
+        <section class="metrics" aria-label="Runbook summary">
+          <div class="metric">
+            <span class="metric-label">Source</span>
+            <strong id="source-format">-</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Shards</span>
+            <strong id="shard-count">-</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Known IPs loaded</span>
+            <strong id="total-rows">-</strong>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Matching IPs</span>
+            <strong id="matching-rows">-</strong>
+          </div>
+          <div class="metric wide">
+            <span class="metric-label">Quick-Output destination</span>
+            <strong id="output-dir">-</strong>
+          </div>
+        </section>
+
         <section class="map-shell refined-map-shell" aria-labelledby="refined-map-title">
           <div class="map-header">
             <div>
@@ -80,6 +88,10 @@
             </div>
             <div class="map-header-actions">
               <p id="refined-map-summary" class="note">Choose a coordinate on the left.</p>
+              <label class="zoom-slider-label">
+                <span>Zoom</span>
+                <input id="refined-map-zoom-slider" class="zoom-slider" type="range" min="1" max="19" step="0.05" />
+              </label>
               <button id="zoom-refined-map-button" class="button secondary small" type="button">
                 Zoom selection
               </button>
@@ -104,7 +116,17 @@
         <button id="export-rows-button" class="button" type="button">Export matching rows</button>
       </section>
 
-      <section class="wizard-shell" aria-label="Runbook flow wizard">
+      <section class="stats-shell" aria-labelledby="stats-title">
+        <div class="stats-titlebar">
+          <h2 id="stats-title">STATISTICS</h2>
+        </div>
+        <div id="stats-grid" class="stats-grid"></div>
+      </section>
+
+      <section class="wizard-shell" aria-labelledby="wizard-title">
+        <div class="wizard-titlebar">
+          <h2 id="wizard-title">FLOW WIZARD</h2>
+        </div>
         <div id="wizard-columns" class="wizard-columns"></div>
       </section>
 
@@ -130,9 +152,16 @@
         </div>
       </section>
 
+      <section class="debug-shell" aria-labelledby="debug-title">
+        <div class="debug-titlebar">
+          <h2 id="debug-title">DEBUG</h2>
+        </div>
+        <div id="debug-body" class="debug-body"></div>
+      </section>
+
     </main>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-    <script src="./app.js?v=20260628-refresh-geo-json-guard"></script>
+    <script src="./app.js?v=20260707-progress-paging"></script>
   </body>
 </html>

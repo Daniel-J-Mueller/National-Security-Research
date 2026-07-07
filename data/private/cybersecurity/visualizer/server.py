@@ -50,12 +50,12 @@ PREFERRED_HIERARCHY = [
     "version",
     "port",
     "host",
-    "target_label",
     "scan_status",
     "host_status",
+    "scanned_day",
+    "target_label",
     "cpe",
     "extrainfo",
-    "error",
     "target",
 ]
 
@@ -63,6 +63,10 @@ OPTION_PAGE_SIZE = 120
 ROW_PAGE_SIZE = 250
 MAP_POINT_LIMIT = 10000
 MAP_CHUNK_RESPONSE_POINT_LIMIT = 500
+SCANNED_DAY_FIELD = "scanned_day"
+SCANNED_AT_FIELD = "scanned_at"
+DEBUG_FIELD = "error"
+DEFAULT_HIDDEN_WIZARD_FIELDS = {"protocol", "scan_status", "host_status", "target_label"}
 
 _DATA_CACHE: dict[str, object] = {
     "signature": None,
@@ -556,6 +560,30 @@ def normalize_row(row: dict[str, object]) -> dict[str, str]:
     return normalize_legacy_shifted_runbook_row(normalized)
 
 
+def scanned_day(value: object) -> str:
+    text = normalize_value(value).strip()
+    if not text:
+        return ""
+    match = re.search(r"\d{4}-\d{2}-\d{2}", text)
+    if match:
+        return match.group(0)
+    for fmt in ("%m/%d/%Y", "%m/%d/%y"):
+        try:
+            return datetime.strptime(text[:10], fmt).date().isoformat()
+        except ValueError:
+            pass
+    return text[:10]
+
+
+def add_derived_fields(row: dict[str, str]) -> dict[str, str]:
+    if SCANNED_DAY_FIELD in row:
+        return row
+    day = scanned_day(row.get(SCANNED_AT_FIELD, ""))
+    if not day:
+        return row
+    return {**row, SCANNED_DAY_FIELD: day}
+
+
 def normalize_legacy_shifted_runbook_row(row: dict[str, str]) -> dict[str, str]:
     """Repair rows appended by older scanners before long/lat were present."""
     if not row.get("long") and not row.get("lat") and row.get("host") in {"open-service", "error", "dry-run-planned"}:
@@ -929,6 +957,10 @@ def get_dataset() -> dict[str, object]:
     else:
         rows, headers = load_jsonl_rows(paths)
 
+    rows = [add_derived_fields(row) for row in rows]
+    if any(row.get(SCANNED_DAY_FIELD) for row in rows):
+        add_header(headers, SCANNED_DAY_FIELD)
+
     _DATA_CACHE.update(
         {
             "signature": signature,
@@ -1175,9 +1207,48 @@ def get_coordinate_records_for_ips(ips: set[str]) -> dict[str, object]:
 
 
 def build_hierarchy(headers: list[str]) -> list[str]:
-    ordered = [field for field in PREFERRED_HIERARCHY if field in headers]
-    ordered.extend(field for field in headers if field not in ordered)
+    excluded = {DEBUG_FIELD}
+    if SCANNED_DAY_FIELD in headers:
+        excluded.add(SCANNED_AT_FIELD)
+    ordered = [field for field in PREFERRED_HIERARCHY if field in headers and field not in excluded]
+    ordered.extend(field for field in headers if field not in ordered and field not in excluded)
     return ordered
+
+
+def field_is_gated(field: str, filters: dict[str, str]) -> bool:
+    return field == "version" and "product" not in filters
+
+
+def column_visible_by_default(field: str, column: dict[str, object], filters: dict[str, str]) -> bool:
+    if field in filters:
+        return True
+    if field_is_gated(field, filters):
+        return False
+    if field in DEFAULT_HIDDEN_WIZARD_FIELDS:
+        return False
+    try:
+        if int(column.get("total_options", 0)) <= 1:
+            return False
+    except (TypeError, ValueError):
+        pass
+    return True
+
+
+def build_visible_columns(
+    rows: list[dict[str, str]],
+    fields: list[str],
+    filters: dict[str, str],
+    hierarchy: list[str],
+    limit: int | None = OPTION_PAGE_SIZE,
+) -> list[dict[str, object]]:
+    columns: list[dict[str, object]] = []
+    for field in fields:
+        if field_is_gated(field, filters) and field not in filters:
+            continue
+        column = build_field_options(rows, field, filters, hierarchy, limit)
+        if column_visible_by_default(field, column, filters):
+            columns.append(column)
+    return columns
 
 
 def parse_filters(raw_value: str | None) -> dict[str, str]:
@@ -1256,6 +1327,160 @@ def row_matches_text(row: dict[str, str], headers: list[str], search: str) -> bo
 
 def known_ips(rows: list[dict[str, str]]) -> set[str]:
     return {ip for row in rows if (ip := row_ip(row))}
+
+
+def unique_join(values: list[str]) -> str:
+    unique: list[str] = []
+    for value in values:
+        text = normalize_value(value)
+        if text and text not in unique:
+            unique.append(text)
+    return "; ".join(unique)
+
+
+def result_headers(headers: list[str]) -> list[str]:
+    preferred = [
+        "host",
+        "target",
+        "target_label",
+        "ports",
+        "protocol",
+        "service_name",
+        "product",
+        "version",
+        "scan_status",
+        "host_status",
+        "cpe",
+        "extrainfo",
+        "error",
+        SCANNED_DAY_FIELD,
+        SCANNED_AT_FIELD,
+        "node_id",
+        "node_label",
+        "source_index",
+    ]
+    result: list[str] = []
+    for field in preferred:
+        if field == "ports" or field in headers:
+            add_header(result, field)
+    for field in headers:
+        add_header(result, field)
+    return result
+
+
+def aggregate_rows_by_ip(rows: list[dict[str, str]], headers: list[str]) -> list[dict[str, str]]:
+    output_headers = result_headers(headers)
+    grouped: dict[str, dict[str, object]] = {}
+    order: list[str] = []
+    anonymous_index = 0
+    for row in rows:
+        ip = row_ip(row)
+        if not ip:
+            anonymous_index += 1
+            ip = f"__row_{anonymous_index}"
+        if ip not in grouped:
+            grouped[ip] = {field: [] for field in output_headers}
+            order.append(ip)
+        bucket = grouped[ip]
+        assert isinstance(bucket, dict)
+        if not str(ip).startswith("__row_"):
+            append_unique(bucket.setdefault("host", []), ip)  # type: ignore[arg-type]
+        port_label = " ".join(
+            part
+            for part in (
+                row.get("protocol", ""),
+                row.get("port", ""),
+                row.get("service_name", ""),
+            )
+            if part
+        )
+        append_unique(bucket.setdefault("ports", []), port_label)  # type: ignore[arg-type]
+        for field in output_headers:
+            values = bucket.setdefault(field, [])
+            assert isinstance(values, list)
+            append_unique(values, row.get(field, ""))
+
+    aggregated: list[dict[str, str]] = []
+    for key in order:
+        bucket = grouped[key]
+        row: dict[str, str] = {}
+        for field in output_headers:
+            values = bucket.get(field, [])
+            assert isinstance(values, list)
+            row[field] = unique_join(values)
+        aggregated.append(row)
+    return aggregated
+
+
+def top_count_items(
+    rows: list[dict[str, str]],
+    field: str,
+    limit: int = 8,
+    include_blank: bool = True,
+) -> list[dict[str, object]]:
+    values: list[str] = []
+    for row in rows:
+        value = normalize_value(row.get(field, ""))
+        if not value and not include_blank:
+            continue
+        values.append(value or "(blank)")
+    counter: Counter[str] = Counter(values)
+    return [
+        {"label": value, "count": count}
+        for value, count in counter.most_common(limit)
+    ]
+
+
+def day_series(rows: list[dict[str, str]], field: str = SCANNED_DAY_FIELD) -> list[dict[str, object]]:
+    counter: Counter[str] = Counter(row.get(field, "") for row in rows if row.get(field, ""))
+    return [
+        {"day": day, "count": counter[day]}
+        for day in sorted(counter)
+    ]
+
+
+def build_statistics(rows: list[dict[str, str]], headers: list[str]) -> dict[str, object]:
+    known = known_ips(rows)
+    open_services = sum(1 for row in rows if row.get("scan_status") == "open-service")
+    error_rows = sum(1 for row in rows if row.get(DEBUG_FIELD))
+    pie_fields = [
+        ("Service", "service_name"),
+        ("Product", "product"),
+        ("Port", "port"),
+    ]
+    pies = [
+        {"title": title, "field": field, "items": top_count_items(rows, field, 7, include_blank=False)}
+        for title, field in pie_fields
+        if field in headers
+    ]
+    return {
+        "cards": [
+            {"label": "Rows", "value": len(rows)},
+            {"label": "Known IPs", "value": len(known)},
+            {"label": "Open services", "value": open_services},
+            {"label": "Rows with errors", "value": error_rows},
+        ],
+        "pies": pies,
+        "scan_days": day_series(rows),
+    }
+
+
+def build_debug_payload(rows: list[dict[str, str]]) -> dict[str, object]:
+    error_rows = [row for row in rows if row.get(DEBUG_FIELD)]
+    return {
+        "error_row_count": len(error_rows),
+        "errors": top_count_items(error_rows, DEBUG_FIELD, 12) if error_rows else [],
+        "samples": [
+            {
+                "host": row_ip(row) or row.get("host", "") or row.get("target", ""),
+                "port": row.get("port", ""),
+                "service_name": row.get("service_name", ""),
+                "error": row.get(DEBUG_FIELD, ""),
+                SCANNED_DAY_FIELD: row.get(SCANNED_DAY_FIELD, ""),
+            }
+            for row in error_rows[:40]
+        ],
+    }
 
 
 def prefix_filters(field: str, hierarchy: list[str], filters: dict[str, str]) -> dict[str, str]:
@@ -1453,6 +1678,8 @@ def build_view(filters: dict[str, str], geo_filter: dict[str, object] | None = N
     resolved_geo_filter = resolve_geo_filter(rows, geo_filter or {})
     geo_rows = apply_geo_filter(rows, resolved_geo_filter)
     matching_rows = [row for row in geo_rows if row_matches(row, valid_filters)]
+    aggregated_rows = aggregate_rows_by_ip(matching_rows, headers)
+    output_headers = result_headers(headers)
     known_ip_count = len(known_ips(rows))
     matching_known_ip_count = len(known_ips(matching_rows))
     chunk_manifest = map_chunk_manifest()
@@ -1477,17 +1704,18 @@ def build_view(filters: dict[str, str], geo_filter: dict[str, object] | None = N
     return {
         "source_format": dataset["source_format"],
         "shards": dataset["shards"],
-        "headers": headers,
+        "headers": output_headers,
         "hierarchy": hierarchy,
         "filters": valid_filters,
         "geo_filter": resolved_geo_filter,
         "total_rows": len(rows),
-        "matching_count": len(matching_rows),
+        "matching_count": len(aggregated_rows),
+        "raw_matching_count": len(matching_rows),
         "known_ip_count": known_ip_count,
         "matching_known_ip_count": matching_known_ip_count,
         "row_page_size": ROW_PAGE_SIZE,
-        "rows": matching_rows[:ROW_PAGE_SIZE],
-        "rows_has_more": len(matching_rows) > ROW_PAGE_SIZE,
+        "rows": aggregated_rows[:ROW_PAGE_SIZE],
+        "rows_has_more": len(aggregated_rows) > ROW_PAGE_SIZE,
         "map_points": map_points,
         "map_point_count": map_point_count,
         "mapped_ip_count": mapped_ip_count,
@@ -1500,10 +1728,9 @@ def build_view(filters: dict[str, str], geo_filter: dict[str, object] | None = N
         "coordinate_lookup_ok_count": coordinate_dataset["lookup_ok_count"],
         "coordinate_lookup_error_count": coordinate_dataset["lookup_error_count"],
         "coordinate_sources": coordinate_dataset["source_files"],
-        "columns": [
-            build_field_options(geo_rows, field, valid_filters, hierarchy, OPTION_PAGE_SIZE)
-            for field in hierarchy
-        ],
+        "columns": build_visible_columns(geo_rows, hierarchy, valid_filters, hierarchy, OPTION_PAGE_SIZE),
+        "statistics": build_statistics(matching_rows, headers),
+        "debug": build_debug_payload(matching_rows),
     }
 
 
@@ -1550,20 +1777,23 @@ def build_rows_page(
     resolved_geo_filter = resolve_geo_filter(rows, geo_filter)
     geo_rows = apply_geo_filter(rows, resolved_geo_filter)
     matching_rows = [row for row in geo_rows if row_matches(row, valid_filters)]
-    searched_rows = [row for row in matching_rows if row_matches_text(row, headers, search)]
+    output_headers = result_headers(headers)
+    aggregated_rows = aggregate_rows_by_ip(matching_rows, headers)
+    searched_rows = [row for row in aggregated_rows if row_matches_text(row, output_headers, search)]
     total_rows = len(searched_rows)
     offset = min(max(0, offset), total_rows)
     page_rows = searched_rows[offset : offset + limit]
 
     return {
         "ok": True,
-        "headers": headers,
+        "headers": output_headers,
         "filters": valid_filters,
         "geo_filter": resolved_geo_filter,
         "search": search,
         "offset": offset,
         "limit": limit,
-        "matching_count": len(matching_rows),
+        "matching_count": len(aggregated_rows),
+        "raw_matching_count": len(matching_rows),
         "matching_known_ip_count": len(known_ips(matching_rows)),
         "total_rows": total_rows,
         "rows": page_rows,
@@ -1903,11 +2133,14 @@ class VisualizerHandler(SimpleHTTPRequestHandler):
 
     def respond_json(self, payload: object, status: HTTPStatus = HTTPStatus.OK) -> None:
         body = json.dumps(payload, indent=2).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+            return
 
 
 def build_parser() -> argparse.ArgumentParser:
