@@ -6,6 +6,7 @@ const API_ROWS = "/api/rows";
 const API_MAP_CHUNKS = "/api/map-chunks";
 const API_MAP_SELECTION = "/api/map-selection";
 const API_REFRESH = "/api/refresh";
+const API_ENTRY_OVERRIDES = "/api/entry-overrides";
 const ANY_VALUE = "__RUNBOOK_ANY__";
 const MAP_HEIGHT_STORAGE_KEY = "dock-1-map-height-v2";
 const REFINED_MAP_HEIGHT_STORAGE_KEY = "dock-1-refined-map-height-v2";
@@ -40,6 +41,7 @@ const state = {
   mapChunkInitialized: false,
   mapChunkPayload: null,
   viewRequestId: 0,
+  resultRenderId: 0,
   progressHideTimer: null,
   mapResizeStartY: 0,
   mapResizeStartHeight: 0,
@@ -49,6 +51,7 @@ const state = {
   mapResizeLeafletMap: null,
   columnSearches: {},
   columnPaging: {},
+  entryEditorRow: null,
   resultSearch: "",
   resultPaging: {
     offset: 0,
@@ -89,6 +92,11 @@ const elements = {
   refreshButton: document.getElementById("refresh-button"),
   exportRowsButton: document.getElementById("export-rows-button"),
   exportMappedButton: document.getElementById("export-mapped-button"),
+  wizardResetAllButton: document.getElementById("wizard-reset-all"),
+  entryEditor: document.getElementById("entry-editor"),
+  entryEditorSummary: document.getElementById("entry-editor-summary"),
+  entryEditorBody: document.getElementById("entry-editor-body"),
+  entryEditorClose: document.getElementById("entry-editor-close"),
   statsGrid: document.getElementById("stats-grid"),
   debugBody: document.getElementById("debug-body"),
 };
@@ -108,8 +116,17 @@ function bindEvents() {
     state.selectedMapPoint = null;
     state.columnSearches = {};
     state.resultSearch = "";
+    closeEntryEditor();
     elements.resultsSearch.value = "";
     void loadView();
+  });
+
+  elements.wizardResetAllButton.addEventListener("click", () => {
+    resetFlowWizard();
+  });
+
+  elements.entryEditorClose.addEventListener("click", () => {
+    closeEntryEditor();
   });
 
   elements.refreshButton.addEventListener("click", () => {
@@ -1253,39 +1270,52 @@ function renderLineChart(titleText, points) {
 
 async function renderWizard(requestId = state.viewRequestId) {
   const view = state.view;
-  elements.wizardColumns.textContent = "";
-  state.columnPaging = {};
-
-  if (!view || !Array.isArray(view.columns) || !view.columns.length) {
-    const empty = document.createElement("p");
-    empty.className = "empty-state";
-    empty.textContent = "No runbook columns were found in the available shards.";
-    elements.wizardColumns.appendChild(empty);
-    return;
+  const shell = elements.wizardColumns.closest(".wizard-shell");
+  const previousHeight = shell ? Math.round(shell.getBoundingClientRect().height) : 0;
+  if (shell) {
+    shell.classList.add("is-loading");
+    shell.style.minHeight = `${Math.max(previousHeight, 380)}px`;
   }
+  try {
+    elements.wizardColumns.textContent = "";
+    state.columnPaging = {};
 
-  for (let index = 0; index < view.columns.length; index += 1) {
-    if (requestId !== state.viewRequestId) {
+    if (!view || !Array.isArray(view.columns) || !view.columns.length) {
+      const empty = document.createElement("p");
+      empty.className = "empty-state";
+      empty.textContent = "No runbook columns were found in the available shards.";
+      elements.wizardColumns.appendChild(empty);
       return;
     }
-    const column = view.columns[index];
-    const rendered = renderColumn(column, index);
-    elements.wizardColumns.appendChild(rendered.wrapper);
-    updateTopProgress(55 + (index / view.columns.length) * 16, {
-      message: `Updating flow columns ${numberFormatter.format(index + 1)}/${numberFormatter.format(
-        view.columns.length,
-      )}...`,
-    });
-    if (rendered.page.search) {
-      void loadColumnOptions(rendered.page.field, true);
-    } else {
-      rendered.page.loading = true;
-      renderColumnFooter(rendered.page);
-      await applyColumnPayload(rendered.page, column, true, requestId);
-      rendered.page.loading = false;
-      renderColumnFooter(rendered.page);
+
+    for (let index = 0; index < view.columns.length; index += 1) {
+      if (requestId !== state.viewRequestId) {
+        return;
+      }
+      const column = view.columns[index];
+      const rendered = renderColumn(column, index);
+      elements.wizardColumns.appendChild(rendered.wrapper);
+      updateTopProgress(55 + (index / view.columns.length) * 16, {
+        message: `Updating flow columns ${numberFormatter.format(index + 1)}/${numberFormatter.format(
+          view.columns.length,
+        )}...`,
+      });
+      if (rendered.page.search) {
+        void loadColumnOptions(rendered.page.field, true);
+      } else {
+        rendered.page.loading = true;
+        renderColumnFooter(rendered.page);
+        await applyColumnPayload(rendered.page, column, true, requestId);
+        rendered.page.loading = false;
+        renderColumnFooter(rendered.page);
+      }
+      await nextFrame();
     }
-    await nextFrame();
+  } finally {
+    if (shell) {
+      shell.classList.remove("is-loading");
+      shell.style.minHeight = "";
+    }
   }
 }
 
@@ -1408,6 +1438,12 @@ async function appendColumnOptions(page, options, requestId = state.viewRequestI
       button.addEventListener("click", () => {
         setFilter(page.field, option.value, page.index);
       });
+      if (page.field === "cpe") {
+        button.addEventListener("dblclick", (event) => {
+          event.preventDefault();
+          setCpeFilter(option.value);
+        });
+      }
 
       const value = document.createElement("span");
       value.className = option.value ? "option-value" : "option-value blank";
@@ -1421,7 +1457,24 @@ async function appendColumnOptions(page, options, requestId = state.viewRequestI
       count.title = `${numberFormatter.format(ipCount)} IPs, ${numberFormatter.format(rowCount)} rows`;
 
       button.append(value, count);
-      fragment.appendChild(button);
+      if (page.field === "cpe" && option.value) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "option-with-copy";
+        button.classList.add("option-button-with-copy");
+        const copyButton = document.createElement("button");
+        copyButton.type = "button";
+        copyButton.className = "option-copy-button";
+        copyButton.textContent = "Copy";
+        copyButton.title = "Copy CPE value";
+        copyButton.addEventListener("click", (event) => {
+          event.stopPropagation();
+          void copyCpeValue(option.value, copyButton);
+        });
+        wrapper.append(button, copyButton);
+        fragment.appendChild(wrapper);
+      } else {
+        fragment.appendChild(button);
+      }
     });
     page.list.appendChild(fragment);
     if (start + OPTION_RENDER_CHUNK_SIZE < options.length) {
@@ -1473,6 +1526,8 @@ async function loadColumnOptions(field, reset = false) {
   if (!page || page.loading || (!reset && !page.hasMore)) {
     return;
   }
+  const requestId = state.viewRequestId;
+  const pageSearch = page.search;
 
   page.loading = true;
   renderColumnFooter(page);
@@ -1485,14 +1540,22 @@ async function loadColumnOptions(field, reset = false) {
 
   try {
     const payload = await fetchJson(`${API_OPTIONS}?${params.toString()}`);
-    await applyColumnPayload(page, payload, reset);
+    if (requestId !== state.viewRequestId || state.columnPaging[field] !== page || page.search !== pageSearch) {
+      return;
+    }
+    await applyColumnPayload(page, payload, reset, requestId);
   } catch (error) {
+    if (requestId !== state.viewRequestId || state.columnPaging[field] !== page || page.search !== pageSearch) {
+      return;
+    }
     setListMessage(page.list, `Could not load values: ${error.message}`);
     page.hasMore = false;
     renderColumnFooter(page);
   } finally {
-    page.loading = false;
-    renderColumnFooter(page);
+    if (requestId === state.viewRequestId && state.columnPaging[field] === page && page.search === pageSearch) {
+      page.loading = false;
+      renderColumnFooter(page);
+    }
   }
 }
 
@@ -1519,6 +1582,8 @@ function maybeLoadVisibleColumnOptions() {
 }
 
 async function renderResults(requestId = state.viewRequestId) {
+  const resultRenderId = state.resultRenderId + 1;
+  state.resultRenderId = resultRenderId;
   const view = state.view;
   elements.resultsHead.textContent = "";
   elements.resultsBody.textContent = "";
@@ -1531,6 +1596,10 @@ async function renderResults(requestId = state.viewRequestId) {
   elements.resultsSearch.value = state.resultSearch;
 
   const headerRow = document.createElement("tr");
+  const editHeader = document.createElement("th");
+  editHeader.className = "row-edit-header";
+  editHeader.textContent = "Edit";
+  headerRow.appendChild(editHeader);
   const copyHeader = document.createElement("th");
   copyHeader.className = "row-copy-header";
   copyHeader.textContent = "Copy";
@@ -1553,12 +1622,15 @@ async function renderResults(requestId = state.viewRequestId) {
     showRowsMessage("Searching rows...");
     state.resultPaging.hasMore = true;
     updateResultsNote();
-    void loadRows(true);
+    void loadRows(true, requestId, resultRenderId);
     return;
   }
 
   const rows = Array.isArray(view.rows) ? view.rows : [];
-  await appendRows(rows, requestId);
+  await appendRows(rows, requestId, resultRenderId);
+  if (requestId !== state.viewRequestId || resultRenderId !== state.resultRenderId) {
+    return;
+  }
   state.resultPaging.offset = rows.length;
   state.resultPaging.total = Number(view.matching_count || 0);
   state.resultPaging.hasMore = Boolean(view.rows_has_more) || rows.length < state.resultPaging.total;
@@ -1569,51 +1641,100 @@ async function renderResults(requestId = state.viewRequestId) {
   updateResultsNote();
 }
 
-async function loadRows(reset = false) {
+async function loadRows(reset = false, requestId = state.viewRequestId, resultRenderId = state.resultRenderId) {
   const view = state.view;
-  if (!view || state.resultPaging.loading || (!reset && !state.resultPaging.hasMore)) {
+  const paging = state.resultPaging;
+  if (!view || paging.loading || (!reset && !paging.hasMore)) {
     return;
   }
 
-  state.resultPaging.loading = true;
+  paging.loading = true;
   updateResultsNote();
 
   const params = viewParams();
   params.set("search", state.resultSearch);
-  params.set("offset", reset ? "0" : String(state.resultPaging.offset));
+  params.set("offset", reset ? "0" : String(paging.offset));
   params.set("limit", String(ROW_PAGE_SIZE));
 
   try {
     const payload = await fetchJson(`${API_ROWS}?${params.toString()}`);
+    if (
+      requestId !== state.viewRequestId ||
+      resultRenderId !== state.resultRenderId ||
+      state.view !== view ||
+      state.resultPaging !== paging
+    ) {
+      return;
+    }
     const rows = Array.isArray(payload.rows) ? payload.rows : [];
     if (reset) {
       elements.resultsBody.textContent = "";
     }
-    await appendRows(rows);
-    state.resultPaging.offset = Number(payload.offset || 0) + rows.length;
-    state.resultPaging.total = Number(payload.total_rows || 0);
-    state.resultPaging.hasMore = Boolean(payload.has_more);
-    if (!state.resultPaging.offset && !rows.length) {
+    await appendRows(rows, requestId, resultRenderId);
+    if (
+      requestId !== state.viewRequestId ||
+      resultRenderId !== state.resultRenderId ||
+      state.view !== view ||
+      state.resultPaging !== paging
+    ) {
+      return;
+    }
+    paging.offset = Number(payload.offset || 0) + rows.length;
+    paging.total = Number(payload.total_rows || 0);
+    paging.hasMore = Boolean(payload.has_more);
+    if (!paging.offset && !rows.length) {
       showRowsMessage(state.resultSearch.trim() ? "No rows match this search." : "No rows match the current path.");
     }
   } catch (error) {
-    showRowsMessage(`Could not load rows: ${error.message}`);
-    state.resultPaging.hasMore = false;
+    if (
+      requestId !== state.viewRequestId ||
+      resultRenderId !== state.resultRenderId ||
+      state.view !== view ||
+      state.resultPaging !== paging
+    ) {
+      return;
+    }
+    paging.hasMore = false;
+    if (reset || !paging.offset) {
+      showRowsMessage(`Could not load rows: ${error.message}`);
+    } else {
+      setStatus(`Could not load more rows: ${error.message}`);
+    }
   } finally {
-    state.resultPaging.loading = false;
-    updateResultsNote();
+    if (
+      requestId === state.viewRequestId &&
+      resultRenderId === state.resultRenderId &&
+      state.view === view &&
+      state.resultPaging === paging
+    ) {
+      paging.loading = false;
+      updateResultsNote();
+    }
   }
 }
 
-async function appendRows(rows, requestId = state.viewRequestId) {
+async function appendRows(rows, requestId = state.viewRequestId, resultRenderId = state.resultRenderId) {
   const view = state.view;
   for (let start = 0; start < rows.length; start += ROW_RENDER_CHUNK_SIZE) {
-    if (requestId !== state.viewRequestId) {
+    if (requestId !== state.viewRequestId || resultRenderId !== state.resultRenderId) {
       return;
     }
     const fragment = document.createDocumentFragment();
     rows.slice(start, start + ROW_RENDER_CHUNK_SIZE).forEach((row) => {
       const tr = document.createElement("tr");
+      const editCell = document.createElement("td");
+      editCell.className = "row-edit-cell";
+      const editButton = document.createElement("button");
+      editButton.type = "button";
+      editButton.className = "button secondary row-copy-button";
+      editButton.textContent = "Edit";
+      editButton.title = "Open entry editor";
+      editButton.addEventListener("click", () => {
+        openEntryEditor(row);
+      });
+      editCell.appendChild(editButton);
+      tr.appendChild(editCell);
+
       const actionCell = document.createElement("td");
       actionCell.className = "row-copy-cell";
       const copyButton = document.createElement("button");
@@ -1629,7 +1750,28 @@ async function appendRows(rows, requestId = state.viewRequestId) {
       view.headers.forEach((header) => {
         const td = document.createElement("td");
         const value = row[header] || "";
-        td.textContent = displayValue(value);
+        if (header === "cpe" && value) {
+          const cpeList = document.createElement("div");
+          cpeList.className = "cpe-token-list";
+          splitCpeValues(value).forEach((cpeValue) => {
+            const cpeButton = document.createElement("button");
+            cpeButton.type = "button";
+            cpeButton.className = "cell-copy-button cpe-token-button";
+            cpeButton.textContent = displayValue(cpeValue);
+            cpeButton.title = "Copy CPE value. Double-click to filter rows.";
+            cpeButton.addEventListener("click", () => {
+              void copyCpeValue(cpeValue, cpeButton);
+            });
+            cpeButton.addEventListener("dblclick", (event) => {
+              event.preventDefault();
+              setCpeFilter(cpeValue);
+            });
+            cpeList.appendChild(cpeButton);
+          });
+          td.appendChild(cpeList);
+        } else {
+          td.textContent = displayValue(value);
+        }
         if (!value) {
           td.className = "blank";
         }
@@ -1652,6 +1794,27 @@ async function copyRowJsonl(row, headers, button) {
     flashButtonLabel(button, "Copied");
   } catch (error) {
     setStatus(`Copy failed: ${error.message}`);
+  }
+}
+
+async function copyCpeValue(value, button) {
+  const text = String(value || "");
+  if (!text) {
+    return;
+  }
+  try {
+    await copyTextToClipboard(text);
+    setStatus("Copied CPE value to clipboard.");
+    if (button && button.children && button.children.length) {
+      button.classList.add("is-copied");
+      window.setTimeout(() => {
+        button.classList.remove("is-copied");
+      }, 900);
+    } else {
+      flashButtonLabel(button, "Copied");
+    }
+  } catch (error) {
+    setStatus(`CPE copy failed: ${error.message}`);
   }
 }
 
@@ -1723,7 +1886,7 @@ function showRowsMessage(message) {
   const tr = document.createElement("tr");
   const td = document.createElement("td");
   td.className = "empty-state";
-  td.colSpan = view && Array.isArray(view.headers) ? view.headers.length + 1 : 1;
+  td.colSpan = view && Array.isArray(view.headers) ? view.headers.length + 2 : 1;
   td.textContent = message;
   tr.appendChild(td);
   elements.resultsBody.textContent = "";
@@ -1796,6 +1959,154 @@ function renderDebug() {
   elements.debugBody.appendChild(grid);
 }
 
+function openEntryEditor(row) {
+  const ip = rowPrimaryIp(row);
+  state.entryEditorRow = row;
+  elements.entryEditor.classList.remove("is-hidden");
+  elements.entryEditorSummary.textContent = ip
+    ? `Editing aggregate entry for ${ip}. Blank to-apply fields are ignored; use (blank) to clear a value.`
+    : "This row does not have a valid IP key, so it cannot be applied.";
+  renderEntryEditor(row);
+  elements.entryEditor.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function closeEntryEditor() {
+  state.entryEditorRow = null;
+  elements.entryEditor.classList.add("is-hidden");
+  elements.entryEditorBody.textContent = "";
+}
+
+function renderEntryEditor(row) {
+  elements.entryEditorBody.textContent = "";
+  const headers = Array.isArray(state.view?.headers) ? state.view.headers : [];
+  const editable = new Set(Array.isArray(state.view?.editable_entry_fields) ? state.view.editable_entry_fields : []);
+  const fields = headers.filter((field) => field !== "source_index" && field !== "ports");
+  const ip = rowPrimaryIp(row);
+
+  const table = document.createElement("table");
+  table.className = "entry-editor-table";
+  const thead = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  ["Entry", "As-is", "To apply"].forEach((label) => {
+    const th = document.createElement("th");
+    th.textContent = label;
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
+
+  const tbody = document.createElement("tbody");
+  fields.forEach((field) => {
+    const tr = document.createElement("tr");
+    const label = document.createElement("td");
+    label.className = "entry-editor-field";
+    label.textContent = labelFor(field);
+
+    const current = document.createElement("td");
+    current.className = "entry-editor-current";
+    current.textContent = displayValue(row[field] || "");
+
+    const next = document.createElement("td");
+    if (editable.has(field) && ip) {
+      const input = document.createElement(field === "error" || field === "extrainfo" ? "textarea" : "input");
+      input.className = "entry-editor-input";
+      input.dataset.field = field;
+      if (input.tagName === "INPUT") {
+        input.type = "text";
+      }
+      input.placeholder = "leave blank";
+      next.appendChild(input);
+    } else {
+      const locked = document.createElement("span");
+      locked.className = "entry-editor-locked";
+      locked.textContent = "Locked";
+      next.appendChild(locked);
+    }
+    tr.append(label, current, next);
+    tbody.appendChild(tr);
+  });
+  table.append(thead, tbody);
+
+  const actions = document.createElement("div");
+  actions.className = "entry-editor-actions";
+  const applyButton = document.createElement("button");
+  applyButton.type = "button";
+  applyButton.className = "button";
+  applyButton.textContent = "Apply changes";
+  applyButton.disabled = !ip;
+  applyButton.addEventListener("click", () => {
+    void applyEntryEditor(ip, row, applyButton);
+  });
+  actions.appendChild(applyButton);
+
+  elements.entryEditorBody.append(table, actions);
+}
+
+async function applyEntryEditor(ip, row, button) {
+  const inputs = Array.from(elements.entryEditorBody.querySelectorAll("[data-field]"));
+  const updates = {};
+  inputs.forEach((input) => {
+    const field = input.dataset.field;
+    const rawValue = input.value;
+    if (!field || rawValue.trim() === "") {
+      return;
+    }
+    const value = rawValue.trim() === "(blank)" ? "" : rawValue;
+    if (value !== (row[field] || "")) {
+      updates[field] = value;
+    }
+  });
+
+  if (!Object.keys(updates).length) {
+    setStatus("No entry editor changes to apply.");
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Applying...";
+  try {
+    const payload = await fetchJson(API_ENTRY_OVERRIDES, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ip, updates }),
+    });
+    closeEntryEditor();
+    setStatus(`Applied ${numberFormatter.format(Object.keys(payload.updates || updates).length)} entry changes for ${ip}.`);
+    await loadAll({ force: true });
+  } catch (error) {
+    setStatus(`Entry editor apply failed: ${error.message}`);
+    button.disabled = false;
+    button.textContent = "Apply changes";
+  }
+}
+
+function rowPrimaryIp(row) {
+  for (const field of ["host", "target", "ip", "address"]) {
+    const match = String(row[field] || "").match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
+    if (match) {
+      return match[0];
+    }
+  }
+  return "";
+}
+
+function resetFlowWizard() {
+  state.filters = {};
+  state.columnSearches = {};
+  state.resultSearch = "";
+  elements.resultsSearch.value = "";
+  void loadView();
+}
+
+function setCpeFilter(value) {
+  const cpeValue = String(value || "").trim();
+  if (!cpeValue) {
+    return;
+  }
+  const hierarchy = (state.view && state.view.hierarchy) || [];
+  const index = hierarchy.indexOf("cpe");
+  setFilter("cpe", cpeValue, index >= 0 ? index : hierarchy.length);
+}
+
 function setFilter(field, value, index) {
   const nextFilters = {};
   const hierarchy = (state.view && state.view.hierarchy) || [];
@@ -1810,11 +2121,27 @@ function setFilter(field, value, index) {
     nextFilters[field] = value;
   }
 
+  if (filtersEqual(state.filters, nextFilters) && !state.resultSearch) {
+    setStatus(`${labelFor(field)} is already filtered to ${displayValue(value)}.`);
+    return;
+  }
+
   state.filters = nextFilters;
   state.columnSearches = {};
   state.resultSearch = "";
   elements.resultsSearch.value = "";
+  showRowsMessage("Loading rows...");
+  setStatus(value === ANY_VALUE ? `Reset ${labelFor(field)} filter.` : `Filtering ${labelFor(field)} to ${displayValue(value)}...`);
   void loadView();
+}
+
+function filtersEqual(left, right) {
+  const leftKeys = Object.keys(left || {}).sort();
+  const rightKeys = Object.keys(right || {}).sort();
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+  return leftKeys.every((key, index) => key === rightKeys[index] && left[key] === right[key]);
 }
 
 async function exportColumn(field) {
@@ -1976,6 +2303,21 @@ function nextFrame() {
 
 function displayValue(value) {
   return value === "" ? "(blank)" : String(value);
+}
+
+function splitCpeValues(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return [];
+  }
+  const values = [];
+  text.split(/\s*;\s*|\s*\|\s*/).forEach((part) => {
+    const cpe = part.trim();
+    if (cpe && !values.includes(cpe)) {
+      values.push(cpe);
+    }
+  });
+  return values.length ? values : [text];
 }
 
 function escapeHtml(value) {

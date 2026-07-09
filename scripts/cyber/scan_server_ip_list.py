@@ -39,6 +39,7 @@ DEFAULT_MAX_CHUNK_MB = 75
 DEFAULT_MAX_TARGETS = 0
 DEFAULT_TIMEOUT_SECONDS = 120
 DEFAULT_WORKERS = 128
+GENERIC_SERVICE_NAMES = {"", "unknown", "tcpwrapped"}
 WORKFLOW_ID = "owner-authorized-batch-service-version-scan"
 IPV4_ZERO_BLOCK_ROWS = ipaddress.ip_network("0.0.0.0/8").num_addresses
 GENERATED_IPV4_FIRST_KEPT_ADDRESS_INDEX = IPV4_ZERO_BLOCK_ROWS
@@ -148,6 +149,38 @@ def build_parser() -> argparse.ArgumentParser:
         "--top-ports",
         type=int,
         help="Optional Nmap --top-ports value. Ignored when --ports is provided.",
+    )
+    parser.add_argument(
+        "--version-all",
+        action="store_true",
+        help="Use Nmap --version-all instead of --version-light for deeper service fingerprints.",
+    )
+    parser.add_argument(
+        "--tcp-connect-scan",
+        action="store_true",
+        help="Pass -sT to Nmap so service/version scans use TCP connect mode.",
+    )
+    parser.add_argument(
+        "--no-version-followup",
+        dest="version_followup",
+        action="store_false",
+        default=True,
+        help=(
+            "Disable port-specific --version-all follow-up scans for open services "
+            "that light detection identifies but leaves unversioned."
+        ),
+    )
+    parser.add_argument(
+        "--version-followup-timeout-seconds",
+        type=int,
+        default=0,
+        help="Per-port heavy follow-up timeout. 0 uses --timeout-seconds.",
+    )
+    parser.add_argument(
+        "--max-version-followups",
+        type=int,
+        default=8,
+        help="Maximum port-specific heavy follow-up scans per target. 0 means unlimited. Default: %(default)s.",
     )
     parser.add_argument(
         "--assume-host-up",
@@ -735,13 +768,19 @@ def build_nmap_command(nmap_path: str, target: str, args: argparse.Namespace) ->
     command = [
         nmap_path,
         "--open",
-        "-sV",
-        "--version-light",
-        "--host-timeout",
-        f"{timeout_seconds}s",
-        "-oX",
-        "-",
     ]
+    if getattr(args, "tcp_connect_scan", False):
+        command.append("-sT")
+    command.extend(
+        [
+            "-sV",
+            "--version-all" if getattr(args, "version_all", False) else "--version-light",
+            "--host-timeout",
+            f"{timeout_seconds}s",
+            "-oX",
+            "-",
+        ]
+    )
     if args.assume_host_up:
         command.append("-Pn")
     if args.ports:
@@ -750,6 +789,139 @@ def build_nmap_command(nmap_path: str, target: str, args: argparse.Namespace) ->
         command.extend(["--top-ports", str(args.top_ports)])
     command.append(target)
     return command
+
+
+def cpe_version(value: object) -> str:
+    parts = str(value or "").split(":")
+    if len(parts) >= 6 and parts[:2] == ["cpe", "2.3"]:
+        return parts[5]
+    if len(parts) >= 5 and parts[0] == "cpe" and parts[1].startswith("/"):
+        return parts[4]
+    return ""
+
+
+def cpe_has_version(value: object) -> bool:
+    version = cpe_version(value)
+    return bool(version and version not in {"*", "-"})
+
+
+def service_has_identified_fingerprint(service: dict[str, Any]) -> bool:
+    if str(service.get("product") or "").strip():
+        return True
+    if str(service.get("extrainfo") or "").strip():
+        return True
+    if service.get("cpe"):
+        return True
+    service_name = str(service.get("service_name") or "").strip().casefold()
+    return service_name not in GENERIC_SERVICE_NAMES
+
+
+def service_needs_version_followup(service: dict[str, Any]) -> bool:
+    if not service_has_identified_fingerprint(service):
+        return False
+    if not str(service.get("version") or "").strip():
+        return True
+    cpes = list(service.get("cpe") or [])
+    return bool(cpes and not any(cpe_has_version(cpe) for cpe in cpes))
+
+
+def port_version_followup_timeout(args: argparse.Namespace) -> int:
+    timeout = int(getattr(args, "version_followup_timeout_seconds", 0) or 0)
+    if timeout > 0:
+        return timeout
+    return int(getattr(args, "timeout_seconds", DEFAULT_TIMEOUT_SECONDS))
+
+
+def build_port_version_command(
+    nmap_path: str,
+    target: str,
+    args: argparse.Namespace,
+    service: dict[str, Any],
+) -> list[str]:
+    followup_args = argparse.Namespace(
+        timeout_seconds=port_version_followup_timeout(args),
+        assume_host_up=getattr(args, "assume_host_up", False),
+        ports=str(service.get("port") or ""),
+        top_ports=None,
+        version_all=True,
+        tcp_connect_scan=getattr(args, "tcp_connect_scan", False),
+    )
+    return build_nmap_command(nmap_path, target, followup_args)
+
+
+def service_key(service: dict[str, Any]) -> tuple[str, str, str]:
+    return (
+        str(service.get("host") or ""),
+        str(service.get("protocol") or ""),
+        str(service.get("port") or ""),
+    )
+
+
+def merge_cpes(left: object, right: object) -> list[str]:
+    merged: list[str] = []
+    for values in (left, right):
+        if isinstance(values, list):
+            parts = values
+        elif values:
+            parts = [values]
+        else:
+            parts = []
+        for value in parts:
+            text = str(value or "").strip()
+            if text and text not in merged:
+                merged.append(text)
+    return merged
+
+
+def merge_service_version_data(base: dict[str, Any], followup: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for field in ("service_name", "product", "version", "extrainfo"):
+        followup_value = str(followup.get(field) or "").strip()
+        if followup_value and (not str(merged.get(field) or "").strip() or field in {"version", "extrainfo"}):
+            merged[field] = followup_value
+    merged["cpe"] = merge_cpes(merged.get("cpe"), followup.get("cpe"))
+    return merged
+
+
+def apply_port_version_followups(
+    args: argparse.Namespace,
+    nmap_path: str,
+    server_target: ServerTarget,
+    services: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    if not getattr(args, "version_followup", True) or getattr(args, "version_all", False):
+        return services, []
+
+    errors: list[dict[str, Any]] = []
+    enriched = [dict(service) for service in services]
+    followups_run = 0
+    max_followups = max(0, int(getattr(args, "max_version_followups", 8) or 0))
+    for index, service in enumerate(enriched):
+        if max_followups and followups_run >= max_followups:
+            break
+        if not service_needs_version_followup(service):
+            continue
+        followups_run += 1
+        command = build_port_version_command(nmap_path, server_target.target, args, service)
+        try:
+            xml_text, nmap_stderr, returncode = run_nmap(command, port_version_followup_timeout(args))
+            if returncode != 0:
+                raise RuntimeError(f"Nmap follow-up exited with {returncode}. STDERR: {nmap_stderr.strip()}")
+            followup_services = parse_open_services(xml_text)
+            matches = [
+                candidate
+                for candidate in followup_services
+                if service_key(candidate) == service_key(service)
+                or (
+                    str(candidate.get("protocol") or "") == str(service.get("protocol") or "")
+                    and str(candidate.get("port") or "") == str(service.get("port") or "")
+                )
+            ]
+            if matches:
+                enriched[index] = merge_service_version_data(service, matches[0])
+        except Exception:  # noqa: BLE001 - preserve the base scan row when deeper fingerprinting fails.
+            continue
+    return enriched, errors
 
 
 def run_nmap(command: list[str], timeout_seconds: int) -> tuple[str, str, int]:
@@ -887,9 +1059,11 @@ def scan_target(
             raise RuntimeError(
                 f"Nmap exited with {returncode}. STDERR: {nmap_stderr.strip()}"
             )
-        services = enrich_services(parse_open_services(xml_text), server_target)
+        services = parse_open_services(xml_text)
+        services, followup_errors = apply_port_version_followups(args, nmap_path, server_target, services)
+        services = enrich_services(services, server_target)
         host_summaries = parse_host_summaries(xml_text, server_target, command, nmap_stderr)
-        return host_summaries, services, []
+        return host_summaries, services, followup_errors
     except Exception as exc:
         return (
             [],
@@ -946,6 +1120,16 @@ def build_target_worker_command(args: argparse.Namespace, server_target: ServerT
         command.append("--dry-run")
     elif getattr(args, "i_own_these_servers", False):
         command.append("--i-own-these-servers")
+    if getattr(args, "version_all", False):
+        command.append("--version-all")
+    if getattr(args, "tcp_connect_scan", False):
+        command.append("--tcp-connect-scan")
+    if not getattr(args, "version_followup", True):
+        command.append("--no-version-followup")
+    followup_timeout = int(getattr(args, "version_followup_timeout_seconds", 0) or 0)
+    if followup_timeout > 0:
+        command.extend(["--version-followup-timeout-seconds", str(followup_timeout)])
+    command.extend(["--max-version-followups", str(max(0, int(getattr(args, "max_version_followups", 8) or 0)))])
     if args.assume_host_up:
         command.append("--assume-host-up")
     if args.ports:
@@ -970,7 +1154,10 @@ def scan_target_in_worker(
     server_target: ServerTarget,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     command = build_target_worker_command(args, server_target)
-    timeout_seconds = 60 if args.dry_run else int(args.timeout_seconds) + 60
+    followup_budget = 0
+    if not args.dry_run and getattr(args, "version_followup", True) and not getattr(args, "version_all", False):
+        followup_budget = port_version_followup_timeout(args) * max(0, int(getattr(args, "max_version_followups", 8) or 0))
+    timeout_seconds = 60 if args.dry_run else int(args.timeout_seconds) + followup_budget + 60
     try:
         completed = subprocess.run(
             command,
@@ -1318,6 +1505,10 @@ def main() -> int:
             )
         if args.timeout_seconds <= 0:
             raise ValueError("--timeout-seconds must be greater than 0")
+        if args.version_followup_timeout_seconds < 0:
+            raise ValueError("--version-followup-timeout-seconds must be zero or greater")
+        if args.max_version_followups < 0:
+            raise ValueError("--max-version-followups must be zero or greater")
         if not args.targets.exists():
             raise FileNotFoundError(f"Target file not found: {args.targets}")
         guard_live_target_file(args, args.targets)

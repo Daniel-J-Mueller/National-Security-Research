@@ -3,7 +3,7 @@
 Serve the private cybersecurity runbook flow visualizer.
 
 The browser UI reads through this local server so exports can be written back to
-data/private/cybersecurity/runbook-outputs/quick-output.
+the selected private cybersecurity runbook output tree.
 """
 
 from __future__ import annotations
@@ -25,7 +25,36 @@ from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parents[4]
 VISUALIZER_DIR = Path(__file__).resolve().parent
-RUNBOOK_OUTPUTS_DIR = ROOT / "data" / "private" / "cybersecurity" / "runbook-outputs"
+CYBERSECURITY_DIR = ROOT / "data" / "private" / "cybersecurity"
+DEFAULT_RUNBOOK_OUTPUT_DIRS = [
+    CYBERSECURITY_DIR / "group-outputs-main",
+    CYBERSECURITY_DIR / "runbook-outputs-3-full-20260626",
+    CYBERSECURITY_DIR / "runbook-outputs-3-20260626",
+    CYBERSECURITY_DIR / "runbook-outputs-2-20260626",
+    CYBERSECURITY_DIR / "runbook-outputs",
+]
+
+
+def output_dir_has_data(path: Path) -> bool:
+    csv_dir = path / "csv"
+    jsonl_dir = path / "jsonl"
+    return (
+        csv_dir.exists()
+        and any(csv_dir.glob("*.csv"))
+    ) or (
+        jsonl_dir.exists()
+        and any(jsonl_dir.glob("*.jsonl"))
+    )
+
+
+def choose_default_output_dir() -> Path:
+    for path in DEFAULT_RUNBOOK_OUTPUT_DIRS:
+        if output_dir_has_data(path):
+            return path
+    return DEFAULT_RUNBOOK_OUTPUT_DIRS[-1]
+
+
+RUNBOOK_OUTPUTS_DIR = choose_default_output_dir()
 CSV_DIR = RUNBOOK_OUTPUTS_DIR / "csv"
 JSONL_DIR = RUNBOOK_OUTPUTS_DIR / "jsonl"
 QUICK_OUTPUT_DIR = RUNBOOK_OUTPUTS_DIR / "quick-output"
@@ -42,6 +71,7 @@ LEGACY_COORDINATE_CACHE_JSON = RUNBOOK_OUTPUTS_DIR / "ip-coordinate-cache.json"
 MAP_CHUNKS_DIR = RUNBOOK_OUTPUTS_DIR / "map-chunks"
 MAP_CHUNK_MANIFEST_JSON = MAP_CHUNKS_DIR / "manifest.json"
 WORK_DIR = RUNBOOK_OUTPUTS_DIR / "_work"
+ENTRY_OVERRIDES_JSON = QUICK_OUTPUT_DIR / "entry-overrides.json"
 
 PREFERRED_HIERARCHY = [
     "protocol",
@@ -66,7 +96,23 @@ MAP_CHUNK_RESPONSE_POINT_LIMIT = 500
 SCANNED_DAY_FIELD = "scanned_day"
 SCANNED_AT_FIELD = "scanned_at"
 DEBUG_FIELD = "error"
+CPE_SPLIT_RE = re.compile(r"\s*;\s*|\s*\|\s*")
 DEFAULT_HIDDEN_WIZARD_FIELDS = {"protocol", "scan_status", "host_status", "target_label"}
+EDITABLE_ENTRY_FIELDS = {
+    "target_label",
+    "port",
+    "protocol",
+    "service_name",
+    "product",
+    "version",
+    "extrainfo",
+    "cpe",
+    "error",
+    SCANNED_AT_FIELD,
+    SCANNED_DAY_FIELD,
+    "node_id",
+    "node_label",
+}
 
 _DATA_CACHE: dict[str, object] = {
     "signature": None,
@@ -147,6 +193,7 @@ def configure_runbook_outputs(output_dir: Path) -> None:
     global MAP_CHUNKS_DIR
     global MAP_CHUNK_MANIFEST_JSON
     global WORK_DIR
+    global ENTRY_OVERRIDES_JSON
 
     RUNBOOK_OUTPUTS_DIR = output_dir.resolve()
     CSV_DIR = RUNBOOK_OUTPUTS_DIR / "csv"
@@ -164,6 +211,7 @@ def configure_runbook_outputs(output_dir: Path) -> None:
     MAP_CHUNKS_DIR = RUNBOOK_OUTPUTS_DIR / "map-chunks"
     MAP_CHUNK_MANIFEST_JSON = MAP_CHUNKS_DIR / "manifest.json"
     WORK_DIR = RUNBOOK_OUTPUTS_DIR / "_work"
+    ENTRY_OVERRIDES_JSON = QUICK_OUTPUT_DIR / "entry-overrides.json"
     reset_caches()
 
 
@@ -537,8 +585,40 @@ def build_map_selection_payload(relative_path: object) -> dict[str, object]:
     }
 
 
+def is_missing_path_error(exc: OSError) -> bool:
+    return isinstance(exc, FileNotFoundError) or getattr(exc, "winerror", None) == 2
+
+
 def file_signature(paths: list[Path]) -> tuple[tuple[str, int, int], ...]:
-    return tuple((str(path), path.stat().st_size, path.stat().st_mtime_ns) for path in paths)
+    signature: list[tuple[str, int, int]] = []
+    for path in paths:
+        try:
+            stat = path.stat()
+        except OSError as exc:
+            if is_missing_path_error(exc):
+                continue
+            raise
+        signature.append((str(path), stat.st_size, stat.st_mtime_ns))
+    return tuple(signature)
+
+
+def source_file_payload(paths: list[Path]) -> list[dict[str, object]]:
+    payload: list[dict[str, object]] = []
+    for path in paths:
+        try:
+            stat = path.stat()
+        except OSError as exc:
+            if is_missing_path_error(exc):
+                continue
+            raise
+        payload.append(
+            {
+                "name": path.name,
+                "relative_path": str(path.relative_to(ROOT)),
+                "bytes": stat.st_size,
+            }
+        )
+    return payload
 
 
 def normalize_value(value: object) -> str:
@@ -547,6 +627,60 @@ def normalize_value(value: object) -> str:
     if isinstance(value, list):
         return "; ".join(normalize_value(item) for item in value if normalize_value(item))
     return str(value)
+
+
+def split_cpe_values(value: object) -> list[str]:
+    text = normalize_value(value).strip()
+    if not text:
+        return []
+    values: list[str] = []
+    for part in CPE_SPLIT_RE.split(text):
+        cpe = part.strip()
+        if cpe and cpe not in values:
+            values.append(cpe)
+    return values
+
+
+def cpe_parts(value: str) -> list[str]:
+    return value.split(":")
+
+
+def cpe_version(value: str) -> str:
+    parts = cpe_parts(value)
+    if len(parts) >= 6 and parts[:2] == ["cpe", "2.3"]:
+        return parts[5]
+    if len(parts) >= 5 and parts[0] == "cpe" and parts[1].startswith("/"):
+        return parts[4]
+    return ""
+
+
+def cpe_has_version(value: str) -> bool:
+    version = cpe_version(value)
+    return bool(version and version not in {"*", "-"})
+
+
+def cpe_base(value: str) -> str:
+    parts = cpe_parts(value)
+    if len(parts) >= 5 and parts[:2] == ["cpe", "2.3"]:
+        return ":".join(parts[:5])
+    if len(parts) >= 4 and parts[0] == "cpe" and parts[1].startswith("/"):
+        return ":".join(parts[:4])
+    return value
+
+
+def cpe_filter_matches(row_value: object, selected: str) -> bool:
+    cpes = split_cpe_values(row_value)
+    if not selected:
+        return not cpes
+    selected = selected.strip()
+    selected_base = cpe_base(selected)
+    selected_is_versioned = cpe_has_version(selected)
+    for cpe in cpes:
+        if cpe == selected:
+            return True
+        if not selected_is_versioned and selected_base and cpe_base(cpe) == selected_base:
+            return True
+    return False
 
 
 def join_values(value: object) -> str:
@@ -575,10 +709,19 @@ def scanned_day(value: object) -> str:
     return text[:10]
 
 
-def add_derived_fields(row: dict[str, str]) -> dict[str, str]:
-    if SCANNED_DAY_FIELD in row:
+def file_scanned_day(path: Path) -> str:
+    try:
+        return datetime.fromtimestamp(path.stat().st_mtime).date().isoformat()
+    except OSError:
+        return ""
+
+
+def add_derived_fields(row: dict[str, str], fallback_day: str = "") -> dict[str, str]:
+    if row.get(SCANNED_DAY_FIELD):
         return row
     day = scanned_day(row.get(SCANNED_AT_FIELD, ""))
+    if not day:
+        day = fallback_day
     if not day:
         return row
     return {**row, SCANNED_DAY_FIELD: day}
@@ -895,16 +1038,22 @@ def load_csv_rows(paths: list[Path]) -> tuple[list[dict[str, str]], list[str]]:
     headers: list[str] = []
 
     for path in paths:
-        with path.open("r", encoding="utf-8-sig", newline="") as handle:
-            reader = csv.DictReader(handle)
-            for field in reader.fieldnames or []:
-                add_header(headers, field)
-
-            for row in reader:
-                normalized = normalize_row(row)
-                for field in normalized:
+        try:
+            fallback_day = file_scanned_day(path)
+            with path.open("r", encoding="utf-8-sig", newline="") as handle:
+                reader = csv.DictReader(handle)
+                for field in reader.fieldnames or []:
                     add_header(headers, field)
-                rows.append(normalized)
+
+                for row in reader:
+                    normalized = add_derived_fields(normalize_row(row), fallback_day)
+                    for field in normalized:
+                        add_header(headers, field)
+                    rows.append(normalized)
+        except OSError as exc:
+            if is_missing_path_error(exc):
+                continue
+            raise
 
     return rows, headers
 
@@ -914,28 +1063,129 @@ def load_jsonl_rows(paths: list[Path]) -> tuple[list[dict[str, str]], list[str]]
     headers: list[str] = []
 
     for path in paths:
-        with path.open("r", encoding="utf-8") as handle:
-            for line_number, line in enumerate(handle, start=1):
-                stripped = line.strip()
-                if not stripped:
-                    continue
-                try:
-                    payload = json.loads(stripped)
-                except json.JSONDecodeError as exc:
-                    raise ValueError(f"{path}:{line_number} is not valid JSONL: {exc}") from exc
-                if not isinstance(payload, dict):
-                    continue
-                normalized = {key: normalize_value(value) for key, value in payload.items()}
-                for field in normalized:
-                    add_header(headers, field)
-                rows.append(normalized)
+        try:
+            fallback_day = file_scanned_day(path)
+            with path.open("r", encoding="utf-8") as handle:
+                for line_number, line in enumerate(handle, start=1):
+                    stripped = line.strip()
+                    if not stripped:
+                        continue
+                    try:
+                        payload = json.loads(stripped)
+                    except json.JSONDecodeError as exc:
+                        raise ValueError(f"{path}:{line_number} is not valid JSONL: {exc}") from exc
+                    if not isinstance(payload, dict):
+                        continue
+                    normalized = add_derived_fields(
+                        {key: normalize_value(value) for key, value in payload.items()},
+                        fallback_day,
+                    )
+                    for field in normalized:
+                        add_header(headers, field)
+                    rows.append(normalized)
+        except OSError as exc:
+            if is_missing_path_error(exc):
+                continue
+            raise
 
     return rows, headers
 
 
+def entry_overrides_signature() -> tuple[tuple[str, int, int], ...]:
+    if not ENTRY_OVERRIDES_JSON.exists():
+        return ()
+    return file_signature([ENTRY_OVERRIDES_JSON])
+
+
+def load_entry_overrides() -> dict[str, dict[str, str]]:
+    if not ENTRY_OVERRIDES_JSON.exists():
+        return {}
+    try:
+        payload = json.loads(ENTRY_OVERRIDES_JSON.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    overrides: dict[str, dict[str, str]] = {}
+    for raw_ip, raw_updates in payload.items():
+        ip = as_ip(raw_ip)
+        if not ip or not isinstance(raw_updates, dict):
+            continue
+        updates = sanitize_entry_updates(raw_updates)
+        if updates:
+            overrides[ip] = updates
+    return overrides
+
+
+def save_entry_overrides(overrides: dict[str, dict[str, str]]) -> None:
+    QUICK_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    payload = {
+        ip: updates
+        for ip, updates in sorted(overrides.items())
+        if updates
+    }
+    ENTRY_OVERRIDES_JSON.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def sanitize_entry_updates(raw_updates: dict[object, object]) -> dict[str, str]:
+    updates: dict[str, str] = {}
+    for raw_field, raw_value in raw_updates.items():
+        field = normalize_value(raw_field).strip()
+        if field not in EDITABLE_ENTRY_FIELDS:
+            continue
+        value = normalize_value(raw_value)
+        if value == "(blank)":
+            value = ""
+        updates[field] = value
+    if SCANNED_AT_FIELD in updates and SCANNED_DAY_FIELD not in updates:
+        day = scanned_day(updates[SCANNED_AT_FIELD])
+        if day:
+            updates[SCANNED_DAY_FIELD] = day
+    return updates
+
+
+def write_entry_override(ip_value: object, raw_updates: object) -> dict[str, object]:
+    ip = as_ip(ip_value)
+    if not ip:
+        raise ValueError("Entry editor needs a valid IP key.")
+    if not isinstance(raw_updates, dict):
+        raise ValueError("Entry updates must be a JSON object.")
+    updates = sanitize_entry_updates(raw_updates)
+    if not updates:
+        raise ValueError("No editable fields were provided.")
+
+    overrides = load_entry_overrides()
+    current = overrides.get(ip, {})
+    merged = {**current, **updates}
+    overrides[ip] = merged
+    save_entry_overrides(overrides)
+    reset_caches()
+    return {
+        "ok": True,
+        "ip": ip,
+        "updates": merged,
+        "path": str(ENTRY_OVERRIDES_JSON.relative_to(ROOT)),
+    }
+
+
+def apply_entry_overrides(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    overrides = load_entry_overrides()
+    if not overrides:
+        return rows
+    edited_rows: list[dict[str, str]] = []
+    for row in rows:
+        ip = row_ip(row)
+        updates = overrides.get(ip)
+        if not updates:
+            edited_rows.append(row)
+            continue
+        edited_rows.append({**row, **updates})
+    return edited_rows
+
+
 def get_dataset() -> dict[str, object]:
     source_format, paths = source_files()
-    signature = (source_format, file_signature(paths))
+    signature = (source_format, file_signature(paths), entry_overrides_signature())
 
     if _DATA_CACHE["signature"] == signature:
         return _DATA_CACHE
@@ -957,23 +1207,19 @@ def get_dataset() -> dict[str, object]:
     else:
         rows, headers = load_jsonl_rows(paths)
 
-    rows = [add_derived_fields(row) for row in rows]
+    rows = apply_entry_overrides(rows)
     if any(row.get(SCANNED_DAY_FIELD) for row in rows):
         add_header(headers, SCANNED_DAY_FIELD)
+    for updates in load_entry_overrides().values():
+        for field in updates:
+            add_header(headers, field)
 
     _DATA_CACHE.update(
         {
             "signature": signature,
             "rows": rows,
             "headers": headers,
-            "shards": [
-                {
-                    "name": path.name,
-                    "relative_path": str(path.relative_to(ROOT)),
-                    "bytes": path.stat().st_size,
-                }
-                for path in paths
-            ],
+            "shards": source_file_payload(paths),
             "source_format": source_format,
         }
     )
@@ -1019,14 +1265,7 @@ def coordinate_source_signature() -> tuple[str, tuple[tuple[str, int, int], ...]
 
 
 def coordinate_source_files_payload(paths: list[Path]) -> list[dict[str, object]]:
-    return [
-        {
-            "name": path.name,
-            "relative_path": str(path.relative_to(ROOT)),
-            "bytes": path.stat().st_size,
-        }
-        for path in paths
-    ]
+    return source_file_payload(paths)
 
 
 def coordinate_cache_shard_id(ip: str) -> str:
@@ -1067,31 +1306,36 @@ def scan_coordinate_lookup_csv(
     row_count = 0
     ok_count = 0
     error_count = 0
-    with path.open("r", encoding="utf-8-sig", newline="") as handle:
-        reader = csv.reader(handle)
-        headers = next(reader, [])
-        indexes = {field: index for index, field in enumerate(headers)}
-        ip_index = indexes.get("ip")
-        lat_index = indexes.get("lat")
-        long_index = indexes.get("long")
-        status_index = indexes.get("coordinate_status")
+    try:
+        with path.open("r", encoding="utf-8-sig", newline="") as handle:
+            reader = csv.reader(handle)
+            headers = next(reader, [])
+            indexes = {field: index for index, field in enumerate(headers)}
+            ip_index = indexes.get("ip")
+            lat_index = indexes.get("lat")
+            long_index = indexes.get("long")
+            status_index = indexes.get("coordinate_status")
 
-        for row in reader:
-            row_count += 1
-            if row_has_valid_coordinates(row, lat_index, long_index):
-                ok_count += 1
-            else:
-                status = raw_field(row, status_index)
-                if status and status not in {"skipped-provider-none", "cached"}:
-                    error_count += 1
+            for row in reader:
+                row_count += 1
+                if row_has_valid_coordinates(row, lat_index, long_index):
+                    ok_count += 1
+                else:
+                    status = raw_field(row, status_index)
+                    if status and status not in {"skipped-provider-none", "cached"}:
+                        error_count += 1
 
-            if target_ips is None:
-                continue
+                if target_ips is None:
+                    continue
 
-            raw_ip = raw_field(row, ip_index).strip()
-            ip = raw_ip if raw_ip in target_ips else as_ip(raw_ip)
-            if ip and ip in target_ips:
-                lookup_rows_by_ip[ip] = normalize_csv_row(headers, row)
+                raw_ip = raw_field(row, ip_index).strip()
+                ip = raw_ip if raw_ip in target_ips else as_ip(raw_ip)
+                if ip and ip in target_ips:
+                    lookup_rows_by_ip[ip] = normalize_csv_row(headers, row)
+    except OSError as exc:
+        if is_missing_path_error(exc):
+            return {}, 0, 0, 0
+        raise
 
     return lookup_rows_by_ip, row_count, ok_count, error_count
 
@@ -1101,7 +1345,12 @@ def load_coordinate_cache_file(path: Path, target_ips: set[str] | None = None) -
     if not path.exists():
         return rows
 
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        if is_missing_path_error(exc):
+            return rows
+        raise
     if not isinstance(payload, dict):
         return rows
 
@@ -1207,7 +1456,7 @@ def get_coordinate_records_for_ips(ips: set[str]) -> dict[str, object]:
 
 
 def build_hierarchy(headers: list[str]) -> list[str]:
-    excluded = {DEBUG_FIELD}
+    excluded = {DEBUG_FIELD, "source_index"}
     if SCANNED_DAY_FIELD in headers:
         excluded.add(SCANNED_AT_FIELD)
     ordered = [field for field in PREFERRED_HIERARCHY if field in headers and field not in excluded]
@@ -1315,7 +1564,13 @@ def parse_positive_int(value: object, default: int, maximum: int) -> int:
 
 
 def row_matches(row: dict[str, str], filters: dict[str, str]) -> bool:
-    return all(row.get(field, "") == value for field, value in filters.items())
+    for field, value in filters.items():
+        if field == "cpe":
+            if not cpe_filter_matches(row.get(field, ""), value):
+                return False
+        elif row.get(field, "") != value:
+            return False
+    return True
 
 
 def row_matches_text(row: dict[str, str], headers: list[str], search: str) -> bool:
@@ -1398,7 +1653,14 @@ def aggregate_rows_by_ip(rows: list[dict[str, str]], headers: list[str]) -> list
         for field in output_headers:
             values = bucket.setdefault(field, [])
             assert isinstance(values, list)
-            append_unique(values, row.get(field, ""))
+            if field == "cpe":
+                cpes = split_cpe_values(row.get(field, ""))
+                if not cpes:
+                    append_unique(values, "")
+                for cpe in cpes:
+                    append_unique(values, cpe)
+            else:
+                append_unique(values, row.get(field, ""))
 
     aggregated: list[dict[str, str]] = []
     for key in order:
@@ -1622,10 +1884,13 @@ def build_field_options(
             ip = row_ip(row)
             if ip:
                 matched_ips.add(ip)
-            value = row.get(field, "")
-            row_counter[value] += 1
-            if ip:
-                ip_counter.setdefault(value, set()).add(ip)
+            values = split_cpe_values(row.get(field, "")) if field == "cpe" else [row.get(field, "")]
+            if not values:
+                values = [""]
+            for value in values:
+                row_counter[value] += 1
+                if ip:
+                    ip_counter.setdefault(value, set()).add(ip)
 
     items = sorted(row_counter.items(), key=option_sort_key)
     if search.strip():
@@ -1728,6 +1993,7 @@ def build_view(filters: dict[str, str], geo_filter: dict[str, object] | None = N
         "coordinate_lookup_ok_count": coordinate_dataset["lookup_ok_count"],
         "coordinate_lookup_error_count": coordinate_dataset["lookup_error_count"],
         "coordinate_sources": coordinate_dataset["source_files"],
+        "editable_entry_fields": sorted(field for field in EDITABLE_ENTRY_FIELDS if field in output_headers or field in headers),
         "columns": build_visible_columns(geo_rows, hierarchy, valid_filters, hierarchy, OPTION_PAGE_SIZE),
         "statistics": build_statistics(matching_rows, headers),
         "debug": build_debug_payload(matching_rows),
@@ -2061,6 +2327,14 @@ class VisualizerHandler(SimpleHTTPRequestHandler):
             try:
                 reset_caches()
                 self.respond_json({"ok": True, "manifest": self.manifest_payload()})
+            except Exception as exc:  # noqa: BLE001 - surfaced to the local UI.
+                self.respond_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+            return
+
+        if parsed.path == "/api/entry-overrides":
+            try:
+                payload = self.read_json_body()
+                self.respond_json(write_entry_override(payload.get("ip"), payload.get("updates", {})))
             except Exception as exc:  # noqa: BLE001 - surfaced to the local UI.
                 self.respond_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
             return

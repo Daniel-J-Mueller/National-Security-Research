@@ -291,6 +291,7 @@ h3 {
 .map-shell,
 .results-shell,
 .map-detail-panel,
+.entry-editor-shell,
 .stats-shell,
 .debug-shell {
   border: 1px solid var(--line);
@@ -468,19 +469,103 @@ h3 {
 }
 
 .stats-titlebar,
-.wizard-titlebar {
+.wizard-titlebar,
+.entry-editor-titlebar {
   padding: 8px;
   border-bottom: 1px solid var(--line);
   background: #0b100e;
 }
 
 .stats-titlebar h2,
-.wizard-titlebar h2 {
+.wizard-titlebar h2,
+.entry-editor-titlebar h2 {
   margin: 0;
   color: var(--accent);
   font-size: 0.78rem;
   font-weight: 800;
   line-height: 1;
+}
+
+.wizard-titlebar,
+.entry-editor-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wizard-shell.is-loading {
+  overflow-anchor: none;
+}
+
+.entry-editor-shell {
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.entry-editor-shell.is-hidden {
+  display: none;
+}
+
+.entry-editor-titlebar > div {
+  min-width: 0;
+}
+
+.entry-editor-titlebar .note {
+  margin-top: 4px;
+}
+
+.entry-editor-body {
+  display: grid;
+  gap: 8px;
+  overflow: auto;
+  padding: 8px;
+}
+
+.entry-editor-table {
+  min-width: 760px;
+}
+
+.entry-editor-table th,
+.entry-editor-table td {
+  max-width: none;
+}
+
+.entry-editor-field {
+  width: 160px;
+  color: var(--muted);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.entry-editor-current {
+  width: 42%;
+  color: var(--ink);
+}
+
+.entry-editor-input {
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: #0b100e;
+  resize: vertical;
+}
+
+textarea.entry-editor-input {
+  min-height: 58px;
+}
+
+.entry-editor-locked {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.entry-editor-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .stats-grid {
@@ -710,8 +795,31 @@ h3 {
   cursor: pointer;
 }
 
+.option-with-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  border-bottom: 1px solid var(--line);
+}
+
+.option-with-copy .option-button {
+  border-bottom: 0;
+}
+
+.option-copy-button {
+  min-width: 48px;
+  padding: 5px 7px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  color: var(--accent);
+  background: #0b100e;
+  cursor: copy;
+  font-size: 0.72rem;
+}
+
 .option-button:hover,
-.option-button:focus-visible {
+.option-button:focus-visible,
+.option-copy-button:hover,
+.option-copy-button:focus-visible {
   background: var(--panel-soft);
 }
 
@@ -777,6 +885,11 @@ h3 {
   overscroll-behavior: contain;
 }
 
+.table-wrap table {
+  width: max-content;
+  min-width: 100%;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -807,17 +920,34 @@ td {
   overflow-wrap: anywhere;
 }
 
+.table-wrap th,
+.table-wrap td {
+  min-width: 150px;
+  max-width: 460px;
+  white-space: nowrap;
+}
+
+.table-wrap td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-edit-header,
+.row-edit-cell,
 .row-copy-header,
 .row-copy-cell {
+  min-width: 48px;
   width: 1%;
   max-width: 56px;
   white-space: nowrap;
 }
 
+.row-edit-header,
 .row-copy-header {
   text-align: center;
 }
 
+.row-edit-cell,
 .row-copy-cell {
   padding: 3px 5px;
   text-align: center;
@@ -827,6 +957,44 @@ td {
   min-height: 22px;
   padding: 3px 6px;
   font-size: 0.72rem;
+}
+
+.cell-copy-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  color: var(--accent);
+  background: transparent;
+  text-align: left;
+  cursor: copy;
+  overflow-wrap: anywhere;
+}
+
+.cpe-token-list {
+  display: flex;
+  max-width: 100%;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.cpe-token-button {
+  flex: 0 1 auto;
+  width: auto;
+  max-width: 440px;
+  padding: 1px 5px;
+  border: 1px solid rgba(95, 128, 112, 0.42);
+  border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-copy-button:hover,
+.cell-copy-button:focus-visible,
+.option-button.is-copied {
+  color: #06110c;
+  background: var(--accent);
 }
 
 .debug-shell {
@@ -916,6 +1084,8 @@ td {
   .map-header,
   .map-header-actions,
   .map-detail-header,
+  .wizard-titlebar,
+  .entry-editor-titlebar,
   .results-header,
   .results-tools,
   .controls-row,

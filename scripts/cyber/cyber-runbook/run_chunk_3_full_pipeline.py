@@ -36,6 +36,7 @@ SUMMARY_DIR = OUTPUT_DIR / "logs"
 SCAN_SCRIPT = ROOT / "scripts" / "cyber" / "scan_server_ip_list.py"
 COORDINATE_SCRIPT = ROOT / "scripts" / "cyber" / "saturate_runbook_coordinates.py"
 ORGANIZER_SCRIPT = ROOT / "scripts" / "cyber" / "cyber-runbook" / "cyber-organizer.py"
+ENRICH_SCRIPT = ROOT / "scripts" / "cyber" / "cyber-runbook" / "enrich_runbook_cpe_versions.py"
 VISUALIZER_SCRIPT = ROOT / "data" / "private" / "cybersecurity" / "visualizer" / "runner.py"
 
 PIPELINE_KIND = "chunk_3_expanded_ip_targets"
@@ -43,8 +44,11 @@ PIPELINE_STATE_VERSION = 3
 CHUNK_SIZE = 10_000
 EXPECTED_INPUT_TOTAL_ADDRESSES = 1_537_376_256
 FIRST_CHUNK3_TARGET_IP = int(ipaddress.IPv4Address("100.0.0.0"))
-SCAN_WORKERS = 128
-SCAN_TIMEOUT_SECONDS = 120
+SCAN_WORKERS = 32
+SCAN_TIMEOUT_SECONDS = 180
+SCAN_VERSION_ALL = False
+SCAN_TCP_CONNECT_SCAN = True
+SCAN_MAX_VERSION_FOLLOWUPS = 8
 
 TARGET_FIELDS = [
     "target",
@@ -334,7 +338,7 @@ def run_command(name: str, command: list[str], stderr_log: Path) -> str:
 
 
 def scanner_command(target_csv: Path, stage_output: Path, run_data_path: Path) -> list[str]:
-    return [
+    command = [
         sys.executable,
         str(SCAN_SCRIPT),
         "--targets",
@@ -350,6 +354,12 @@ def scanner_command(target_csv: Path, stage_output: Path, run_data_path: Path) -
         "--timeout-seconds",
         str(SCAN_TIMEOUT_SECONDS),
     ]
+    if SCAN_VERSION_ALL:
+        command.append("--version-all")
+    if SCAN_TCP_CONNECT_SCAN:
+        command.append("--tcp-connect-scan")
+    command.extend(["--max-version-followups", str(SCAN_MAX_VERSION_FOLLOWUPS)])
+    return command
 
 
 def coordinate_command(stage_output: Path) -> list[str]:
@@ -377,6 +387,16 @@ def organizer_command() -> list[str]:
     return [
         sys.executable,
         str(ORGANIZER_SCRIPT),
+    ]
+
+
+def final_cleanup_command() -> list[str]:
+    return [
+        sys.executable,
+        str(ENRICH_SCRIPT),
+        "--apply",
+        "--output-dir",
+        str(OUTPUT_DIR),
     ]
 
 
@@ -546,12 +566,30 @@ def print_completion() -> None:
     )
 
 
+def run_final_cleanup(state: dict[str, Any]) -> dict[str, Any]:
+    if state.get("final_cleanup_completed_at"):
+        return state
+    run_command(
+        "final CPE/version cleanup",
+        final_cleanup_command(),
+        SUMMARY_DIR / "final-cleanup-stderr.log",
+    )
+    run_command(
+        "final organizer",
+        organizer_command(),
+        SUMMARY_DIR / "final-organizer-stderr.log",
+    )
+    state["final_cleanup_completed_at"] = utc_timestamp()
+    save_state(state)
+    return state
+
+
 def main() -> int:
     if len(sys.argv) > 1:
         print("This script intentionally runs without arguments.", file=sys.stderr)
         return 2
 
-    for required in (INPUT_JSON, SCAN_SCRIPT, COORDINATE_SCRIPT, ORGANIZER_SCRIPT):
+    for required in (INPUT_JSON, SCAN_SCRIPT, COORDINATE_SCRIPT, ORGANIZER_SCRIPT, ENRICH_SCRIPT):
         if not required.exists():
             print(f"Missing required file: {required}", file=sys.stderr)
             return 1
@@ -578,6 +616,7 @@ def main() -> int:
             else:
                 raise ValueError(f"Unknown pipeline phase: {state.get('phase')!r}")
 
+        state = run_final_cleanup(state)
         print_completion()
         return 0
     except KeyboardInterrupt:

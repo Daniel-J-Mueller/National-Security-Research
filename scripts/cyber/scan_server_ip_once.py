@@ -29,6 +29,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--ports", help="Optional Nmap port expression.")
     parser.add_argument("--top-ports", type=int, help="Optional Nmap --top-ports value.")
+    parser.add_argument("--version-all", action="store_true", help="Use Nmap --version-all for deeper fingerprints.")
+    parser.add_argument("--tcp-connect-scan", action="store_true", help="Pass -sT to Nmap.")
+    parser.add_argument(
+        "--no-version-followup",
+        dest="version_followup",
+        action="store_false",
+        default=True,
+        help="Disable port-specific --version-all follow-up scans for unversioned light-detection hits.",
+    )
+    parser.add_argument(
+        "--version-followup-timeout-seconds",
+        type=int,
+        default=0,
+        help="Per-port heavy follow-up timeout. 0 uses --timeout-seconds.",
+    )
+    parser.add_argument(
+        "--max-version-followups",
+        type=int,
+        default=8,
+        help="Maximum port-specific heavy follow-up scans. 0 means unlimited.",
+    )
     parser.add_argument("--assume-host-up", action="store_true", help="Pass -Pn to Nmap.")
     parser.add_argument("--nmap-path", default="nmap", help="Path to nmap executable.")
     parser.add_argument(
@@ -52,6 +73,10 @@ def main() -> int:
             )
         if args.timeout_seconds <= 0:
             raise ValueError("--timeout-seconds must be greater than 0")
+        if args.version_followup_timeout_seconds < 0:
+            raise ValueError("--version-followup-timeout-seconds must be zero or greater")
+        if args.max_version_followups < 0:
+            raise ValueError("--max-version-followups must be zero or greater")
 
         target = scan.validate_target(args.target)
         server_target = scan.ServerTarget(target=target, label=scan.clean_label(args.target_label))
